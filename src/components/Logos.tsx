@@ -1,108 +1,105 @@
-import { BRAND_PATHS } from "../brand-paths";
+"use client";
 
-export function OpenFoundryMark({ size = 24 }: { size?: number }) {
+import { useState } from "react";
+
+export function OpenFoundryLogo({ size = 20 }: { size?: number }) {
   return (
     <svg
-      width={size}
       height={size}
+      width={size}
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      role="img"
-      aria-label="openFoundry"
+      role="presentation"
+      aria-hidden="true"
     >
       <defs>
-        <linearGradient id="of-mark" x1="4" y1="2" x2="28" y2="30">
+        <linearGradient id="of-header-mark" x1="4" y1="2" x2="28" y2="30">
           <stop stopColor="#f0a25f" />
           <stop offset="1" stopColor="#c56532" />
         </linearGradient>
       </defs>
       <path
         d="M16 2.5 18 9l6.2 2L18 13l-2 6.5L14 13l-6.2-2L14 9l2-6.5Z"
-        fill="url(#of-mark)"
+        fill="url(#of-header-mark)"
       />
       <path
         d="M8.5 19.5h15l-1.7 4.6h-4v3.2h-3.6v-3.2h-4L8.5 19.5Z"
-        fill="url(#of-mark)"
+        fill="url(#of-header-mark)"
       />
     </svg>
   );
 }
 
-const BRAND_KEYS: [RegExp, string][] = [
-  [/anthropic|claude/i, "anthropic"],
-  [/meta/i, "meta"],
-  [/mistral|ministral/i, "mistral"],
-  [/google|gemma/i, "google"],
-  [/deepseek/i, "deepseek"],
-  [/qwen/i, "qwen"],
-  [/nvidia/i, "nvidia"],
-  [/hugging ?face/i, "huggingface"],
-  [/alibaba/i, "alibaba"],
-  [/xai|^x$/i, "xai"],
+// Model-publisher marks are fetched from Simple Icons' public CDN (CC0) and
+// never bundled with the app. If a mark is unavailable or not allowed, the
+// component falls back to a neutral first-letter tile.
+const LOGO_SLUGS: [RegExp, string, string][] = [
+  [/anthropic|claude/i, "anthropic", "d97757"],
+  [/meta/i, "meta", "0866ff"],
+  [/mistral|ministral/i, "mistralai", "ff7000"],
+  [/google|gemma/i, "google", "8ab4f8"],
+  [/deepseek/i, "deepseek", "4d6bfe"],
+  [/qwen/i, "qwen", "a78bfa"],
+  [/nvidia/i, "nvidia", "76b900"],
+  [/hugging ?face/i, "huggingface", "ffd21e"],
+  [/alibaba/i, "alibabacloud", "ff6a00"],
+  [/xai|^x$/i, "x", "ffffff"],
 ];
 
-const BRAND_COLORS: Record<string, string> = {
-  anthropic: "#d97757",
-  meta: "#0866ff",
-  mistral: "#ff7000",
-  google: "#8ab4f8",
-  deepseek: "#4d6bfe",
-  qwen: "#a78bfa",
-  nvidia: "#76b900",
-  huggingface: "#ffd21e",
-  alibaba: "#ff6a00",
-  xai: "#ffffff",
-};
-
-const FALLBACK_COLORS = [
-  "#615ced",
-  "#2f7d6b",
-  "#a15445",
-  "#3f6f9e",
-  "#7b5aa6",
-  "#8a6a2f",
-];
+const FALLBACK_COLORS = ["#615ced", "#2f7d6b", "#a15445", "#3f6f9e", "#7b5aa6", "#8a6a2f"];
 
 export function ModelLogo({
   publisher,
   name,
   size = 32,
+  dark = false,
 }: {
   publisher: string;
   name?: string;
   size?: number;
+  dark?: boolean;
 }) {
+  const [failed, setFailed] = useState(false);
   const key = publisher.toLowerCase();
-  const brand = BRAND_KEYS.find(([pattern]) => pattern.test(key))?.[1];
-  const path = brand ? BRAND_PATHS[brand] : undefined;
+  const match = LOGO_SLUGS.find(([pattern]) => pattern.test(key));
+  const slug = match?.[1];
+  const color = match?.[2];
+  const letter =
+    (name || publisher || "?").replace(/[^a-zA-Z0-9]/g, "").slice(0, 1).toUpperCase() || "?";
 
-  if (brand && path) {
+  if (slug && !failed) {
     return (
       <span
-        className="model-logo brand"
+        className={`model-logo brand${dark ? " dark" : ""}`}
         style={{ width: size, height: size }}
         aria-hidden="true"
       >
-        <svg viewBox="0 0 24 24" width={Math.round(size * 0.58)} height={Math.round(size * 0.58)}>
-          <path d={path} fill={BRAND_COLORS[brand] || "#ffffff"} />
-        </svg>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://cdn.simpleicons.org/${slug}/${color}`}
+          alt=""
+          width={Math.round(size * 0.55)}
+          height={Math.round(size * 0.55)}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
       </span>
     );
   }
 
-  const letter = (name || publisher || "?").replace(/[^a-zA-Z0-9]/g, "").slice(0, 1).toUpperCase() || "?";
   let hash = 0;
   for (const character of publisher) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  const color = FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
+  const background = FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
 
   return (
     <span
-      className="model-logo"
+      className={`model-logo${dark ? " dark" : ""}`}
       style={{
         width: size,
         height: size,
-        background: color,
+        background,
         color: "#fff",
         fontSize: Math.max(11, Math.round(size * 0.38)),
       }}
@@ -114,8 +111,45 @@ export function ModelLogo({
   );
 }
 
+export function DottedObject({ className = "empty-illustration" }: { className?: string }) {
+  return (
+    <span className={className} aria-hidden="true">
+      <svg viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="of-empty-dots" width="7" height="7" patternUnits="userSpaceOnUse">
+            <circle cx="1.6" cy="1.6" r="1.1" fill="currentColor" />
+          </pattern>
+        </defs>
+        <path
+          d="M55 30c0-8 16-14 35-14s35 6 35 14v66c0 12-16 22-35 22s-35-10-35-22V30Z"
+          fill="url(#of-empty-dots)"
+        />
+        <ellipse cx="90" cy="96" rx="35" ry="14" fill="var(--bg-elevated)" />
+      </svg>
+    </span>
+  );
+}
+
+export const FoundryLogo = OpenFoundryLogo;
+
+export function AgentTileIcon({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M15.76 4.5c.34 0 .66.19.84.49l3.82 6.64c.13.23.13.51 0 .74l-3.89 6.75a.75.75 0 0 1-.65.38H12.5a.75.75 0 0 0 0 1.5h3.38c.8 0 1.55-.43 1.95-1.13l3.89-6.75c.4-.7.4-1.55 0-2.24L17.9 4.24a2.47 2.47 0 0 0-4.5.48L8.91 18.84a.95.95 0 0 1-1.73.17l-3.62-6.63a.75.75 0 0 1 .01-.73l3.9-6.77a.75.75 0 0 1 .65-.38h3.13a.75.75 0 0 0 0-1.5H8.12c-.8 0-1.55.43-1.95 1.13l-3.9 6.77c-.4.68-.4 1.5-.03 2.2l3.62 6.62a2.45 2.45 0 0 0 4.48-.43l4.5-14.12c.12-.4.5-.67.92-.67Z" />
+    </svg>
+  );
+}
+
+export function ModelTileIcon({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M10.52 4.25a4.5 4.5 0 0 1 3.07.04l5.91 2.1a3 3 0 0 1 1 .59v-.42a2 2 0 0 0-1.33-1.88L14 2.85a6 6 0 0 0-4.02 0L4.83 4.68A2 2 0 0 0 3.5 6.56v.42a3 3 0 0 1 1-.6l5.91-2.1c.04 0 .07-.02.1-.03Zm-4.07 5.86c.14-.39.57-.6.96-.45L12 11.28l4.6-1.62a.75.75 0 0 1 .5 1.4l-4.35 1.55v4.72a.75.75 0 0 1-1.5 0v-4.72l-4.34-1.54a.75.75 0 0 1-.46-.96Zm4.3-4.88c.8-.29 1.7-.29 2.5 0l5.92 2.1A2 2 0 0 1 20.5 9.2v8.24a2 2 0 0 1-1.33 1.88l-5.92 2.1c-.8.29-1.7.29-2.5 0l-5.92-2.1a2 2 0 0 1-1.33-1.88V9.2a2 2 0 0 1 1.33-1.88l5.92-2.1Zm2 1.41a2.25 2.25 0 0 0-1.5 0l-5.92 2.1a.5.5 0 0 0-.33.47v8.24c0 .2.13.4.33.47l5.92 2.1c.48.17 1.02.17 1.5 0l5.92-2.1a.5.5 0 0 0 .33-.47V9.2a.5.5 0 0 0-.33-.47l-5.92-2.1Z" />
+    </svg>
+  );
+}
+
 export function BentoTileArt({ variant }: { variant: "agent" | "model" }) {
-  const id = `of-dots-${variant}`;
+  const id = `dots-${variant}`;
   return (
     <svg
       className="bento-art"
@@ -145,24 +179,5 @@ export function BentoTileArt({ variant }: { variant: "agent" | "model" }) {
         </g>
       )}
     </svg>
-  );
-}
-
-export function DottedObject() {
-  return (
-    <span className="empty-illustration" aria-hidden="true">
-      <svg viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="of-empty-dots" width="7" height="7" patternUnits="userSpaceOnUse">
-            <circle cx="1.6" cy="1.6" r="1.1" fill="#b9adcf" />
-          </pattern>
-        </defs>
-        <path
-          d="M55 30c0-8 16-14 35-14s35 6 35 14v66c0 12-16 22-35 22s-35-10-35-22V30Z"
-          fill="url(#of-empty-dots)"
-        />
-        <ellipse cx="90" cy="96" rx="35" ry="14" fill="#1f1f1f" opacity="0.9" />
-      </svg>
-    </span>
   );
 }

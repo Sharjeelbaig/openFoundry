@@ -1,117 +1,134 @@
-mod chat;
-mod model;
-mod providers;
-mod store;
+// openFoundry desktop shell.
+//
+// The product UI and all local APIs are the Next.js app. This Rust layer only
+// starts the bundled Next standalone server on a free loopback port, waits for
+// it to answer, and points the window at it. Workspace data is written to the
+// OS app-data directory instead of the read-only application bundle.
 
-use tauri::ipc::Channel;
-use tauri::{AppHandle, Manager};
-use uuid::Uuid;
+#[cfg(not(debug_assertions))]
+use std::net::{TcpListener, TcpStream};
+use std::sync::Mutex;
+#[cfg(not(debug_assertions))]
+use std::thread;
+#[cfg(not(debug_assertions))]
+use std::time::Duration;
 
-use model::{Agent, AppData, ChatEvent, ChatRequest, ProviderConfig, ProviderStatus, Settings};
+use tauri::{Manager, RunEvent};
+use tauri_plugin_shell::process::CommandChild;
+#[cfg(not(debug_assertions))]
+use tauri_plugin_shell::ShellExt;
 
-#[tauri::command]
-fn load_app(app: AppHandle) -> Result<AppData, String> {
-    store::load(&app)
+struct ServerProcess(Mutex<Option<CommandChild>>);
+
+#[cfg(not(debug_assertions))]
+fn free_port() -> u16 {
+    TcpListener::bind(("127.0.0.1", 0))
+        .and_then(|listener| listener.local_addr())
+        .map(|address| address.port())
+        .unwrap_or(3210)
 }
 
-#[tauri::command]
-fn save_settings(app: AppHandle, settings: Settings) -> Result<Settings, String> {
-    let mut data = store::load(&app)?;
-    let mut next = settings;
-    if next.api_key.trim().is_empty() {
-        next.api_key = format!("of-{}", Uuid::new_v4().simple());
-    }
-    if next.created_at.trim().is_empty() {
-        next.created_at = store::now();
-    }
-    data.settings = next.clone();
-    store::save(&app, &data)?;
-    Ok(next)
+#[cfg(not(debug_assertions))]
+fn navigate_when_ready(window: tauri::WebviewWindow, url: String) {
+    thread::spawn(move || {
+        for _ in 0..240 {
+            if TcpStream::connect(("127.0.0.1", url_port(&url))).is_ok() {
+                let quoted = serde_json::to_string(&url).unwrap_or_else(|_| "\"/\"".into());
+                let _ = window.eval(&format!("window.location.replace({quoted});"));
+                return;
+            }
+            thread::sleep(Duration::from_millis(150));
+        }
+        let _ = window.eval(
+            "document.querySelector('h1').textContent = 'openFoundry could not start'; \
+             document.querySelector('p').textContent = \
+             'The local server did not answer. Quit and open the app again.';",
+        );
+    });
 }
 
-#[tauri::command]
-async fn detect_providers(
-    app: AppHandle,
-    providers: Option<Vec<ProviderConfig>>,
-) -> Result<Vec<ProviderStatus>, String> {
-    let mut data = store::load(&app)?;
-    if data.settings.providers.is_empty() {
-        data.settings = store::default_settings();
-        store::save(&app, &data)?;
-    }
-    let selected = providers.unwrap_or_else(|| data.settings.providers.clone());
-    let enabled = selected
-        .into_iter()
-        .filter(|provider| provider.enabled)
-        .collect();
-    Ok(providers::detect(enabled).await)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-async fn chat_stream(
-    app: AppHandle,
-    request: ChatRequest,
-    on_event: Channel<ChatEvent>,
-) -> Result<(), String> {
-    let data = store::load(&app)?;
-    let provider = providers::provider_by_id(&data.settings.providers, &request.provider_id)
-        .ok_or_else(|| "Choose a provider before sending a message.".to_string())?;
-    chat::stream_chat(provider, request, on_event).await
-}
-
-#[tauri::command]
-fn save_agent(app: AppHandle, agent: Agent) -> Result<Agent, String> {
-    let mut data = store::load(&app)?;
-    let now = store::now();
-    let mut next = agent;
-    if next.id.trim().is_empty() {
-        next.id = Uuid::new_v4().to_string();
-        next.created_at = now.clone();
-    }
-    next.updated_at = now;
-    if let Some(existing) = data.agents.iter_mut().find(|item| item.id == next.id) {
-        *existing = next.clone();
-    } else {
-        data.agents.push(next.clone());
-    }
-    store::save(&app, &data)?;
-    Ok(next)
-}
-
-#[tauri::command]
-fn delete_agent(app: AppHandle, id: String) -> Result<(), String> {
-    let mut data = store::load(&app)?;
-    data.agents.retain(|agent| agent.id != id);
-    store::save(&app, &data)
-}
-
-#[tauri::command]
-fn app_data_dir(app: AppHandle) -> Result<String, String> {
-    app.path()
-        .app_data_dir()
-        .map(|path| path.to_string_lossy().to_string())
-        .map_err(|error| format!("Could not resolve app data directory: {error}"))
-}
-
-#[tauri::command]
-fn app_version() -> String {
-    env!("CARGO_PKG_VERSION").to_string()
+#[cfg(not(debug_assertions))]
+fn url_port(url: &str) -> u16 {
+    url.rsplit(':')
+        .next()
+        .and_then(|value| value.trim_end_matches('/').parse().ok())
+        .unwrap_or(3210)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![
-            load_app,
-            save_settings,
-            detect_providers,
-            chat_stream,
-            save_agent,
-            delete_agent,
-            app_data_dir,
-            app_version
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running openFoundry");
+        .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            let _ = app;
+            #[cfg(not(debug_assertions))]
+            {
+                let window = app
+                    .get_webview_window("main")
+                    .ok_or("The main window was not created")?;
+                let resource_dir = app.path().resource_dir()?;
+                let server_dir = resource_dir.join("next-server");
+                let data_dir = app.path().app_data_dir()?.join("data");
+                std::fs::create_dir_all(&data_dir)?;
+
+                let port = free_port();
+                let public_url = format!("http://127.0.0.1:{port}");
+                let command = app
+                    .shell()
+                    .sidecar("node")
+                    .map_err(|error| format!("Could not find the bundled Node runtime: {error}"))?
+                    .args(["server.js"])
+                    .current_dir(server_dir)
+                    .env("PORT", port.to_string())
+                    .env("HOSTNAME", "127.0.0.1")
+                    .env("NODE_ENV", "production")
+                    .env(
+                        "OPENFOUNDRY_DATA_DIR",
+                        data_dir.to_string_lossy().to_string(),
+                    )
+                    .env("OPENFOUNDRY_PUBLIC_URL", public_url.clone());
+
+                let (mut events, child) = command
+                    .spawn()
+                    .map_err(|error| format!("Could not start the local server: {error}"))?;
+                app.manage(ServerProcess(Mutex::new(Some(child))));
+
+                tauri::async_runtime::spawn(async move {
+                    use tauri_plugin_shell::process::CommandEvent;
+                    while let Some(event) = events.recv().await {
+                        match event {
+                            CommandEvent::Stdout(line) | CommandEvent::Stderr(line) => {
+                                eprintln!("[openFoundry] {}", String::from_utf8_lossy(&line));
+                            }
+                            CommandEvent::Terminated(payload) => {
+                                eprintln!(
+                                    "[openFoundry] local server exited: {:?}",
+                                    payload.code
+                                );
+                            }
+                            _ => {}
+                        }
+                    }
+                });
+
+                navigate_when_ready(window, public_url);
+            }
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building openFoundry");
+
+    app.run(|app_handle, event| {
+        if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {
+            if let Some(server) = app_handle.try_state::<ServerProcess>() {
+                if let Ok(mut child) = server.0.lock() {
+                    if let Some(process) = child.take() {
+                        let _ = process.kill();
+                    }
+                }
+            }
+        }
+    });
 }

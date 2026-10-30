@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { Checkmark20Regular, Copy20Regular } from "@fluentui/react-icons";
-import { DottedObject } from "./Logos";
+"use client";
 
-export function Spinner() {
-  return <span className="spinner" aria-label="Loading" />;
-}
+import { useState } from "react";
+import { Checkmark20Regular, Copy20Regular, Info20Regular } from "@fluentui/react-icons";
+import { useToast } from "./Toast";
+import { DottedObject as OwnDottedObject } from "./Logos";
 
 export function StatusBadge({ status }: { status: string }) {
   const tone =
@@ -23,25 +22,94 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+export function Spinner({ large = false }: { large?: boolean }) {
+  return <span className={`spinner${large ? " lg" : ""}`} aria-label="Loading" />;
+}
+
+export function CopyButton({
+  value,
+  label = "Copy",
+  className = "icon-button small",
+}: {
+  value: string;
+  label?: string;
+  className?: string;
+}) {
+  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   return (
     <button
-      className="icon-button small"
+      className={className}
       aria-label={label}
       title={label}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
+          toast("Copied to clipboard", "success");
+          setTimeout(() => setCopied(false), 1600);
         } catch {
-          // clipboard can be disabled by the host
+          toast("Clipboard access was denied", "error");
         }
       }}
     >
       {copied ? <Checkmark20Regular /> : <Copy20Regular />}
     </button>
+  );
+}
+
+export function InfoTip({ text }: { text: string }) {
+  return (
+    <span title={text} style={{ display: "inline-flex", color: "var(--fg-3)" }}>
+      <Info20Regular style={{ width: 13, height: 13 }} />
+    </span>
+  );
+}
+
+export function DottedObject({ className = "empty-illustration" }: { className?: string }) {
+  return <OwnDottedObject className={className} />;
+}
+
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <div className="page-header">
+      <div>
+        <h1 className="page-title">{title}</h1>
+        {subtitle && <div className="page-subtitle">{subtitle}</div>}
+      </div>
+      {actions && <div className="page-header-actions">{actions}</div>}
+    </div>
+  );
+}
+
+export function Field({
+  label,
+  required,
+  hint,
+  children,
+}: {
+  label: React.ReactNode;
+  required?: boolean;
+  hint?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="field">
+      <span className="field-label">
+        {label}
+        {required && <span className="required">*</span>}
+      </span>
+      {children}
+      {hint && <span className="field-hint">{hint}</span>}
+    </label>
   );
 }
 

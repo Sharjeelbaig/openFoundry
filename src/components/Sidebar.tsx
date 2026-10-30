@@ -1,5 +1,8 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
 import {
   Beaker20Regular,
   Book20Regular,
@@ -63,7 +66,11 @@ const DISCOVER: NavGroup = {
     { href: "/discover/tools", label: "Tools", icon: <Wrench20Regular /> },
     { href: "/discover/knowledge", label: "Knowledge", icon: <Book20Regular /> },
     { href: "/discover/services", label: "Services", icon: <Cloud20Regular /> },
-    { href: "/discover/solutiontemplates", label: "Solution templates", icon: <SlideText20Regular /> },
+    {
+      href: "/discover/solutiontemplates",
+      label: "Solution templates",
+      icon: <SlideText20Regular />,
+    },
   ],
 };
 
@@ -82,7 +89,7 @@ const MANAGE: NavGroup = {
     { href: "/manage/quota", label: "Quota", icon: <DataBarVertical20Regular /> },
     { href: "/manage/gateway", label: "AI Gateway", icon: <Cloud20Regular /> },
     { href: "/manage/resources", label: "Resource details", icon: <Server20Regular /> },
-    { href: "/manage", label: "Workspace details", icon: <Settings20Regular /> },
+    { href: "/manage", label: "Project details", icon: <Settings20Regular /> },
   ],
 };
 
@@ -96,24 +103,27 @@ function groupsFor(pathname: string): NavGroup[] {
 }
 
 export default function Sidebar() {
-  const pathname = useLocation().pathname;
+  const pathname = usePathname();
   const groups = groupsFor(pathname);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     try {
-      setCollapsed(localStorage.getItem("openfoundry:sidebar-collapsed") === "1");
+      setCollapsed(localStorage.getItem("foundry-local:sidebar-collapsed") === "1");
     } catch {
       // ignore
     }
   }, []);
 
   if (groups.length === 0) return null;
+
   const onDiscover = pathname.startsWith("/discover");
 
   return (
     <aside
-      className={`sidebar${collapsed ? " collapsed" : ""}${onDiscover ? " base" : ""}`}
+      className={`sidebar${collapsed ? " collapsed" : ""}${
+        onDiscover ? " base" : ""
+      }`}
     >
       <div className="sidebar-scroll">
         {groups.map((group) => (
@@ -123,15 +133,19 @@ export default function Sidebar() {
               {group.items.map((item) => {
                 const active =
                   pathname === item.href ||
-                  (item.href === "/build/agents" && pathname.startsWith("/build/agents")) ||
-                  (item.href === "/build/models/deployments" && pathname.startsWith("/build/models")) ||
-                  (item.href === "/build/knowledge/search" && pathname.startsWith("/build/knowledge")) ||
+                  (item.href.includes("?") && pathname.startsWith(item.href.split("?")[0])) ||
+                  (item.href === "/build/agents" &&
+                    pathname.startsWith("/build/agents")) ||
+                  (item.href === "/build/models/deployments" &&
+                    pathname.startsWith("/build/models")) ||
+                  (item.href === "/build/knowledge/search" &&
+                    pathname.startsWith("/build/knowledge")) ||
                   (item.href === "/operate" && pathname === "/operate") ||
-                  (item.href === "/manage" && pathname === "/manage");
+                  pathname === item.href;
                 return (
                   <Link
                     key={item.href}
-                    to={item.href}
+                    href={item.href}
                     className={`sidebar-link${active ? " active" : ""}`}
                     title={collapsed ? item.label : undefined}
                   >
@@ -151,11 +165,15 @@ export default function Sidebar() {
         <button
           className="icon-button"
           aria-label={collapsed ? "Expand left navigation" : "Collapse left navigation"}
+          title={collapsed ? "Expand left navigation" : "Collapse left navigation"}
           onClick={() => {
             setCollapsed((value) => {
               const next = !value;
               try {
-                localStorage.setItem("openfoundry:sidebar-collapsed", next ? "1" : "0");
+                localStorage.setItem(
+                  "foundry-local:sidebar-collapsed",
+                  next ? "1" : "0"
+                );
               } catch {
                 // ignore
               }

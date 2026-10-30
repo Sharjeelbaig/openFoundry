@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "app.openfoundry.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run dev -- -p 1420",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "npm run build && npm run desktop:prepare",
+    "frontendDist": "loading"
   },
   "app": {
     "windows": [
@@ -37,6 +37,12 @@
     ],
     "category": "DeveloperTool",
     "shortDescription": "A local AI workbench for models, agents and knowledge.",
-    "longDescription": "openFoundry is an independent, free desktop workbench for running local AI models, prompt agents and knowledge tools on your own computer."
+    "longDescription": "openFoundry is an independent, free desktop workbench for running local AI models, prompt agents and knowledge tools on your own computer.",
+    "resources": [
+      "next-server"
+    ],
+    "externalBin": [
+      "binaries/node"
+    ]
   }
 }

@@ -1,9 +1,14 @@
 # Trademarks
 
-openFoundry is an independent project. It is not affiliated with, endorsed by, or sponsored by Microsoft or any model provider.
+openFoundry is an independent project. It is not affiliated with, endorsed by, or
+sponsored by any model provider or platform vendor.
 
-“Microsoft”, “Microsoft Foundry”, “Foundry Local” and other product names are trademarks of their respective owners. They are mentioned in this repository only to describe the project's independence and inspiration.
+Model and runtime names are used only to identify the provider or model being configured.
+All trademarks remain the property of their respective owners.
 
-Third-party model marks are used nominatively to identify model provenance and remain the property of their owners. No Microsoft logos are included in the application.
+Third-party model marks are fetched at runtime from Simple Icons when available and are
+used nominatively to identify model provenance. No third-party logos are bundled in this
+repository. Publishers without an available mark receive a neutral first-letter tile.
 
-If you are a rights holder and want an attribution changed or a mark removed, open an issue in this repository.
+If you are a rights holder and want an attribution changed or a mark removed, open an
+issue in this repository.
