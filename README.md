@@ -8,7 +8,7 @@ openFoundry is a free, independent desktop app for discovering local models, cha
 
 ## Status
 
-Early desktop foundation. Implemented:
+Early desktop foundation. The current macOS arm64 release bundle is about **5.5 MB** and the DMG is about **2.7 MB** before optional runtimes or models. Implemented:
 
 - Native desktop shell with Tauri 2.
 - First-run setup before the workspace: independence notice, profile, provider configuration and model selection.

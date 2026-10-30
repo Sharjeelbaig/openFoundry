@@ -195,7 +195,7 @@ export default function SetupWizard({
               <p className="setup-lead">
                 openFoundry is a free, independent desktop workbench for running models,
                 agents and knowledge bases on your own hardware. No cloud account, no
-                Azure subscription, no usage bill.
+                cloud subscription, no usage bill.
               </p>
               <div className="setup-points">
                 <div>
