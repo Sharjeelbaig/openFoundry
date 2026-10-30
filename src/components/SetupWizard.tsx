@@ -120,6 +120,7 @@ export default function SetupWizard({
   const canContinue = () => {
     if (step === 0) return settings.termsAccepted && settings.workspaceName.trim().length > 0;
     if (step === 1) return settings.displayName.trim().length > 0;
+    if (step === 2) return !scanning;
     return true;
   };
 
