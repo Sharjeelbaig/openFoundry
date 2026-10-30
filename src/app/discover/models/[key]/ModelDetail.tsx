@@ -132,11 +132,20 @@ export default function ModelDetail({ modelKey }: { modelKey: string }) {
       <div className="page">
         <div className="banner error">
           This model is no longer present in the local catalog. It may have been
-          removed from the runtime or cache.
+          removed from the runtime or cache. A Hugging Face model that was downloaded
+          through Ollama appears under the Ollama runtime instead.
         </div>
-        <Link href="/discover/models" className="btn btn-secondary mt-16">
-          Back to models
-        </Link>
+        <div className="row mt-16" style={{ gap: 8 }}>
+          <Link href="/discover/models" className="btn btn-secondary">
+            Back to models
+          </Link>
+          <Link
+            href="/discover/models?provider=ollama"
+            className="btn btn-primary"
+          >
+            Browse Ollama models
+          </Link>
+        </div>
       </div>
     );
   }

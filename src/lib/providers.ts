@@ -515,7 +515,20 @@ export async function discoverModels(): Promise<LocalModel[]> {
       foundryIds.push(id);
     }
     const foundryModels = bestFoundryVariants(foundryIds, catalog);
-    const combined = [...foundryModels, ...ollama, ...lmstudio, ...llamacpp, ...hf, ...hfCatalog];
+    const ollamaHfRepos = new Set(
+      ollama
+        .filter((model) => model.id.startsWith("hf.co/"))
+        .map((model) =>
+          model.id
+            .replace(/^hf\.co\//, "")
+            .split(":")[0]
+            .toLowerCase()
+        )
+    );
+    const remoteHf = hfCatalog.filter(
+      (model) => !ollamaHfRepos.has(model.id.toLowerCase())
+    );
+    const combined = [...foundryModels, ...ollama, ...lmstudio, ...llamacpp, ...hf, ...remoteHf];
     const seen = new Set<string>();
     return combined.filter((model) => {
       if (seen.has(model.key)) return false;
