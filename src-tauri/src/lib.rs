@@ -79,7 +79,7 @@ pub fn run() {
                     .shell()
                     .sidecar("node")
                     .map_err(|error| format!("Could not find the bundled Node runtime: {error}"))?
-                    .args(["server.js"])
+                    .args(["start.cjs"])
                     .current_dir(server_dir)
                     .env("PORT", port.to_string())
                     .env("HOSTNAME", "127.0.0.1")

@@ -116,6 +116,20 @@ async function copyServer() {
       recursive: true,
     });
   }
+  // The sidecar must not outlive a hard-killed app. Tauri sends SIGTERM for a
+  // normal quit, but a force quit or crash would otherwise leave an orphaned
+  // Next server. The wrapper notices when it has been reparented and exits.
+  await fs.writeFile(
+    path.join(serverDir, "start.cjs"),
+    `const originalParent = process.ppid;
+const timer = setInterval(() => {
+  if (process.ppid !== originalParent) process.exit(0);
+}, 1200);
+timer.unref();
+require("./server.js");
+`,
+    "utf8"
+  );
   console.log(`Next server ready: ${path.relative(root, serverDir)}`);
 }
 
