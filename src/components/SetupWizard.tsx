@@ -18,6 +18,7 @@ import type {
   Settings,
 } from "../lib/types";
 import { ModelLogo, OpenFoundryMark } from "./Logos";
+import { openExternal } from "../lib/open";
 
 const STEPS = ["Welcome", "Profile", "Providers", "Models", "Ready"] as const;
 
@@ -396,6 +397,14 @@ export default function SetupWizard({
               <button className="btn btn-secondary" onClick={addCustom}>
                 <Add20Regular /> Add OpenAI-compatible endpoint
               </button>
+
+              <div className="setup-provider-links">
+                <span className="muted text-12">Need a runtime?</span>
+                <button className="link" onClick={() => void openExternal("https://ollama.com/download")}>Ollama</button>
+                <button className="link" onClick={() => void openExternal("https://lmstudio.ai")}>LM Studio</button>
+                <button className="link" onClick={() => void openExternal("https://github.com/ggml-org/llama.cpp")}>llama.cpp</button>
+                <button className="link" onClick={() => void openExternal("https://learn.microsoft.com/azure/ai-foundry/foundry-local/get-started")}>Foundry CLI</button>
+              </div>
 
               {error && <div className="banner error">{error}</div>}
               <div className="banner">

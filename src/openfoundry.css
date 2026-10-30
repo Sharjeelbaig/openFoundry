@@ -4699,3 +4699,11 @@ svg {
     grid-template-columns: 1fr;
   }
 }
+
+.setup-provider-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
