@@ -1,7 +1,21 @@
 import { NextRequest } from "next/server";
 import { streamCompletion } from "@/lib/chat";
 import { retrieveCitations } from "@/lib/rag";
-import { appendTrace, getAgent, getDeployments, newId } from "@/lib/store";
+import {
+  appendTrace,
+  getAgent,
+  getBlocklists,
+  getDeployments,
+  getGuardrails,
+  newId,
+} from "@/lib/store";
+import {
+  evaluate,
+  guardrailInstructions,
+  refusalMessage,
+  type GuardrailVerdict,
+} from "@/lib/guardrails";
+import { getMemoryStore, recall, rememberTurn, renderMemory } from "@/lib/memory";
 import { nodeForDeployment } from "@/lib/nodes";
 import {
   acquireSlot,
@@ -28,6 +42,8 @@ interface ChatBody {
   knowledgeBaseIds?: string[];
   instructions?: string;
   guardrail?: "Default" | "Strict" | "Off";
+  guardrailId?: string;
+  memoryStoreId?: string;
   tools?: string[];
   saveTrace?: boolean;
 }
@@ -72,8 +88,11 @@ export async function POST(req: NextRequest) {
         let knowledgeBaseIds = body.knowledgeBaseIds || [];
         let tools = body.tools || [];
         let guardrail = body.guardrail;
+        let guardrailId = body.guardrailId;
+        let memoryStoreId = body.memoryStoreId;
         let agentName = "";
         let heldDeployment: Deployment | null = null;
+        const memoryScope = "local-user";
 
         try {
           if (body.agentId) {
@@ -89,6 +108,8 @@ export async function POST(req: NextRequest) {
                 knowledgeBaseIds = agent.knowledgeBaseIds;
               if (body.tools === undefined) tools = agent.tools;
               if (!body.guardrail) guardrail = agent.guardrail;
+              if (!body.guardrailId) guardrailId = agent.guardrailId;
+              if (!body.memoryStoreId) memoryStoreId = agent.memoryStoreId;
               if (!body.model) {
                 model = agent.model;
                 provider = agent.provider;
@@ -109,10 +130,66 @@ export async function POST(req: NextRequest) {
             const retrieved = await retrieveCitations(
               knowledgeBaseIds,
               lastUser.content,
-              4
+              { topK: 4 }
             );
             citations = retrieved.citations;
             embeddingModel = retrieved.embeddingModel;
+          }
+
+          // Resolve the guardrail resource and its blocklists.
+          const guardrails = await getGuardrails();
+          const guardrailResource = guardrailId
+            ? guardrails.find((g) => g.id === guardrailId)
+            : undefined;
+          const blocklists = await getBlocklists();
+
+          // Enforce input controls before any model work happens.
+          if (lastUser && guardrailResource) {
+            const verdict = evaluate(
+              guardrailResource,
+              blocklists,
+              lastUser.content,
+              "input"
+            );
+            if (verdict.blocked && verdict.control) {
+              const message = refusalMessage(verdict.control);
+              const latency = Date.now() - started;
+              send({
+                type: "meta",
+                model,
+                provider,
+                citations: [],
+                embeddingModel: "none",
+                agent: agentName || null,
+                guardrail: { blocked: true, control: verdict.control.riskType },
+                deployment: null,
+              });
+              send({ type: "delta", text: message });
+              send({
+                type: "done",
+                promptTokens: 0,
+                completionTokens: approxTokens(message),
+                latencyMs: latency,
+                citations: [],
+                blocked: verdict.control.riskType,
+              });
+              await appendTrace({
+                id: newId("trace"),
+                agentId: body.agentId || "playground",
+                agentName: agentName || "Playground",
+                prompt: lastUser.content,
+                response: message,
+                model,
+                provider,
+                latencyMs: latency,
+                promptTokens: 0,
+                completionTokens: approxTokens(message),
+                citations: [],
+                at: new Date().toISOString(),
+                error: `Blocked by ${verdict.control.riskType} guardrail`,
+              });
+              return;
+            }
           }
 
           const systemParts: string[] = [];
@@ -120,16 +197,29 @@ export async function POST(req: NextRequest) {
           systemParts.push(
             "You are running inside a local Foundry-compatible environment. Answer helpfully and concisely. If the user asks something you cannot verify from the provided context, say so instead of inventing details."
           );
+          const guardrailText = guardrailInstructions(guardrailResource);
+          if (guardrailText) systemParts.push(guardrailText);
           const effectiveGuardrail = guardrail || "Default";
-          if (effectiveGuardrail !== "Off") {
+          if (!guardrailResource && effectiveGuardrail !== "Off") {
             systemParts.push(
               "Safety guardrail: refuse requests that facilitate violence, self-harm, illegal activity or sexual content involving minors. Do not fabricate private personal data."
             );
           }
-          if (effectiveGuardrail === "Strict") {
+          if (!guardrailResource && effectiveGuardrail === "Strict") {
             systemParts.push(
               "Strict guardrail: never repeat, infer or generate personal identifiers such as full addresses, phone numbers, government ids or credentials. Ask the user to redact sensitive data instead."
             );
+          }
+
+          // Recall long-term memory and inject it as trusted context.
+          let memoryStore = null;
+          if (memoryStoreId) {
+            memoryStore = (await getMemoryStore(memoryStoreId)) || null;
+            if (memoryStore && lastUser) {
+              const items = await recall(memoryStore, memoryScope, lastUser.content);
+              const block = renderMemory(items);
+              if (block) systemParts.push(block);
+            }
           }
           if (citations.length) {
             systemParts.push(
@@ -237,6 +327,35 @@ export async function POST(req: NextRequest) {
 
           if (deployment)
             void meter(deployment.id, promptTokens, completionTokens);
+
+          // Enforce output controls on the final answer.
+          if (guardrailResource && answer) {
+            const verdict = evaluate(
+              guardrailResource,
+              blocklists,
+              answer,
+              "output"
+            );
+            if (verdict.blocked && verdict.control) {
+              const notice = `\n\n[${refusalMessage(verdict.control)}]`;
+              send({ type: "delta", text: notice });
+              answer += notice;
+            }
+          }
+
+          // Persist anything worth remembering for the next turn.
+          if (memoryStore && lastUser) {
+            try {
+              await rememberTurn(
+                memoryStore,
+                memoryScope,
+                lastUser.content,
+                answer
+              );
+            } catch {
+              // Memory is best-effort and must never fail the turn.
+            }
+          }
 
           const latencyMs = Date.now() - started;
           send({

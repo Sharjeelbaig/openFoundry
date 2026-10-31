@@ -4,13 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import {
+  Add20Regular,
   ArrowClockwise20Regular,
   ArrowLeft20Regular,
   Book20Regular,
+  Cloud20Regular,
   Code20Regular,
+  Database20Regular,
   Delete20Regular,
   Dismiss20Regular,
   DocumentText20Regular,
+  Globe20Regular,
+  Layer20Regular,
   MoreHorizontal20Regular,
   Search20Regular,
   ArrowUpload20Regular,
@@ -18,7 +23,21 @@ import {
 import { formatBytes, formatDate, useApi } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
-import type { Citation, KnowledgeBase, KnowledgeDocument } from "@/lib/types";
+import type {
+  Citation,
+  KnowledgeBase,
+  KnowledgeDocument,
+  KnowledgeSource,
+  KnowledgeSourceKind,
+} from "@/lib/types";
+
+const ADD_SOURCE_OPTIONS: { kind: KnowledgeSourceKind; label: string; detail: string }[] = [
+  { kind: "work-iq", label: "Work IQ (Preview)", detail: "Microsoft 365 organizational context" },
+  { kind: "fabric-iq", label: "Fabric IQ (OneLake Catalog) (Preview)", detail: "Fabric ontology or lakehouse" },
+  { kind: "azure-blob", label: "Azure Blob Storage", detail: "Documents and files from a container" },
+  { kind: "web", label: "Web", detail: "Real-time web content" },
+  { kind: "azure-ai-search", label: "Azure AI Search Index", detail: "Existing enterprise search index" },
+];
 
 export default function KnowledgeDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -46,7 +65,47 @@ export default function KnowledgeDetail({ id }: { id: string }) {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<Citation[] | null>(null);
   const [embeddingModel, setEmbeddingModel] = useState("");
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const sources = base?.sources ?? [];
+
+  const addSource = async (kind: KnowledgeSourceKind, label: string, detail: string) => {
+    if (!base) return;
+    setSourceMenuOpen(false);
+    const res = await fetch("/api/knowledge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "addSource",
+        id: base.id,
+        sourceKind: kind,
+        sourceName: label,
+        sourceDetail: detail,
+      }),
+    });
+    if (!res.ok) {
+      toast("Could not add the source", "error");
+      return;
+    }
+    toast(`${label} added to ${base.name}`, "success");
+    refresh();
+  };
+
+  const removeSource = async (source: KnowledgeSource) => {
+    if (!base) return;
+    const res = await fetch("/api/knowledge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "deleteSource", id: base.id, sourceId: source.id }),
+    });
+    if (!res.ok) {
+      toast("Could not remove the source", "error");
+      return;
+    }
+    toast(`${source.name} removed`, "success");
+    refresh();
+  };
 
   const chunks = useMemo(
     () =>
@@ -333,6 +392,85 @@ export default function KnowledgeDetail({ id }: { id: string }) {
 
       <div className="knowledge-split mt-16">
         <div>
+          <div className="operate-card mb-16">
+            <div className="row between mb-12">
+              <h3>Knowledge sources</h3>
+              <div style={{ position: "relative" }}>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => setSourceMenuOpen((open) => !open)}
+                >
+                  <Add20Regular /> Add sources
+                </button>
+                {sourceMenuOpen && (
+                  <div className="menu-popover kb-source-menu" style={{ right: 0, top: 32 }}>
+                    {ADD_SOURCE_OPTIONS.map((option) => (
+                      <button
+                        key={option.kind}
+                        className="menu-item"
+                        onClick={() => addSource(option.kind, option.label, option.detail)}
+                      >
+                        <span className="kb-source-icon">
+                          {option.kind === "web" ? (
+                            <Globe20Regular />
+                          ) : option.kind === "azure-blob" ? (
+                            <Cloud20Regular />
+                          ) : option.kind === "azure-ai-search" ? (
+                            <Database20Regular />
+                          ) : (
+                            <Layer20Regular />
+                          )}
+                        </span>
+                        <span>
+                          <strong>{option.label}</strong>
+                          <span className="muted text-12">{option.detail}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {sources.length === 0 ? (
+              <p className="muted text-12">
+                No sources configured yet. Add a source to expand what this base can
+                retrieve from, or upload files below.
+              </p>
+            ) : (
+              <div className="stack" style={{ gap: 8 }}>
+                {sources.map((source) => (
+                  <div className="kb-source-item" key={source.id}>
+                    <span className="kb-source-icon">
+                      {source.kind === "web" ? (
+                        <Globe20Regular />
+                      ) : source.kind === "azure-blob" ? (
+                        <Cloud20Regular />
+                      ) : source.kind === "azure-ai-search" ? (
+                        <Database20Regular />
+                      ) : source.kind === "upload" ? (
+                        <ArrowUpload20Regular />
+                      ) : (
+                        <Layer20Regular />
+                      )}
+                    </span>
+                    <span className="kb-source-body">
+                      <strong>{source.name}</strong>
+                      <span className="muted text-12">{source.detail}</span>
+                    </span>
+                    <StatusBadge status={source.status} />
+                    <button
+                      className="icon-button small"
+                      aria-label={`Remove ${source.name}`}
+                      onClick={() => removeSource(source)}
+                    >
+                      <Dismiss20Regular />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="operate-card">
             <div className="row between mb-12">
               <h3>Documents</h3>
@@ -501,6 +639,18 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                 <span className="mono text-12">{base.indexName}</span>
               </div>
               <div className="fact-row">
+                <span>Chat completions model</span>
+                <span>{base.chatModel || "--"}</span>
+              </div>
+              <div className="fact-row">
+                <span>Retrieval reasoning effort</span>
+                <span>{base.reasoningEffort || "Minimal"}</span>
+              </div>
+              <div className="fact-row">
+                <span>Output mode</span>
+                <span>{base.outputMode || "Extractive data"}</span>
+              </div>
+              <div className="fact-row">
                 <span>Embedding runtime</span>
                 <span>{base.embeddingProvider}</span>
               </div>
@@ -513,6 +663,12 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                 <span>{formatDate(base.updatedAt)}</span>
               </div>
             </div>
+            {base.retrievalInstructions && (
+              <div className="banner mt-12">
+                <Search20Regular />
+                <span>Retrieval instructions: {base.retrievalInstructions}</span>
+              </div>
+            )}
             <div className="banner mt-12">
               <Code20Regular />
               <span>

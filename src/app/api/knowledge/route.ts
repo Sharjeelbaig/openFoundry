@@ -8,7 +8,7 @@ import {
   saveKnowledgeBases,
 } from "@/lib/store";
 import { chunkText, indexKnowledgeBase } from "@/lib/rag";
-import { KnowledgeBase, KnowledgeDocument } from "@/lib/types";
+import { KnowledgeBase, KnowledgeDocument, KnowledgeSource, SearchIndex } from "@/lib/types";
 import { execFile } from "child_process";
 import { promises as fs } from "fs";
 import os from "os";
@@ -19,6 +19,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const execFileAsync = promisify(execFile);
+
+/** Default display label for a Foundry IQ knowledge source kind. */
+function sourceLabel(kind: KnowledgeSource["kind"]): string {
+  switch (kind) {
+    case "work-iq":
+      return "Work IQ";
+    case "fabric-iq":
+      return "Fabric IQ (OneLake Catalog)";
+    case "azure-blob":
+      return "Azure Blob Storage";
+    case "web":
+      return "Web";
+    case "azure-ai-search":
+      return "Azure AI Search Index";
+    default:
+      return "Files";
+  }
+}
 
 async function extractText(file: File): Promise<string> {
   const name = file.name.toLowerCase();
@@ -60,7 +78,46 @@ async function extractText(file: File): Promise<string> {
 
 export async function GET() {
   const knowledgeBases = await getKnowledgeBases();
-  return NextResponse.json({ knowledgeBases });
+  const indexes: SearchIndex[] = knowledgeBases.flatMap((base) => {
+    const indexed = (base.sources || []).filter((source) => source.indexName);
+    const chunkCount = base.documents.reduce(
+      (sum, doc) => sum + doc.chunks.length,
+      0
+    );
+    if (indexed.length === 0) {
+      // Legacy base (or one with only non-index sources): still expose the
+      // base's own local index so Knowledge → Indexes mirrors Foundry IQ.
+      if (base.documents.length === 0 && (base.sources || []).length === 0)
+        return [];
+      return [
+        {
+          id: `${base.id}:local`,
+          name: base.indexName,
+          version: 1,
+          type: base.sources?.some((source) => source.kind !== "upload")
+            ? "Agentic retrieval"
+            : "File search",
+          documents: base.documents.length,
+          chunks: chunkCount,
+          status: base.status === "Indexing" ? "Indexing" : "Ready",
+          createdAt: base.createdAt,
+          updatedAt: base.updatedAt,
+        },
+      ];
+    }
+    return indexed.map((source) => ({
+      id: `${base.id}:${source.id}`,
+      name: source.indexName || base.indexName,
+      version: 1,
+      type: source.kind === "upload" ? "File search" : "Agentic retrieval",
+      documents: source.documentCount || base.documents.length,
+      chunks: chunkCount,
+      status: base.status === "Indexing" ? "Indexing" : "Ready",
+      createdAt: base.createdAt,
+      updatedAt: base.updatedAt,
+    }));
+  });
+  return NextResponse.json({ knowledgeBases, indexes });
 }
 
 export async function POST(req: NextRequest) {
@@ -114,6 +171,17 @@ export async function POST(req: NextRequest) {
     description?: string;
     text?: string;
     documentId?: string;
+    connectionId?: string;
+    chatModel?: string;
+    reasoningEffort?: KnowledgeBase["reasoningEffort"];
+    outputMode?: KnowledgeBase["outputMode"];
+    retrievalInstructions?: string;
+    sources?: KnowledgeBase["sources"];
+    encryption?: KnowledgeBase["encryption"];
+    sourceKind?: string;
+    sourceId?: string;
+    sourceName?: string;
+    sourceDetail?: string;
   };
 
   if (body.action === "create" || (!body.action && body.name)) {
@@ -123,6 +191,13 @@ export async function POST(req: NextRequest) {
       description:
         body.description ||
         "Local knowledge base indexed on this computer with vector search.",
+      connectionId: body.connectionId,
+      chatModel: body.chatModel,
+      reasoningEffort: body.reasoningEffort || "Minimal",
+      outputMode: body.outputMode || "Extractive data",
+      retrievalInstructions: body.retrievalInstructions || "",
+      sources: body.sources || [],
+      encryption: body.encryption || { enabled: false },
       indexName: `${(body.name || "knowledge-base")
         .toLowerCase()
         .replace(/[^a-z0-9-]+/g, "-")}-index`,
@@ -185,6 +260,46 @@ export async function POST(req: NextRequest) {
   if (body.action === "rename") {
     base.name = body.name || base.name;
     base.description = body.description ?? base.description;
+    if (body.connectionId !== undefined) base.connectionId = body.connectionId;
+    if (body.chatModel !== undefined) base.chatModel = body.chatModel;
+    if (body.reasoningEffort !== undefined)
+      base.reasoningEffort = body.reasoningEffort;
+    if (body.outputMode !== undefined) base.outputMode = body.outputMode;
+    if (body.retrievalInstructions !== undefined)
+      base.retrievalInstructions = body.retrievalInstructions;
+    if (body.encryption !== undefined) base.encryption = body.encryption;
+    base.updatedAt = nowIso();
+    await saveKnowledgeBases(bases);
+    return NextResponse.json({ knowledgeBase: base });
+  }
+
+  if (body.action === "addSource") {
+    const sourceId = newId("src");
+    const kind = (body.sourceKind || "web") as KnowledgeSource["kind"];
+    const source: KnowledgeSource = {
+      id: sourceId,
+      kind,
+      name: body.sourceName || sourceLabel(kind),
+      detail: body.sourceDetail || "",
+      status: "Connected",
+      indexName:
+        kind === "upload" || kind === "azure-blob"
+          ? `${base.name.toLowerCase().replace(/[^a-z0-9-]+/g, "-")}-${sourceId.slice(
+              -6
+            )}`
+          : undefined,
+      documentCount: 0,
+    };
+    base.sources = [...(base.sources || []), source];
+    base.updatedAt = nowIso();
+    await saveKnowledgeBases(bases);
+    return NextResponse.json({ knowledgeBase: base, source });
+  }
+
+  if (body.action === "deleteSource") {
+    base.sources = (base.sources || []).filter(
+      (source) => source.id !== body.sourceId
+    );
     base.updatedAt = nowIso();
     await saveKnowledgeBases(bases);
     return NextResponse.json({ knowledgeBase: base });

@@ -20,6 +20,9 @@ export const FOUNDRY_URL =
 export const OLLAMA_URL =
   process.env.OLLAMA_URL || "http://127.0.0.1:11434";
 
+/** Foundry Local embedding model used when Ollama has nothing embed-capable. */
+const FOUNDRY_EMBEDDING_MODEL = "qwen3-embedding-0.6b-generic-gpu:1";
+
 /** Runtime endpoints can be changed in Manage → Project details. */
 export async function getRuntimeUrls(): Promise<{
   foundry: string;
@@ -759,7 +762,7 @@ export async function embedTexts(
   }
 
   try {
-    const embeddingModel = "qwen3-embedding-0.6b-generic-gpu:1";
+    const embeddingModel = FOUNDRY_EMBEDDING_MODEL;
     if (await isFoundryCached(embeddingModel)) {
       const res = await fetch(`${urls.foundry}/v1/embeddings`, {
         method: "POST",
@@ -787,6 +790,32 @@ export async function embedTexts(
   }
 
   return null;
+}
+
+/**
+ * The embedding model the local runtime will actually use, so pickers can show
+ * a real default instead of a placeholder. Probes the runtimes, so it is cached.
+ */
+export async function detectEmbeddingModel(): Promise<string> {
+  return cached("embedding-model", 30000, async () => {
+    try {
+      const urls = await getRuntimeUrls();
+      const tags = await fetchJson<{ models?: OllamaTag[] }>(
+        `${urls.ollama}/api/tags`,
+        {},
+        1500
+      );
+      const preferred =
+        (tags.models || []).find((m) => /nomic-embed/i.test(m.name)) ||
+        (tags.models || []).find((m) => /embed/i.test(m.name));
+      if (preferred) return preferred.name;
+    } catch {
+      // try Foundry Local below
+    }
+    if (await isFoundryCached(FOUNDRY_EMBEDDING_MODEL)) return FOUNDRY_EMBEDDING_MODEL;
+    // Fall back to the Foundry default embedding deployment name.
+    return "text-embedding-3-small";
+  });
 }
 
 export function lexicalScore(query: string, text: string): number {

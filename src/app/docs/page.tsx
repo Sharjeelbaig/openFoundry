@@ -13,6 +13,8 @@ const SECTIONS = [
   ["runtime-nodes", "Runtime nodes"],
   ["agents", "Agents"],
   ["knowledge", "Knowledge and retrieval"],
+  ["memory", "Memory"],
+  ["guardrails", "Guardrails"],
   ["tools", "Tools"],
   ["gateway", "AI Gateway"],
   ["evaluations", "Evaluations"],
@@ -228,11 +230,73 @@ with AIProjectClient(
           numbered citations. Retrieval can be tested without running the model on the
           knowledge detail page.
         </p>
+        <h3>Foundry IQ</h3>
+        <p>
+          Knowledge bases are created as Foundry IQ bases. A base records the chat
+          completions model used to plan retrieval, a retrieval reasoning effort, an
+          output mode and optional retrieval instructions, plus one or more knowledge
+          sources. Reasoning effort is applied by the local query planner:
+        </p>
+        <ul>
+          <li><span className="mono">Minimal</span> searches the raw query with no planning, for the lowest cost and latency.</li>
+          <li><span className="mono">Low</span> runs one pass of planning and drops stop words to widen the search.</li>
+          <li><span className="mono">Medium</span> splits the question into focused sub-queries, merges the results and refines once against the original question.</li>
+        </ul>
+        <p>
+          Output mode selects between <span className="mono">Answer synthesis</span> (a
+          grounded natural-language answer) and <span className="mono">Extractive data</span>{" "}
+          (the raw retrieved chunks). Knowledge sources cover files you upload, Web, Azure
+          Blob Storage, Azure AI Search indexes, Work IQ and Fabric IQ. Uploads are the only
+          source that is indexed for real locally; the other kinds record the connection and
+          appear in the Knowledge → Indexes tab.
+        </p>
         <ul>
           <li>Text, Markdown, CSV, JSON and HTML are read directly.</li>
           <li>PDF extraction uses <span className="mono">pdftotext</span> if installed.</li>
           <li>If no embedding model is cached, the index reports lexical mode instead of pretending to be vector search.</li>
         </ul>
+
+        <h2 id="memory">Memory</h2>
+        <p>
+          A memory store retains context across conversations. Point an agent at a store in
+          the builder&apos;s Memory section and every turn is remembered and recalled. Stores
+          live in <span className="mono">data/memory.json</span> on this computer; nothing is
+          uploaded. Each store has a chat model, an embedding model and three feature
+          switches: chat summary, procedural memory and user profile. Memories are written by
+          a local heuristic extractor, not a hosted extraction service:
+        </p>
+        <ul>
+          <li><strong>Chat summary</strong> records a one-line summary of the latest turn.</li>
+          <li><strong>Procedural memory</strong> captures standing instructions such as &quot;always cite sources&quot;.</li>
+          <li><strong>User profile</strong> captures durable facts about the user — name, role, dietary needs and similar.</li>
+        </ul>
+        <p>
+          Recalled items are ranked against the incoming message and injected into the system
+          prompt, so an agent can answer &quot;where do I work?&quot; from memory. Expand a store
+          to see and forget individual memories. A default time-to-live expires items after a
+          fixed number of seconds; zero means they never expire.
+        </p>
+
+        <h2 id="guardrails">Guardrails</h2>
+        <p>
+          Guardrails group controls and apply them to specific agents or models. Open a
+          control group in the creation wizard to toggle controls and pick an action
+          (<span className="mono">Block</span>, <span className="mono">On</span> or{" "}
+          <span className="mono">Off</span>). Three built-in guardrails are seeded —{" "}
+          <span className="mono">Default</span>, <span className="mono">DefaultV2</span> and{" "}
+          <span className="mono">MAIDefault</span> — and a{" "}
+          <span className="mono">Profanity</span> blocklist is preloaded. Controls cover
+          jailbreak, network egress rules, indirect prompt injections and spotlighting,
+          content harms (hate, sexual, self-harm, violence) with blocklists, protected
+          materials, sensitive data leakage and task drift.
+        </p>
+        <p>
+          Attach a guardrail to an agent or deployment in the builder. Input is checked before
+          the model call and output before the answer is returned. The check is a deterministic
+          classifier plus prompt instructions, so it is inspectable and adds under a millisecond
+          of latency — it is not a hosted moderation model. Blocked turns return a clear refusal
+          and are recorded in the trace with the control that fired.
+        </p>
 
         <h2 id="tools">Tools</h2>
         <p>
@@ -291,6 +355,9 @@ api-key: <project api key>
                 ["/api/agents", "Agent CRUD", "GET / POST / PATCH / DELETE"],
                 ["/api/knowledge", "Knowledge bases, uploads and text", "GET / POST"],
                 ["/api/knowledge/search", "Retrieval test", "POST"],
+                ["/api/memory", "Memory stores and remembered items", "GET / POST"],
+                ["/api/guardrails", "Guardrails, blocklists and controls", "GET / POST"],
+                ["/api/connections", "Project connections used by Foundry IQ sources", "GET / POST"],
                 ["/api/tools/test", "Run a tool in isolation", "POST"],
                 ["/api/gateway/v1/chat/completions", "Routed gateway completion", "POST"],
                 ["/api/evaluations", "Quality and red team runs", "GET / POST / PATCH"],
@@ -319,18 +386,19 @@ api-key: <project api key>
         </p>
         <p>
           Project records are written atomically to JSON files in{" "}
-          <span className="mono">data/</span>: agents, deployments, knowledge, traces,
-          evaluations, routines, workflows, batch jobs, gateway configuration and
-          settings. Export everything from <Link href="/build/data">Build → Data</Link>.
-          Conversation memory in the agent builder is stored in browser localStorage and
-          is never uploaded.
+          <span className="mono">data/</span>: agents, deployments, knowledge, memory,
+          guardrails, connections, traces, evaluations, routines, workflows, batch jobs,
+          gateway configuration and settings. Export everything from{" "}
+          <Link href="/build/data">Build → Data</Link>. Memory extracted by the agent
+          builder is stored on this computer in{" "}
+          <span className="mono">data/memory.json</span> and is never uploaded.
         </p>
 
         <h2 id="limits">Limitations</h2>
         <ul>
           <li>There is no cloud resource, subscription, quota or billing behind any page. Local serving behaviour (metering, rate limits, reserved slots, queues, batch) is real; only data residency is simulated.</li>
           <li>No fine-tuning runtime is bundled; datasets can be exported for an external trainer.</li>
-          <li>Guardrails are prompt instructions, not a moderation model.</li>
+          <li>Guardrails combine a deterministic local classifier with prompt instructions; they are not a hosted moderation model. Hosted-agent-only controls such as network egress rules are recorded but not enforced against local models.</li>
           <li>The project Responses surface is non-streaming; chat completions support streaming.</li>
           <li>Local models are smaller than hosted frontier models and can hallucinate.</li>
           <li>Deployment types that need Azure-only infrastructure (Arc, VM Managed Compute, Provisioned Throughput Classic) are disabled with an explanation; register a runtime node to approximate Arc or VM compute against another machine.</li>

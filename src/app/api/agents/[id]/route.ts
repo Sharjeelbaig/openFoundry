@@ -66,7 +66,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       "maxTokens",
       "voiceMode",
       "memoryEnabled",
+      "memoryStoreId",
       "guardrail",
+      "guardrailId",
       "tools",
       "knowledgeBaseIds",
     ];

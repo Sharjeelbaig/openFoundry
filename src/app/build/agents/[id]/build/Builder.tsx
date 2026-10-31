@@ -83,6 +83,12 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const { data: knowledgeData, refresh: refreshKnowledge } = useApi<{
     knowledgeBases: KnowledgeBase[];
   }>("/api/knowledge");
+  const { data: memoryData } = useApi<{ stores: { id: string; name: string }[] }>(
+    "/api/memory"
+  );
+  const { data: guardrailData } = useApi<{
+    guardrails: { id: string; name: string }[];
+  }>("/api/guardrails");
   const tracesApi = useApi<{ traces: Trace[] }>(
     `/api/traces?agentId=${encodeURIComponent(agentId)}`,
     4000
@@ -91,6 +97,8 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const agent = data?.agent;
   const models = modelData?.models ?? [];
   const knowledgeBases = knowledgeData?.knowledgeBases ?? [];
+  const memoryStores = memoryData?.stores ?? [];
+  const guardrailResources = guardrailData?.guardrails ?? [];
   const traces = tracesApi.data?.traces ?? [];
 
   const [tab, setTab] = useState<BuilderTab>("Playground");
@@ -101,7 +109,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const [maxTokens, setMaxTokens] = useState(1024);
   const [voiceMode, setVoiceMode] = useState(false);
   const [memoryEnabled, setMemoryEnabled] = useState(false);
+  const [memoryStoreId, setMemoryStoreId] = useState("");
   const [guardrail, setGuardrail] = useState<Agent["guardrail"]>("Default");
+  const [guardrailId, setGuardrailId] = useState("");
   const [tools, setTools] = useState<string[]>([]);
   const [knowledgeIds, setKnowledgeIds] = useState<string[]>([]);
   const [name, setName] = useState("");
@@ -159,7 +169,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     setMaxTokens(agent.maxTokens);
     setVoiceMode(agent.voiceMode);
     setMemoryEnabled(Boolean(agent.memoryEnabled));
+    setMemoryStoreId(agent.memoryStoreId || "");
     setGuardrail(agent.guardrail || "Default");
+    setGuardrailId(agent.guardrailId || "");
     setTools(agent.tools);
     setKnowledgeIds(agent.knowledgeBaseIds);
     setName(agent.name);
@@ -212,6 +224,8 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
       description !== agent.description ||
       voiceMode !== agent.voiceMode ||
       memoryEnabled !== Boolean(agent.memoryEnabled) ||
+      (memoryStoreId || "") !== (agent.memoryStoreId || "") ||
+      (guardrailId || "") !== (agent.guardrailId || "") ||
       (guardrail || "Default") !== (agent.guardrail || "Default") ||
       temperature !== agent.temperature ||
       topP !== agent.topP ||
@@ -227,7 +241,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     description,
     voiceMode,
     memoryEnabled,
+    memoryStoreId,
     guardrail,
+    guardrailId,
     temperature,
     topP,
     maxTokens,
@@ -255,7 +271,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
             maxTokens,
             voiceMode,
             memoryEnabled,
+            memoryStoreId: memoryStoreId || undefined,
             guardrail,
+            guardrailId: guardrailId || undefined,
             tools,
             knowledgeBaseIds: knowledgeIds,
           }),
@@ -282,7 +300,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
       maxTokens,
       voiceMode,
       memoryEnabled,
+      memoryStoreId,
       guardrail,
+      guardrailId,
       tools,
       knowledgeIds,
       refresh,
@@ -359,6 +379,8 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
           instructions,
           knowledgeBaseIds: knowledgeIds,
           guardrail,
+          guardrailId: guardrailId || undefined,
+          memoryStoreId: memoryStoreId || undefined,
           tools,
           temperature,
           topP,
@@ -512,6 +534,8 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
             instructions,
             knowledgeBaseIds: knowledgeIds,
             guardrail,
+            guardrailId: guardrailId || undefined,
+            memoryStoreId: memoryStoreId || undefined,
             tools,
             temperature,
             maxTokens: Math.min(maxTokens, 300),
@@ -1050,23 +1074,44 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                 {sections.memory ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
               </button>
               {sections.memory && (
-                <div className="config-body row between">
-                  <span>
-                    <span className="text-14" style={{ display: "block" }}>
-                      Conversation memory
-                    </span>
-                    <span className="text-12 muted">
-                      Remember this agent&apos;s chat between visits, stored in this
-                      browser.
-                    </span>
-                  </span>
-                  <button
-                    role="switch"
-                    aria-checked={memoryEnabled}
-                    aria-label="Conversation memory"
-                    className="switch"
-                    onClick={() => setMemoryEnabled(!memoryEnabled)}
-                  />
+                <div className="config-body">
+                  {memoryStores.length === 0 ? (
+                    <div className="row between">
+                      <span className="text-12 muted">
+                        No memory stores yet. Create one in Memory to retain context
+                        across conversations.
+                      </span>
+                      <Link
+                        className="btn btn-sm btn-secondary"
+                        href="/build/memory"
+                      >
+                        Create memory store
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        className="select"
+                        value={memoryStoreId}
+                        aria-label="Memory store"
+                        onChange={(e) => {
+                          setMemoryStoreId(e.target.value);
+                          setMemoryEnabled(Boolean(e.target.value));
+                        }}
+                      >
+                        <option value="">No memory store</option>
+                        {memoryStores.map((store) => (
+                          <option key={store.id} value={store.id}>
+                            {store.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-12 muted mt-8">
+                        The store extracts durable facts from each turn and recalls the
+                        most relevant ones into the system prompt.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1082,18 +1127,34 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                 <div className="config-body">
                   <select
                     className="select"
-                    value={guardrail}
-                    onChange={(e) =>
-                      setGuardrail(e.target.value as Agent["guardrail"])
-                    }
+                    value={guardrailId}
+                    aria-label="Guardrail"
+                    onChange={(e) => setGuardrailId(e.target.value)}
                   >
-                    <option value="Default">Default</option>
-                    <option value="Strict">Strict</option>
-                    <option value="Off">Off</option>
+                    <option value="">Default safety prompt</option>
+                    {guardrailResources.map((resource) => (
+                      <option key={resource.id} value={resource.id}>
+                        {resource.name}
+                      </option>
+                    ))}
                   </select>
+                  {!guardrailId && (
+                    <select
+                      className="select mt-8"
+                      value={guardrail}
+                      onChange={(e) =>
+                        setGuardrail(e.target.value as Agent["guardrail"])
+                      }
+                    >
+                      <option value="Default">Default</option>
+                      <option value="Strict">Strict</option>
+                      <option value="Off">Off</option>
+                    </select>
+                  )}
                   <p className="text-12 muted mt-8">
-                    Guardrail instructions are added to the system prompt of every
-                    local completion. Strict also blocks obvious PII requests.
+                    Select a guardrail resource from Build → Guardrails, or use the
+                    built-in Default / Strict / Off safety prompt. Controls are
+                    enforced on user input and model output.
                   </p>
                 </div>
               )}

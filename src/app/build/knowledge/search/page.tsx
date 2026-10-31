@@ -5,10 +5,8 @@ import { OpenFoundryAppIcon } from "@/components/Logos";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-  Add20Regular,
   ArrowClockwise20Regular,
   Book20Regular,
-  Database20Regular,
   Delete20Regular,
   Dismiss20Regular,
   MoreHorizontal20Regular,
@@ -17,7 +15,7 @@ import {
 import { formatDate, useApi, useKnowledge } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { Spinner, StatusBadge } from "@/components/ui";
-import type { KnowledgeBase } from "@/lib/types";
+import type { Connection, KnowledgeBase, SearchIndex } from "@/lib/types";
 
 type Tab = "Knowledge bases" | "Indexes";
 
@@ -25,19 +23,21 @@ export default function KnowledgePage() {
   const router = useRouter();
   const { toast } = useToast();
   const { data, loading, refresh } = useKnowledge();
-  const { data: systemData } = useApi<{
-    stats: { hostname: string; totalMem: number; freeMem: number };
-  }>("/api/system");
+  const { data: connectionsData } = useApi<{ connections: Connection[] }>(
+    "/api/connections"
+  );
   const bases = data?.knowledgeBases ?? [];
+  const indexes =
+    (data as { indexes?: SearchIndex[] } | null)?.indexes ?? [];
+  const connections = connectionsData?.connections ?? [];
 
   const [tab, setTab] = useState<Tab>("Knowledge bases");
   const [query, setQuery] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [busy, setBusy] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [reindexing, setReindexing] = useState<string | null>(null);
+  const [connection, setConnection] = useState<Connection | null>(null);
+
+  const activeConnection = connection ?? connections[0] ?? null;
 
   const filtered = useMemo(
     () =>
@@ -50,34 +50,13 @@ export default function KnowledgePage() {
     [bases, query]
   );
 
-  const create = async () => {
-    if (!name.trim()) return;
-    setBusy(true);
-    try {
-      const res = await fetch("/api/knowledge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create",
-          name: name.trim(),
-          description: description.trim(),
-        }),
-      });
-      const json = (await res.json()) as { knowledgeBase?: KnowledgeBase; error?: string };
-      if (!res.ok || !json.knowledgeBase)
-        throw new Error(json.error || "Could not create the knowledge base");
-      toast("Knowledge base created", "success");
-      setCreateOpen(false);
-      setName("");
-      setDescription("");
-      refresh();
-      router.push(`/build/knowledge/${encodeURIComponent(json.knowledgeBase.id)}`);
-    } catch (error) {
-      toast(error instanceof Error ? error.message : "Create failed", "error");
-    } finally {
-      setBusy(false);
-    }
-  };
+  const filteredIndexes = useMemo(
+    () =>
+      indexes.filter(
+        (index) => !query || index.name.toLowerCase().includes(query.toLowerCase())
+      ),
+    [indexes, query]
+  );
 
   const reindex = async (base: KnowledgeBase) => {
     setReindexing(base.id);
@@ -120,12 +99,11 @@ export default function KnowledgePage() {
   const vectors = bases.reduce(
     (sum, base) =>
       sum +
-      base.documents.reduce(
-        (n, doc) => n + (doc.embeddings?.length || 0),
-        0
-      ),
+      base.documents.reduce((n, doc) => n + (doc.embeddings?.length || 0), 0),
     0
   );
+
+  const startCreate = () => router.push("/build/knowledge/create");
 
   return (
     <div className="page" style={{ paddingTop: 18 }}>
@@ -133,8 +111,8 @@ export default function KnowledgePage() {
         <h1 className="page-title">Knowledge (Foundry IQ)</h1>
         {bases.length > 0 ? (
           <div className="page-header-actions">
-            <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
-              <Add20Regular /> New knowledge base
+            <button className="btn btn-primary" onClick={startCreate}>
+              Create a knowledge base
             </button>
           </div>
         ) : null}
@@ -154,9 +132,37 @@ export default function KnowledgePage() {
 
       {tab === "Knowledge bases" && (
         <>
+          {activeConnection && (
+            <div className="kb-connection-row">
+              <span className="kb-connection-label">Connection</span>
+              <button
+                className="kb-connection-chip"
+                aria-label="Connection"
+                title={activeConnection.target}
+              >
+                {activeConnection.name}
+              </button>
+              {activeConnection !== connections[0] || connections.length > 1 ? (
+                <button
+                  className="icon-button small"
+                  aria-label="Clear selection"
+                  onClick={() => setConnection(null)}
+                >
+                  <Dismiss20Regular />
+                </button>
+              ) : null}
+              <Link
+                className="link kb-connection-manage"
+                href="/manage/resources/projectDetails/connections"
+              >
+                Manage
+              </Link>
+            </div>
+          )}
+
           {loading && bases.length === 0 ? (
             <div className="row" style={{ gap: 8, color: "var(--fg-3)", padding: 40 }}>
-              <Spinner /> Reading local knowledge bases…
+              <Spinner /> Reading local knowledge bases...
             </div>
           ) : bases.length === 0 ? (
             <div className="knowledge-hero">
@@ -172,33 +178,9 @@ export default function KnowledgePage() {
                 bases are indexed on this computer with real embeddings and never
                 leave it.
               </p>
-              <div className="knowledge-connect">
-                <label className="field">
-                  <span className="field-label">
-                    Foundry IQ resource <span className="required">*</span>
-                  </span>
-                  <select className="select" defaultValue="local">
-                    <option value="local">
-                      This computer — {systemData?.stats.hostname || "local runtime"}
-                    </option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span className="field-label">
-                    Auth Type <span className="required">*</span>
-                  </span>
-                  <select className="select" defaultValue="local">
-                    <option value="local">Local (no key required)</option>
-                  </select>
-                </label>
-                <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
-                  Connect
-                </button>
-              </div>
               <div className="knowledge-create-link">
-                Don&apos;t see your resource?{" "}
-                <button className="link" onClick={() => setCreateOpen(true)}>
-                  Create new resource
+                <button className="btn btn-primary" onClick={startCreate}>
+                  Create a knowledge base
                 </button>
               </div>
             </div>
@@ -271,7 +253,7 @@ export default function KnowledgePage() {
                         <StatusBadge status={base.status} />
                         <span className="muted text-12">
                           {reindexing === base.id
-                            ? "Reindexing…"
+                            ? "Reindexing..."
                             : formatDate(base.updatedAt)}
                         </span>
                       </div>
@@ -290,151 +272,57 @@ export default function KnowledgePage() {
       )}
 
       {tab === "Indexes" && (
-        <>
-          <div className="banner info mb-16">
-            <Database20Regular />
-            <span>
-              Each knowledge base owns one local vector index. Embeddings are
-              produced with {bases[0]?.embeddingModel || "an embedding runtime on this computer"} when
-              available, and fall back to lexical scoring when no embedding model is
-              cached.
-            </span>
-          </div>
-          <div className="table-card">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Index</th>
-                  <th>Knowledge base</th>
-                  <th style={{ width: 220 }}>Embedding model</th>
-                  <th style={{ width: 110 }}>Documents</th>
-                  <th style={{ width: 100 }}>Vectors</th>
-                  <th style={{ width: 120 }}>Status</th>
-                  <th style={{ width: 170 }}>Updated</th>
-                  <th style={{ width: 110 }}>Actions</th>
+        <div className="table-card">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th style={{ width: 100 }}>Version</th>
+                <th style={{ width: 180 }}>Type</th>
+                <th style={{ width: 140 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredIndexes.map((index) => (
+                <tr key={index.id}>
+                  <td className="mono text-12">
+                    {index.name}
+                    <div className="muted text-12" style={{ fontWeight: 400 }}>
+                      {index.documents} documents · {index.chunks} chunks
+                    </div>
+                  </td>
+                  <td>{index.version}</td>
+                  <td>
+                    <StatusBadge status={index.type} />
+                  </td>
+                  <td>
+                    <Link
+                      className="btn btn-sm btn-outline"
+                      href={`/build/knowledge/${encodeURIComponent(
+                        index.id.split(":")[0]
+                      )}`}
+                    >
+                      View
+                    </Link>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {bases.map((base) => {
-                  const docVectors = base.documents.reduce(
-                    (sum, doc) => sum + (doc.embeddings?.length || 0),
-                    0
-                  );
-                  return (
-                    <tr key={base.id}>
-                      <td className="mono text-12">{base.indexName}</td>
-                      <td>
-                        <Link
-                          href={`/build/knowledge/${encodeURIComponent(base.id)}`}
-                          className="agent-name"
-                        >
-                          {base.name}
-                        </Link>
-                      </td>
-                      <td className="truncate" style={{ maxWidth: 220 }}>
-                        {base.embeddingModel}
-                      </td>
-                      <td>{base.documents.length}</td>
-                      <td>{docVectors || "lexical"}</td>
-                      <td>
-                        <StatusBadge status={base.status} />
-                      </td>
-                      <td>{formatDate(base.updatedAt)}</td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-outline"
-                          disabled={reindexing === base.id}
-                          onClick={() => reindex(base)}
-                        >
-                          {reindexing === base.id ? <Spinner /> : <ArrowClockwise20Regular />}
-                          Reindex
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {bases.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 36 }}>
-                      No indexes yet. Create a knowledge base to build one locally.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {createOpen && (
-        <div
-          className="dialog-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setCreateOpen(false);
-          }}
-        >
-          <div className="dialog" role="dialog" aria-modal="true" aria-label="New knowledge base">
-            <div className="dialog-head">
-              <div>
-                <h2 className="dialog-title">New knowledge base</h2>
-                <p className="dialog-sub">
-                  Documents are indexed locally. Embeddings come from Ollama or
-                  Foundry Local when a model is cached.
-                </p>
-              </div>
-              <button className="icon-button" onClick={() => setCreateOpen(false)} aria-label="Close">
-                <Dismiss20Regular />
-              </button>
+              ))}
+              {filteredIndexes.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="muted" style={{ textAlign: "center", padding: 36 }}>
+                    {bases.length === 0
+                      ? "No indexes yet. Create a knowledge base to build one locally."
+                      : `No indexes match “${query}”.`}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {filteredIndexes.length > 0 && (
+            <div className="table-footer">
+              1-{filteredIndexes.length} of {filteredIndexes.length}
             </div>
-            <div className="dialog-body">
-              <label className="field">
-                <span className="field-label">
-                  Name <span className="required">*</span>
-                </span>
-                <input
-                  className="input"
-                  placeholder="product-catalog"
-                  autoFocus
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void create();
-                  }}
-                />
-                <span className="field-hint">
-                  The index name is derived from this and stored under data/knowledge.json.
-                </span>
-              </label>
-              <label className="field">
-                <span className="field-label">Description</span>
-                <textarea
-                  className="textarea"
-                  placeholder="What is in this knowledge base and who should use it?"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                />
-              </label>
-              <div className="banner">
-                <Book20Regular />
-                <span>
-                  After creation you can upload files, paste text, and test retrieval
-                  against the same embedding path agents use.
-                </span>
-              </div>
-            </div>
-            <div className="dialog-footer">
-              <button className="btn btn-secondary" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                disabled={!name.trim() || busy}
-                onClick={create}
-              >
-                {busy ? <Spinner /> : null} Create
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

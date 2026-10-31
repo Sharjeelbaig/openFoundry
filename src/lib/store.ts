@@ -5,9 +5,15 @@ import path from "path";
 import os from "os";
 import {
   Agent,
+  Blocklist,
+  Connection,
   Deployment,
+  Guardrail,
+  GuardrailControl,
   KnowledgeBase,
   LocalSettings,
+  MemoryItem,
+  MemoryStore,
   RuntimeNode,
   Trace,
 } from "./types";
@@ -141,6 +147,276 @@ export async function getKnowledgeBases(): Promise<KnowledgeBase[]> {
 
 export async function saveKnowledgeBases(items: KnowledgeBase[]): Promise<void> {
   await writeJson("knowledge.json", items);
+}
+
+export async function getConnections(): Promise<Connection[]> {
+  const existing = await readJson<Connection[] | null>("connections.json", null);
+  if (existing) return existing;
+  const seeded = defaultConnections();
+  await writeJson("connections.json", seeded);
+  return seeded;
+}
+
+export async function saveConnections(items: Connection[]): Promise<void> {
+  await writeJson("connections.json", items);
+}
+
+export async function getMemoryStores(): Promise<MemoryStore[]> {
+  return readJson<MemoryStore[]>("memory.json", []);
+}
+
+export async function saveMemoryStores(items: MemoryStore[]): Promise<void> {
+  await writeJson("memory.json", items);
+}
+
+export async function getMemoryItems(): Promise<MemoryItem[]> {
+  return readJson<MemoryItem[]>("memory-items.json", []);
+}
+
+export async function saveMemoryItems(items: MemoryItem[]): Promise<void> {
+  await writeJson("memory-items.json", items);
+}
+
+export async function getGuardrails(): Promise<Guardrail[]> {
+  const existing = await readJson<Guardrail[] | null>("guardrails.json", null);
+  if (existing) return existing;
+  const seeded = defaultGuardrails();
+  await writeJson("guardrails.json", seeded);
+  return seeded;
+}
+
+export async function saveGuardrails(items: Guardrail[]): Promise<void> {
+  await writeJson("guardrails.json", items);
+}
+
+export async function getBlocklists(): Promise<Blocklist[]> {
+  const existing = await readJson<Blocklist[] | null>("blocklists.json", null);
+  if (existing) return existing;
+  const seeded: Blocklist[] = [
+    {
+      id: "blocklist-profanity",
+      name: "Profanity",
+      terms: [
+        "damn",
+        "hell",
+        "crap",
+        "bastard",
+        "idiot",
+        "stupid",
+      ],
+      createdAt: nowIso(),
+      builtIn: true,
+    },
+  ];
+  await writeJson("blocklists.json", seeded);
+  return seeded;
+}
+
+export async function saveBlocklists(items: Blocklist[]): Promise<void> {
+  await writeJson("blocklists.json", items);
+}
+
+function defaultConnections(): Connection[] {
+  return [
+    {
+      id: "connection-ai-search",
+      name: "ai-search",
+      kind: "Azure AI Search",
+      target: "https://localhost.search.local",
+      authType: "Local (no key required)",
+      createdAt: nowIso(),
+    },
+  ];
+}
+
+/**
+ * The guardrails Foundry seeds into every project. Structure matches the live
+ * portal; names are local so no Microsoft branding ships with the build.
+ */
+export function defaultGuardrails(): Guardrail[] {
+  const controls: GuardrailControl[] = [
+    {
+      id: "jailbreak",
+      group: "Jailbreak",
+      riskType: "Jailbreak",
+      intervention: "User input",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description:
+        "Detects and blocks attempts to override the agent's instructions or safety rules through jailbreak prompts.",
+    },
+    {
+      id: "egress-rules",
+      group: "Network",
+      riskType: "Egress rules",
+      intervention: "Outbound requests",
+      action: "Deny",
+      defaulted: true,
+      enabled: true,
+      description:
+        "Restricts which outbound network destinations a hosted agent may call.",
+    },
+    {
+      id: "indirect-prompt-injection",
+      group: "Indirect prompt injections",
+      riskType: "Indirect prompt injections",
+      intervention: "User input, Tool response",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description:
+        "Blocks instructions smuggled in through tool output or retrieved documents.",
+    },
+    {
+      id: "spotlighting",
+      group: "Indirect prompt injections",
+      riskType: "Spotlighting",
+      intervention: "User input",
+      action: "On",
+      defaulted: true,
+      enabled: true,
+      description:
+        "Marks untrusted retrieved content so the model treats it as data, not instructions.",
+    },
+    {
+      id: "hate",
+      group: "Content harms",
+      riskType: "Hate",
+      severity: "Medium blocking",
+      intervention: "User input, Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description:
+        "Blocks content that attacks or dehumanises people based on protected characteristics.",
+    },
+    {
+      id: "sexual",
+      group: "Content harms",
+      riskType: "Sexual",
+      severity: "Medium blocking",
+      intervention: "User input, Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description: "Blocks sexually explicit content.",
+    },
+    {
+      id: "self-harm",
+      group: "Content harms",
+      riskType: "Self-harm",
+      severity: "Medium blocking",
+      intervention: "User input, Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description:
+        "Blocks content promoting or instructing self-harm or suicide.",
+    },
+    {
+      id: "violence",
+      group: "Content harms",
+      riskType: "Violence",
+      severity: "Medium blocking",
+      intervention: "User input, Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description: "Blocks content promoting or depicting violence.",
+    },
+    {
+      id: "blocklists",
+      group: "Content harms",
+      riskType: "Blocklists",
+      intervention: "User input, Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description: "Blocks the custom terms configured in the project blocklists.",
+    },
+    {
+      id: "protected-material-code",
+      group: "Protected materials",
+      riskType: "Protected material for code",
+      intervention: "Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description: "Blocks output that reproduces licensed source code.",
+    },
+    {
+      id: "protected-material-text",
+      group: "Protected materials",
+      riskType: "Protected material for text",
+      intervention: "Output",
+      action: "Block",
+      defaulted: true,
+      enabled: true,
+      description: "Blocks output that reproduces copyrighted text.",
+    },
+    {
+      id: "pii",
+      group: "Sensitive data leakage",
+      riskType: "PII",
+      intervention: "User input, Tool call, Tool response, Output",
+      action: "Block",
+      defaulted: false,
+      enabled: false,
+      description:
+        "Blocks the disclosure of personal data such as names, emails, phone numbers, and addresses.",
+    },
+    {
+      id: "task-adherence",
+      group: "Task drift",
+      riskType: "Task adherence",
+      intervention: "Tool call",
+      action: "Block",
+      defaulted: false,
+      enabled: false,
+      description:
+        "Blocks tool calls that drift away from the user's stated task.",
+    },
+  ];
+  const now = nowIso();
+  return [
+    {
+      id: "guardrail-default",
+      name: "Default",
+      streamingMode: "Default",
+      controls: controls.map((control) => ({ ...control })),
+      agents: [],
+      deployments: [],
+      builtIn: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "guardrail-default-v2",
+      name: "DefaultV2",
+      streamingMode: "Default",
+      controls: controls.map((control) => ({
+        ...control,
+        enabled: control.defaulted,
+      })),
+      agents: [],
+      deployments: [],
+      builtIn: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "guardrail-mai-default",
+      name: "MAIDefault",
+      streamingMode: "Default",
+      controls: controls.map((control) => ({ ...control })),
+      agents: [],
+      deployments: [],
+      builtIn: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
 }
 
 export async function getTraces(): Promise<Trace[]> {

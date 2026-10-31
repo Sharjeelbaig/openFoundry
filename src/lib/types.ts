@@ -179,7 +179,11 @@ export interface Agent {
   maxTokens: number;
   voiceMode: boolean;
   memoryEnabled?: boolean;
+  /** Memory store this agent writes to and recalls from (Foundry Memory Preview). */
+  memoryStoreId?: string;
   guardrail?: "Default" | "Strict" | "Off";
+  /** Guardrail resource applied to this agent (Foundry Guardrails Preview). */
+  guardrailId?: string;
   tools: string[];
   knowledgeBaseIds: string[];
   status: AgentStatus;
@@ -204,10 +208,55 @@ export interface KnowledgeDocument {
   addedAt: string;
 }
 
+/**
+ * Retrieval reasoning effort, exactly as Foundry IQ offers it in the knowledge
+ * base creator. Higher effort spends more local model work planning queries.
+ */
+export type ReasoningEffort = "Minimal" | "Low" | "Medium";
+
+/** Foundry IQ output mode. */
+export type OutputMode = "Extractive data" | "Answer synthesis";
+
+/** The data-source kinds Foundry IQ can ground a knowledge base on. */
+export type KnowledgeSourceKind =
+  | "upload"
+  | "work-iq"
+  | "fabric-iq"
+  | "azure-blob"
+  | "web"
+  | "azure-ai-search";
+
+export interface KnowledgeSource {
+  id: string;
+  kind: KnowledgeSourceKind;
+  /** Display name, e.g. the source label or the connected asset name. */
+  name: string;
+  /** Short description shown under the name in the source list. */
+  detail?: string;
+  status: "Connected" | "Indexing" | "Ready" | "Error";
+  /** Index this source is materialised into (uploads create a file-search index). */
+  indexName?: string;
+  documentCount?: number;
+}
+
 export interface KnowledgeBase {
   id: string;
   name: string;
   description: string;
+  /** Foundry IQ connection the base is scoped to (e.g. an Azure AI Search connection). */
+  connectionId?: string;
+  /** Chat completion deployment used for agentic query planning / answer synthesis. */
+  chatModel?: string;
+  /** Retrieval reasoning effort. */
+  reasoningEffort?: ReasoningEffort;
+  /** Output mode: raw extractive chunks or a synthesised answer. */
+  outputMode?: OutputMode;
+  /** Query-planning instructions handed to the agentic retrieval engine. */
+  retrievalInstructions?: string;
+  /** Grounding sources attached to the base. */
+  sources?: KnowledgeSource[];
+  /** Customer-managed encryption key settings. */
+  encryption?: { enabled: boolean; keyVault?: string; keyName?: string };
   indexName: string;
   embeddingModel: string;
   embeddingProvider: ProviderId | "lexical";
@@ -215,6 +264,114 @@ export interface KnowledgeBase {
   documents: KnowledgeDocument[];
   createdAt: string;
   updatedAt: string;
+}
+
+/** A vector / agentic search index, as listed under Knowledge → Indexes. */
+export interface SearchIndex {
+  id: string;
+  name: string;
+  version: number;
+  type: "File search" | "Agentic retrieval";
+  documents: number;
+  chunks: number;
+  status: "Ready" | "Indexing" | "Failed";
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A connection (Azure AI Search, storage, M365...) usable by Foundry IQ. */
+export interface Connection {
+  id: string;
+  name: string;
+  kind: "Azure AI Search" | "Azure Blob Storage" | "Microsoft 365" | "Microsoft Fabric";
+  target: string;
+  authType: "API key" | "Managed identity" | "Local (no key required)";
+  createdAt: string;
+}
+
+/** Memory store kinds, matching Foundry's Memory store creator. */
+export interface MemoryFeatures {
+  chatSummary: boolean;
+  proceduralMemory: boolean;
+  userProfile: boolean;
+}
+
+export interface MemoryStore {
+  id: string;
+  name: string;
+  description?: string;
+  chatModel: string;
+  chatModelSku?: string;
+  embeddingModel: string;
+  embeddingModelSku?: string;
+  features: MemoryFeatures;
+  userProfileDetails?: string;
+  /** Default time-to-live in seconds. 0 means entries never expire. */
+  ttlSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+  lastUsedAt?: string;
+}
+
+export type MemoryKind = "chat-summary" | "procedural" | "user-profile";
+
+export interface MemoryItem {
+  id: string;
+  storeId: string;
+  /** Whose memory this is — a local user id. */
+  scope: string;
+  kind: MemoryKind;
+  /** Stable slot key for structured memories (e.g. "dietary-restrictions"). */
+  key?: string;
+  value: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+}
+
+/** One control inside a guardrail. */
+export interface GuardrailControl {
+  /** Stable id, e.g. "jailbreak", "hate", "pii". */
+  id: string;
+  /** Group heading, e.g. "Jailbreak", "Content harms". */
+  group: string;
+  /** Risk type label shown in the table (e.g. "Hate", "Egress rules"). */
+  riskType: string;
+  /** Intervention point, e.g. "User input, Output". */
+  intervention: string;
+  /** Action, e.g. "Block", "Deny", "On". */
+  action: string;
+  /** Severity qualifier ("Medium blocking") for content harms. */
+  severity?: string;
+  /** True when Foundry adds it by default and it cannot be removed. */
+  defaulted: boolean;
+  /** True when the caller toggled it on. */
+  enabled: boolean;
+  /** Human description used for the enforcement prompt. */
+  description: string;
+}
+
+export interface Guardrail {
+  id: string;
+  name: string;
+  streamingMode: "Default" | "Off";
+  controls: GuardrailControl[];
+  /** Agent ids the guardrail is attached to. */
+  agents: string[];
+  /** Deployment ids (models) the guardrail is attached to. */
+  deployments: string[];
+  /** Built-in guardrails cannot be deleted. */
+  builtIn?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Blocklist {
+  id: string;
+  name: string;
+  terms: string[];
+  createdAt: string;
+  builtIn?: boolean;
 }
 
 export interface Citation {
