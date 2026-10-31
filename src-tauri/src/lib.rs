@@ -75,10 +75,21 @@ pub fn run() {
 
                 let port = free_port();
                 let public_url = format!("http://127.0.0.1:{port}");
+                let node_path = if cfg!(target_os = "macos") {
+                    resource_dir
+                        .join("resources")
+                        .join("OpenFoundry Server.app")
+                        .join("Contents")
+                        .join("MacOS")
+                        .join("node")
+                } else if cfg!(target_os = "windows") {
+                    resource_dir.join("resources").join("node.exe")
+                } else {
+                    resource_dir.join("resources").join("node")
+                };
                 let command = app
                     .shell()
-                    .sidecar("node")
-                    .map_err(|error| format!("Could not find the bundled Node runtime: {error}"))?
+                    .command(&node_path)
                     .args(["start.cjs"])
                     .current_dir(server_dir)
                     .env("PORT", port.to_string())

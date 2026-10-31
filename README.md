@@ -94,7 +94,9 @@ redistribute them.
 
 - **Next.js 16 + React 19 + TypeScript** — workspace UI and local API routes.
 - **Tauri 2 + Rust** — desktop shell, free-port selection, sidecar lifecycle.
-- **Bundled Node.js + Next standalone server** — production desktop runtime.
+- **Bundled Node.js + Next standalone server** — production desktop runtime. On macOS the
+  runtime is wrapped in a hidden `LSUIElement` helper app so it never appears as a second
+  Dock icon or foreground application.
 - JSON workspace store under the OS app-data directory in desktop builds, or `data/` in
   the web build.
 - Direct provider APIs; no openFoundry cloud service and no telemetry.

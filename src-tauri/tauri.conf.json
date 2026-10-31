@@ -39,10 +39,8 @@
     "shortDescription": "A local AI workbench for models, agents and knowledge.",
     "longDescription": "openFoundry is an independent, free desktop workbench for running local AI models, prompt agents and knowledge tools on your own computer.",
     "resources": [
-      "next-server"
-    ],
-    "externalBin": [
-      "binaries/node"
+      "next-server",
+      "resources"
     ]
   }
 }

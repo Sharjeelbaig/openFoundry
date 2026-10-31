@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tauri = path.join(root, "src-tauri");
 const serverDir = path.join(tauri, "next-server");
-const binariesDir = path.join(tauri, "binaries");
+const resourcesDir = path.join(tauri, "resources");
 const cacheDir = path.join(root, ".desktop-cache");
 const NODE_VERSION = process.env.OPENFOUNDRY_NODE_VERSION || "v24.22.2";
 
@@ -62,7 +62,7 @@ async function exists(target) {
   }
 }
 
-async function downloadNode() {
+async function prepareNode() {
   const archive = `node-${NODE_VERSION}-${platform.node}.${platform.ext}`;
   await fs.mkdir(cacheDir, { recursive: true });
   const cached = path.join(cacheDir, archive);
@@ -84,18 +84,65 @@ async function downloadNode() {
     }
   }
 
-  const source = path.join(
-    extracted,
-    process.platform === "win32" ? "node.exe" : "bin/node"
-  );
-  await fs.mkdir(binariesDir, { recursive: true });
-  const target = path.join(
-    binariesDir,
-    `node-${triple}${platform.win ? ".exe" : ""}`
-  );
-  await fs.copyFile(source, target);
-  if (!platform.win) await fs.chmod(target, 0o755);
-  console.log(`Node runtime ready: ${path.relative(root, target)}`);
+  const source = path.join(extracted, platform.win ? "node.exe" : "bin/node");
+  await fs.rm(resourcesDir, { recursive: true, force: true });
+  await fs.mkdir(resourcesDir, { recursive: true });
+
+  if (triple.endsWith("-apple-darwin")) {
+    // A raw executable living in Contents/MacOS is registered by LaunchServices
+    // as a second foreground copy of the app, which puts a generic "exec" tile
+    // in the Dock. Wrapping the runtime in a tiny LSUIElement helper app is the
+    // same approach Electron and other desktop apps use for headless helpers.
+    const helperApp = path.join(resourcesDir, "OpenFoundry Server.app");
+    const helperMacOS = path.join(helperApp, "Contents", "MacOS");
+    await fs.mkdir(helperMacOS, { recursive: true });
+    await fs.mkdir(path.join(helperApp, "Contents", "Resources"), {
+      recursive: true,
+    });
+    const nodeTarget = path.join(helperMacOS, "node");
+    await fs.copyFile(source, nodeTarget);
+    await fs.chmod(nodeTarget, 0o755);
+    await fs.writeFile(
+      path.join(helperApp, "Contents", "Info.plist"),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>openFoundry Server</string>
+  <key>CFBundleExecutable</key>
+  <string>node</string>
+  <key>CFBundleIdentifier</key>
+  <string>app.openfoundry.desktop.server</string>
+  <key>CFBundleName</key>
+  <string>openFoundry Server</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSBackgroundOnly</key>
+  <true/>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>
+`,
+      "utf8"
+    );
+    await fs.writeFile(path.join(helperApp, "Contents", "PkgInfo"), "APPL????", "utf8");
+    run("xattr", ["-cr", helperApp]);
+    run("codesign", ["--force", "--deep", "--sign", "-", helperApp]);
+    console.log(`Node runtime ready: ${path.relative(root, nodeTarget)}`);
+  } else {
+    const target = path.join(resourcesDir, platform.win ? "node.exe" : "node");
+    await fs.copyFile(source, target);
+    if (!platform.win) await fs.chmod(target, 0o755);
+    console.log(`Node runtime ready: ${path.relative(root, target)}`);
+  }
 }
 
 async function copyServer() {
@@ -133,6 +180,6 @@ require("./server.js");
   console.log(`Next server ready: ${path.relative(root, serverDir)}`);
 }
 
-await downloadNode();
+await prepareNode();
 await copyServer();
 console.log("Desktop resources prepared.");

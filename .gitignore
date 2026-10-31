@@ -35,4 +35,5 @@ data/
 # Generated desktop sidecar resources
 .desktop-cache/
 src-tauri/binaries/
+src-tauri/resources/
 src-tauri/next-server/
