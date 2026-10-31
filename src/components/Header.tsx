@@ -16,6 +16,8 @@ import {
   Search20Regular,
   Settings20Regular,
   SignOut20Regular,
+  WeatherMoon20Regular,
+  WeatherSunny20Regular,
 } from "@fluentui/react-icons";
 import { FoundryLogo } from "./Logos";
 import { useToast } from "./Toast";
@@ -42,7 +44,12 @@ export default function Header({
   const pathname = usePathname();
   const { toast } = useToast();
   const { jobs, activeJobs, setPanelOpen } = useDownloads();
-  const [newFoundry, setNewFoundry] = useState(true);
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    typeof document !== "undefined" &&
+    document.documentElement.dataset.theme === "light"
+      ? "light"
+      : "dark"
+  );
   const [menu, setMenu] = useState<"project" | "profile" | "notifications" | "feedback" | null>(null);
   const [feedback, setFeedback] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -149,19 +156,29 @@ export default function Header({
       </div>
 
       <div className="header-right">
-        <div className="new-foundry">
-          <span className="new-foundry-label">New look</span>
+        <div className="theme-switch">
+          <span className="theme-switch-label">
+            {theme === "dark" ? <WeatherMoon20Regular /> : <WeatherSunny20Regular />}
+            {theme === "dark" ? "Dark" : "Light"}
+          </span>
           <button
             className="switch"
             role="switch"
-            aria-checked={newFoundry}
-            aria-label="Toggle new look experience"
+            aria-checked={theme === "light"}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={() => {
-              setNewFoundry((value) => !value);
+              const next = theme === "dark" ? "light" : "dark";
+              setTheme(next);
+              document.documentElement.dataset.theme = next;
+              try {
+                localStorage.setItem("openfoundry:theme", next);
+              } catch {
+                // ignore
+              }
               toast(
-                newFoundry
-                  ? "Classic navigation enabled. Local features stay the same."
-                  : "New look enabled."
+                next === "light"
+                  ? "Light theme enabled."
+                  : "Dark theme enabled."
               );
             }}
           />
