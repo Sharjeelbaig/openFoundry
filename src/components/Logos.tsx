@@ -263,14 +263,14 @@ export function BentoTileArt({ variant }: { variant: "agent" | "model" }) {
     >
       <defs>
         <pattern id={id} width="8" height="8" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1.2" fill="#b9adcf" />
+          <circle cx="2" cy="2" r="1.2" fill="var(--bento-dot, #b9adcf)" />
         </pattern>
       </defs>
       {variant === "agent" ? (
         <g fill={`url(#${id})`}>
           <ellipse cx="130" cy="56" rx="78" ry="30" />
           <path d="M52 56h156v122c0 37-35 62-78 62s-78-25-78-62V56Z" />
-          <ellipse cx="130" cy="196" rx="78" ry="32" fill="#1f1f1f" opacity="0.92" />
+          <ellipse cx="130" cy="196" rx="78" ry="32" fill="var(--bento-shade, #1f1f1f)" opacity="0.92" />
           <ellipse cx="130" cy="196" rx="52" ry="18" fill={`url(#${id})`} opacity="0.65" />
         </g>
       ) : (
@@ -278,7 +278,7 @@ export function BentoTileArt({ variant }: { variant: "agent" | "model" }) {
           <path d="M130 22 216 70 130 118 44 70 130 22Z" opacity="0.9" />
           <path d="M44 70 130 118v118L44 188V70Z" opacity="0.55" />
           <path d="M216 70 130 118v118l86-48V70Z" opacity="0.7" />
-          <path d="m130 142 44-25v55l-44 25v-55Z" fill="#1f1f1f" opacity="0.94" />
+          <path d="m130 142 44-25v55l-44 25v-55Z" fill="var(--bento-shade, #1f1f1f)" opacity="0.94" />
         </g>
       )}
     </svg>
