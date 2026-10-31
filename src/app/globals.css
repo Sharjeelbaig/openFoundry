@@ -69,6 +69,15 @@
   --surface-input: transparent;
   --surface-table-stroke: #525252;
   --surface-row-stroke: #3d3d3d;
+  /*
+   * Page canvas lighting, measured down a column of the portal home: the area
+   * just under the header starts at #141414 and fades to #0f0f0f by ~230px,
+   * and the last 240px of the viewport carry a faint brand glow that tops out
+   * at rgb(22, 18, 30) right above the footer.
+   */
+  --canvas-glow:
+    linear-gradient(to top, rgba(100, 63, 178, 0.09), rgba(100, 63, 178, 0) 240px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.021), rgba(255, 255, 255, 0) 230px);
   --card-radius: 12px;
   --tile-radius: 8px;
   --icon-radius: 8px;
@@ -158,6 +167,9 @@
   --surface-input: transparent;
   --surface-table-stroke: #d1d1d1;
   --surface-row-stroke: #e0e0e0;
+  --canvas-glow:
+    linear-gradient(to top, rgba(100, 63, 178, 0.07), rgba(100, 63, 178, 0) 240px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.018), rgba(0, 0, 0, 0) 200px);
   /* Foundry shadow8 / shadow16: ambient and key at their light alphas. */
   --shadow-8: 0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
   --shadow-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
@@ -183,13 +195,16 @@
 }
 [data-theme="light"] .bento-card:first-child {
   background:
-    radial-gradient(70% 130% at 0% 0%, rgba(100, 63, 178, 0.09), transparent 55%),
+    linear-gradient(
+      138deg,
+      rgba(100, 63, 178, 0) 46%,
+      rgba(100, 63, 178, 0.04) 74%,
+      rgba(100, 63, 178, 0.085) 100%
+    ),
     var(--surface-card);
 }
 [data-theme="light"] .bento-card:last-child {
-  background:
-    radial-gradient(80% 140% at 100% 0%, rgba(105, 96, 132, 0.06), transparent 60%),
-    var(--surface-card);
+  background: var(--surface-card);
 }
 [data-theme="light"] .bento-art {
   opacity: 0.7;
@@ -655,14 +670,14 @@ svg {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  background: var(--bg);
+  background: var(--canvas-glow), var(--bg);
   position: relative;
 }
 .app-main.no-scroll {
   overflow: hidden;
 }
 .app-main.surface {
-  background: var(--bg);
+  background: var(--canvas-glow), var(--bg);
 }
 .app-footer {
   height: var(--footer-h);
@@ -4411,15 +4426,21 @@ svg {
   display: block;
 }
 
-/* Foundry home bento cards: a filled surface with a faint purple wash in the
-   first tile and neutral dotted 3D artwork on the right. No outline. */
+/* Foundry's build tile carries a brand wash that grows towards the bottom-right
+   corner - measured from rgba(100,63,178,0) at ~46% of a 112deg axis up to
+   rgba(100,63,178,0.18) in the corner. The neighbour tile stays flat. */
 .bento-card {
   position: relative;
   overflow: hidden;
 }
 .bento-card:first-child {
   background:
-    radial-gradient(45% 70% at 0% 0%, rgba(100, 63, 178, 0.1), transparent 60%),
+    linear-gradient(
+      138deg,
+      rgba(100, 63, 178, 0) 46%,
+      rgba(100, 63, 178, 0.09) 74%,
+      rgba(100, 63, 178, 0.18) 100%
+    ),
     var(--surface-card);
 }
 .bento-card:last-child {
@@ -4431,10 +4452,10 @@ svg {
 }
 .bento-art {
   position: absolute;
-  right: 34px;
-  top: -6px;
-  width: 255px;
-  height: 245px;
+  right: 26px;
+  top: 10px;
+  width: 220px;
+  height: 200px;
   opacity: 0.52;
   pointer-events: none;
   z-index: 0;
