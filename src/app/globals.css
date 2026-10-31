@@ -1,8 +1,8 @@
 
 :root {
-  --bg: #111111;
-  --bg-elevated: #1f1f1f;
-  --bg-2: #1c1c1c;
+  --bg: #0f0f0f;
+  --bg-elevated: #1a1a1a;
+  --bg-2: #1a1a1a;
   --bg-3: #151515;
   --bg-hover: #2e2e2e;
   --fg-1: #ffffff;
@@ -50,8 +50,28 @@
   --mark-fg: #f2f2f2;
   --scrollbar-thumb: #3a3a3a;
   --scrollbar-thumb-hover: #4a4a4a;
-  --bento-dot: #b9adcf;
-  --bento-shade: #1f1f1f;
+  --bento-dot: #5a5a5a;
+  --bento-shade: #141414;
+  /*
+   * Foundry surfaces, measured on the signed-in portal (ai.azure.com home and
+   * catalog), dark scheme:
+   *   canvas #0f0f0f, card #1f1f1f, catalog card / logo plate #1a1a1a,
+   *   icon badge #141414, form field border #3d3d3d.
+   * Cards are filled panels; the 1px "border" Foundry draws on them is painted
+   * in the canvas colour, so no outline is visible. Radii: 12px for the card
+   * component, 8px for the shell tiles and logo plates, 8px icon tiles.
+   */
+  --surface-card: #1f1f1f;
+  --surface-card-hover: #2a2a2a;
+  --surface-plate: #1a1a1a;
+  --surface-icon: #141414;
+  --surface-header: #141414;
+  --surface-input: transparent;
+  --surface-table-stroke: #525252;
+  --surface-row-stroke: #3d3d3d;
+  --card-radius: 12px;
+  --tile-radius: 8px;
+  --icon-radius: 8px;
   --radius-sm: 2px;
   --radius: 4px;
   --radius-lg: 8px;
@@ -76,10 +96,10 @@
    not a hand-tuned approximation. Everything here is scoped to data-theme="light";
    the dark palette above stays authoritative and untouched. */
 [data-theme="light"] {
-  --bg: #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-2: #ffffff;
-  --bg-3: #fafafa;
+  --bg: #f0f0f0;
+  --bg-elevated: #fafafa;
+  --bg-2: #fafafa;
+  --bg-3: #f5f5f5;
   --bg-hover: #f5f5f5;
   --fg-1: #242424;
   --fg-2: #424242;
@@ -128,8 +148,17 @@
   --scrollbar-thumb-hover: #bdbdbd;
   --bento-dot: #d8d1e4;
   --bento-shade: #e9e3f2;
-  /* Foundry shadow2 / shadow8 / shadow16: ambient and key at their light alphas. */
-  --card-shadow: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+  /* Same surfaces in the light scheme: Foundry's neutralBackground1 tiles on a
+     #f0f0f0 canvas, with #fafafa for the catalog card and logo plate. */
+  --surface-card: #ffffff;
+  --surface-card-hover: #f5f5f5;
+  --surface-plate: #fafafa;
+  --surface-icon: #f5f5f5;
+  --surface-header: #f5f5f5;
+  --surface-input: transparent;
+  --surface-table-stroke: #d1d1d1;
+  --surface-row-stroke: #e0e0e0;
+  /* Foundry shadow8 / shadow16: ambient and key at their light alphas. */
   --shadow-8: 0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
   --shadow-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
   /* Foundry radius scale: small 2, medium 4, large 6, xLarge 8, circular 10000. */
@@ -139,15 +168,10 @@
   color-scheme: light;
 }
 
-/* Cards: white on white, held together by the Foundry card stroke and shadow. */
-[data-theme="light"] .card,
-[data-theme="light"] .credentials,
-[data-theme="light"] .publisher-card,
-[data-theme="light"] .bento-card,
-[data-theme="light"] .quick-card {
-  border-color: var(--stroke-2);
-  box-shadow: var(--card-shadow);
-}
+/*
+ * Foundry does not outline cards. In light the hierarchy comes from the canvas
+ * tone instead: #fafafa cards on an #f0f0f0 page, no stroke and no shadow.
+ */
 [data-theme="light"] .badge {
   background: rgba(0, 0, 0, 0.02);
 }
@@ -155,33 +179,23 @@
   color: var(--stroke-2);
 }
 [data-theme="light"] .sidebar-link.active {
-  background: #f0f0f0;
+  background: #ebebeb;
 }
 [data-theme="light"] .bento-card:first-child {
   background:
-    radial-gradient(75% 130% at 8% 0%, rgba(100, 63, 178, 0.09), transparent 60%),
-    linear-gradient(104deg, #fcfaff 0%, #f6f1fc 46%, #ffffff 100%);
+    radial-gradient(70% 130% at 0% 0%, rgba(100, 63, 178, 0.09), transparent 55%),
+    var(--surface-card);
 }
 [data-theme="light"] .bento-card:last-child {
   background:
-    radial-gradient(80% 130% at 88% 0%, rgba(105, 96, 132, 0.06), transparent 60%),
-    linear-gradient(104deg, #fbfafd 0%, #f5f3f9 52%, #ffffff 100%);
+    radial-gradient(80% 140% at 100% 0%, rgba(105, 96, 132, 0.06), transparent 60%),
+    var(--surface-card);
 }
 [data-theme="light"] .bento-art {
   opacity: 0.7;
 }
-/* Model tiles sit on the white canvas, so they need the card treatment. */
-[data-theme="light"] .model-tile {
-  background: var(--bg-2);
-  border-color: var(--stroke-2);
-  box-shadow: var(--card-shadow);
-}
 [data-theme="light"] .model-tile:hover {
-  border-color: var(--stroke-1);
-  background: var(--bg-2);
-}
-[data-theme="light"] .model-logo {
-  border: 1px solid var(--stroke-2);
+  background: var(--surface-card);
 }
 [data-theme="light"] .model-logo.dark {
   color: var(--fg-1);
@@ -192,8 +206,6 @@
  */
 [data-theme="light"] .collection-card {
   background-image: url("/images/collection-light.svg") !important;
-  border-color: var(--stroke-2);
-  box-shadow: var(--card-shadow);
 }
 [data-theme="light"] .collection-card::after {
   background: linear-gradient(
@@ -650,7 +662,7 @@ svg {
   overflow: hidden;
 }
 .app-main.surface {
-  background: var(--bg-2);
+  background: var(--bg);
 }
 .app-footer {
   height: var(--footer-h);
@@ -797,7 +809,7 @@ svg {
   background: var(--brand-pressed);
 }
 .btn-secondary {
-  background: var(--bg-2);
+  background: var(--surface-plate);
   border-color: var(--stroke-1);
   color: var(--fg-1);
 }
@@ -872,19 +884,21 @@ svg {
 }
 
 /* ------------------------------------------------------------------- inputs */
+/* Foundry fields: a 1px #3d3d3d outline on the card surface, 4px radius, and a
+   brand outline on focus. Only cards drop their outline - controls keep one. */
 .input,
 .select,
 .textarea {
   width: 100%;
-  background: var(--bg-3);
-  border: 1px solid var(--stroke-2);
+  background: var(--surface-input);
+  border: 1px solid var(--stroke-3);
   border-radius: var(--radius);
   color: var(--fg-1);
   height: 32px;
-  padding: 5px 10px;
+  padding: 5px 12px;
   font-size: 14px;
   line-height: 20px;
-  transition: border-color 100ms ease;
+  transition: border-color 100ms ease, background-color 100ms ease;
 }
 .input::placeholder,
 .textarea::placeholder {
@@ -893,7 +907,7 @@ svg {
 .input:hover,
 .select:hover,
 .textarea:hover {
-  border-color: var(--fg-3);
+  border-color: var(--stroke-1);
 }
 .input:focus,
 .select:focus,
@@ -936,8 +950,8 @@ svg {
 .search-input .input {
   padding-left: 32px;
   border-radius: var(--pill);
-  background: var(--bg-3);
-  border-color: var(--stroke-2);
+  background: var(--surface-card);
+  border-color: transparent;
 }
 .search-input.pill .input {
   border-radius: var(--pill);
@@ -1227,10 +1241,10 @@ svg {
 
 /* ------------------------------------------------------------------ tables */
 .table-card {
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-radius: var(--card-radius);
   overflow: hidden;
-  background: var(--bg-2);
+  background: var(--surface-card);
 }
 .data-table {
   width: 100%;
@@ -1244,14 +1258,14 @@ svg {
   color: var(--fg-1);
   height: 42px;
   padding: 8px 16px;
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--stroke-3);
+  background: var(--surface-header);
+  border-bottom: 1px solid var(--surface-row-stroke);
   white-space: nowrap;
 }
 .data-table td {
   height: 46px;
   padding: 8px 16px;
-  border-bottom: 1px solid var(--stroke-4);
+  border-bottom: 1px solid var(--surface-row-stroke);
   color: var(--fg-1);
   vertical-align: middle;
 }
@@ -1307,27 +1321,30 @@ svg {
 }
 
 /* ------------------------------------------------------------------- cards */
+/*
+ * Foundry card anatomy: a filled surface, no outline and no shadow, a 12px
+ * radius. Elevation is expressed purely by the fill sitting above the canvas.
+ */
 .card {
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
 }
 .card-pad {
   padding: 16px;
 }
 .card-hover:hover {
-  background: var(--tile-hover);
-  border-color: var(--stroke-3);
+  background: var(--surface-card-hover);
 }
 .panel {
-  background: var(--bg-3);
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
 }
 .metric-card {
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
   padding: 16px;
   min-height: 120px;
   display: flex;
@@ -1383,10 +1400,10 @@ svg {
 .banner {
   display: flex;
   gap: 10px;
-  border: 1px solid var(--stroke-2);
-  background: var(--bg-2);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  border: 0;
+  background: var(--surface-icon);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
   color: var(--fg-2);
   font-size: 12px;
   line-height: 17px;
@@ -1470,7 +1487,8 @@ svg {
 }
 .home-wrap {
   width: 100%;
-  max-width: 1460px;
+  /* Foundry caps the home content at 1236px inside 24px gutters. */
+  max-width: 1284px;
   margin: 0 auto;
   padding: 40px 24px 64px;
 }
@@ -1488,9 +1506,9 @@ svg {
 }
 .bento-card {
   min-height: 220px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg);
-  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--tile-radius);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1513,8 +1531,8 @@ svg {
 .bento-desc {
   font-size: 14px;
   line-height: 20px;
-  color: var(--fg-2);
-  margin-top: 8px;
+  color: var(--fg-3);
+  margin-top: 4px;
   max-width: 360px;
 }
 .bento-actions {
@@ -1523,14 +1541,14 @@ svg {
   gap: 8px;
 }
 .credentials {
-  margin-top: 10px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
+  margin-top: 12px;
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--tile-radius);
   padding: 16px;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 .credential-field {
   min-width: 0;
@@ -1538,6 +1556,7 @@ svg {
 .credential-label {
   color: var(--fg-2);
   font-size: 14px;
+  line-height: 20px;
   margin-bottom: 4px;
   display: flex;
   align-items: center;
@@ -1552,13 +1571,13 @@ svg {
   flex: 1;
   min-width: 0;
   height: 32px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-2);
+  background: transparent;
+  border: 1px solid var(--stroke-3);
   border-right: 0;
   border-radius: var(--radius) 0 0 var(--radius);
-  padding: 5px 8px;
-  color: var(--fg-2);
-  font-size: 12px;
+  padding: 5px 12px;
+  color: var(--fg-1);
+  font-size: 14px;
   line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
@@ -1566,9 +1585,10 @@ svg {
 }
 .credential-copy {
   height: 32px;
-  width: 32px;
-  border: 1px solid var(--stroke-2);
-  background: var(--bg-2);
+  width: 36px;
+  border: 1px solid var(--stroke-3);
+  border-left: 0;
+  background: transparent;
   border-radius: 0 var(--radius) var(--radius) 0;
   display: inline-flex;
   align-items: center;
@@ -1578,6 +1598,7 @@ svg {
 }
 .credential-copy:hover {
   background: var(--bg-hover);
+  color: var(--fg-1);
 }
 .home-section {
   margin-top: 40px;
@@ -1600,31 +1621,47 @@ svg {
   gap: 12px;
 }
 .quick-card {
-  height: 76px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
+  min-height: 76px;
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   text-align: left;
   cursor: pointer;
 }
 .quick-card:hover {
-  background: var(--bg-hover);
+  background: var(--surface-card-hover);
 }
 .quick-title {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 16px;
+  line-height: 22px;
   font-weight: 600;
 }
 .quick-desc {
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--fg-3);
   margin-top: 2px;
+}
+/* 40px badge holding a 24px glyph, filled one step below the card. */
+.quick-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--icon-radius);
+  background: var(--surface-icon);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-1);
+  flex: none;
+}
+.quick-icon svg {
+  width: 24px;
+  height: 24px;
 }
 .quick-card svg {
   color: var(--fg-2);
@@ -1651,39 +1688,59 @@ svg {
   height: 80px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: var(--radius);
-  border: 1px solid transparent;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--tile-radius);
+  border: 0;
   min-width: 0;
 }
 .model-tile:hover {
-  background: var(--bg-2);
-  border-color: var(--stroke-3);
+  background: var(--surface-card);
 }
-.model-logo {
-  width: 32px;
-  height: 32px;
+/* Foundry's carousel mark: a 68x64 plate holding a 36px logo. */
+.model-tile-plate {
+  width: 68px;
+  height: 64px;
   border-radius: 6px;
-  background: #fff;
-  color: #111;
+  background: var(--surface-plate);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
+  flex: none;
+}
+.model-tile-plate .model-logo {
+  background: transparent;
+  border-radius: 0;
+}
+/* Foundry model mark: a neutral icon tile, not a coloured chip. */
+.model-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--icon-radius);
+  background: var(--surface-icon);
+  color: var(--fg-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
   flex: none;
   overflow: hidden;
 }
 .model-logo.dark {
-  background: var(--tile-strong);
-  color: #fff;
-  border: 1px solid var(--stroke-3);
+  background: var(--surface-icon);
+  color: var(--fg-2);
+  border: 0;
+}
+/* Inside a catalog card the tile is one step lighter than the card fill, so the
+   mark reads as a raised plate rather than a hole. */
+.catalog-card-head .model-logo {
+  background: var(--surface-card);
 }
 .model-tile-name {
   font-size: 14px;
   font-weight: 600;
-  line-height: 18px;
+  line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1701,42 +1758,46 @@ svg {
   margin-bottom: 12px;
 }
 .recent-table {
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-radius: var(--tile-radius);
   overflow: hidden;
+  background: var(--surface-card);
 }
-.recent-table .data-table td,
 .recent-table .data-table th {
-  height: 40px;
-  padding: 6px 16px;
+  height: 34px;
+  padding: 6px 12px;
+  border-radius: var(--tile-radius) var(--tile-radius) 0 0;
+}
+.recent-table .data-table td {
+  height: 45px;
+  padding: 6px 12px;
 }
 .resource-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 .resource-card {
   min-height: 120px;
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  background: var(--bg);
-  padding: 16px;
+  border: 0;
+  border-radius: var(--card-radius);
+  background: var(--surface-card);
+  padding: 24px;
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: flex-start;
   text-align: left;
   cursor: pointer;
 }
 .resource-card:hover {
-  background: var(--bg-2);
-  border-color: var(--stroke-2);
+  background: var(--surface-card-hover);
 }
 .resource-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-3);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--icon-radius);
+  background: var(--surface-icon);
+  border: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1809,13 +1870,13 @@ svg {
 .publisher-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 .publisher-card {
   height: 64px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1825,19 +1886,19 @@ svg {
   cursor: pointer;
 }
 .publisher-card:hover {
-  background: var(--bg-hover);
+  background: var(--surface-card-hover);
 }
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 .collection-card {
   min-height: 112px;
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--stroke-3);
+  border-radius: var(--card-radius);
+  border: 0;
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
@@ -1851,7 +1912,7 @@ svg {
   cursor: pointer;
 }
 .collection-card:hover {
-  border-color: var(--stroke-1);
+  filter: brightness(1.08);
 }
 .collection-title {
   font-size: 14px;
@@ -1865,9 +1926,10 @@ svg {
   max-width: 340px;
 }
 .leaderboard {
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-radius: var(--card-radius);
   overflow: hidden;
+  background: var(--surface-card);
 }
 .leaderboard .data-table td,
 .leaderboard .data-table th {
@@ -1971,18 +2033,17 @@ svg {
 }
 .catalog-card {
   min-height: 230px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  background: var(--surface-plate);
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 24px;
   display: flex;
   flex-direction: column;
   cursor: pointer;
   text-align: left;
 }
 .catalog-card:hover {
-  background: var(--bg-hover);
-  border-color: var(--stroke-3);
+  background: var(--surface-card);
 }
 .catalog-card-head {
   display: flex;
@@ -1991,22 +2052,24 @@ svg {
   min-width: 0;
 }
 .catalog-card-name {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 18px;
+  line-height: 22px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  word-break: break-all;
+  overflow-wrap: break-word;
 }
 .catalog-card-pub {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
+  row-gap: 4px;
   font-size: 12px;
   color: var(--fg-3);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 .catalog-task {
   margin-top: 12px;
@@ -2056,8 +2119,8 @@ svg {
   top: 36px;
   min-width: 200px;
   background: var(--bg-elevated);
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius);
+  border: 0;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-16);
   padding: 2px;
   z-index: 60;
@@ -2387,9 +2450,9 @@ svg {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  background: var(--bg-3);
+  border: 0;
+  border-radius: var(--card-radius);
+  background: var(--surface-card);
   overflow: hidden;
 }
 .chat-head {
@@ -2617,8 +2680,8 @@ svg {
 .knowledge-visual {
   width: 100%;
   height: 300px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--stroke-3);
+  border-radius: var(--card-radius);
+  border: 0;
   overflow: hidden;
   position: relative;
   background:
@@ -2695,17 +2758,17 @@ svg {
   gap: 12px;
 }
 .kb-card {
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 160px;
 }
 .kb-card:hover {
-  border-color: var(--stroke-3);
+  background: var(--surface-card-hover);
 }
 .kb-icon {
   width: 32px;
@@ -2799,10 +2862,10 @@ svg {
   gap: 16px;
 }
 .operate-card {
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  background: var(--bg-2);
-  padding: 16px;
+  border: 0;
+  border-radius: var(--card-radius);
+  background: var(--surface-card);
+  padding: 20px;
 }
 .operate-card h3 {
   font-size: 14px;
@@ -2962,9 +3025,9 @@ svg {
   width: 560px;
   max-width: 100%;
   max-height: calc(100vh - 48px);
-  background: var(--bg-elevated);
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
   box-shadow: var(--shadow-16);
   display: flex;
   flex-direction: column;
@@ -3144,11 +3207,11 @@ svg {
   padding-bottom: 16px;
 }
 .playground-config {
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 20px;
   overflow-y: auto;
-  background: var(--bg-3);
+  background: var(--surface-card);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -3502,10 +3565,10 @@ svg {
   max-width: 560px;
 }
 .suggestion {
-  border: 1px solid var(--stroke-3);
-  background: var(--bg-elevated);
+  border: 0;
+  background: var(--surface-plate);
   color: var(--fg-2);
-  border-radius: var(--radius);
+  border-radius: var(--tile-radius);
   padding: 10px 12px;
   font-size: 12px;
   line-height: 17px;
@@ -3513,7 +3576,7 @@ svg {
   cursor: pointer;
 }
 .suggestion:hover {
-  border-color: var(--brand-stroke);
+  background: var(--surface-card-hover);
   color: var(--fg-1);
 }
 .suggestion:disabled {
@@ -3623,17 +3686,17 @@ svg {
   gap: 12px;
   text-align: left;
   padding: 12px 14px;
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  background: var(--bg-2);
+  border: 0;
+  border-radius: var(--card-radius);
+  background: var(--surface-card);
   color: var(--fg-1);
   cursor: pointer;
 }
 .asset-tile:hover {
-  border-color: var(--stroke-1);
+  background: var(--surface-card-hover);
 }
 .asset-tile.active {
-  border-color: var(--brand-stroke);
+  box-shadow: inset 0 0 0 1px var(--brand-stroke);
   background: var(--brand-tint);
 }
 .asset-tile .metric-label {
@@ -3650,13 +3713,13 @@ svg {
   grid-template-columns: 190px minmax(0, 1fr) 260px;
   gap: 24px;
   align-items: center;
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  padding: 22px 24px;
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 24px;
   margin-bottom: 16px;
   background:
     radial-gradient(120% 200% at 0% 0%, rgba(100, 63, 178, 0.22), transparent 55%),
-    var(--bg-elevated);
+    var(--surface-card);
 }
 .compliance-score {
   position: relative;
@@ -3852,17 +3915,17 @@ svg {
   gap: 12px;
 }
 .manage-stat {
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius-lg);
-  padding: 14px;
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 16px;
   color: var(--fg-1);
-  background: var(--bg-2);
+  background: var(--surface-card);
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 .manage-stat:hover {
-  border-color: var(--brand-stroke);
+  background: var(--surface-card-hover);
 }
 .manage-stat .metric-value {
   font-size: 24px;
@@ -3899,20 +3962,20 @@ svg {
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  padding: 20px 22px;
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 24px;
   margin-top: 6px;
   background:
     radial-gradient(120% 180% at 5% 0%, rgba(100, 63, 178, 0.22), transparent 55%),
-    var(--bg-elevated);
+    var(--surface-card);
 }
 .gateway-hero-icon {
   width: 48px;
   height: 48px;
-  border-radius: 10px;
+  border-radius: var(--icon-radius);
   background: var(--brand-tint);
-  border: 1px solid var(--brand-stroke);
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3965,10 +4028,10 @@ svg {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border: 1px solid var(--stroke-4);
-  border-radius: var(--radius);
+  border: 0;
+  border-radius: var(--radius-lg);
   padding: 12px;
-  background: var(--bg-3);
+  background: var(--surface-icon);
 }
 .gateway-step-number {
   width: 22px;
@@ -3989,18 +4052,18 @@ svg {
   display: flex;
   align-items: center;
   gap: 16px;
-  border: 1px solid var(--stroke-3);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--card-radius);
+  padding: 24px;
   margin-top: 6px;
-  background: var(--bg-2);
+  background: var(--surface-card);
 }
 .resource-icon {
   width: 52px;
   height: 52px;
-  border-radius: 12px;
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-3);
+  border-radius: var(--icon-radius);
+  background: var(--surface-icon);
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4325,8 +4388,8 @@ svg {
 .knowledge-visual {
   overflow: hidden;
   padding: 0;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--stroke-3);
+  border-radius: var(--card-radius);
+  border: 0;
   width: min(100%, 603px);
   margin: 0 auto;
   background: #000;
@@ -4348,20 +4411,19 @@ svg {
   display: block;
 }
 
-/* Foundry home bento cards: gradient wash plus dotted 3D artwork. */
+/* Foundry home bento cards: a filled surface with a faint purple wash in the
+   first tile and neutral dotted 3D artwork on the right. No outline. */
 .bento-card {
   position: relative;
   overflow: hidden;
 }
 .bento-card:first-child {
   background:
-    radial-gradient(75% 130% at 8% 0%, rgba(92, 66, 158, 0.55), transparent 62%),
-    linear-gradient(104deg, #2b2440 0%, #201d2b 48%, #1f1f1f 100%);
+    radial-gradient(45% 70% at 0% 0%, rgba(100, 63, 178, 0.1), transparent 60%),
+    var(--surface-card);
 }
 .bento-card:last-child {
-  background:
-    radial-gradient(80% 130% at 88% 0%, rgba(105, 96, 132, 0.24), transparent 62%),
-    linear-gradient(104deg, #26242e 0%, #1d1d21 52%, #1f1f1f 100%);
+  background: var(--surface-card);
 }
 .bento-card > *:not(.bento-art) {
   position: relative;
@@ -4413,8 +4475,9 @@ svg {
   padding: 32px;
   background:
     radial-gradient(420px 220px at 50% 0%, rgba(240, 162, 95, 0.16), transparent 70%),
-    linear-gradient(145deg, #1c1c1c, #131313);
-  border: 1px solid var(--stroke-3);
+    linear-gradient(145deg, var(--surface-card), var(--bg));
+  border: 0;
+  border-radius: var(--card-radius);
 }
 .of-knowledge-visual strong {
   font-size: 16px;
@@ -4443,9 +4506,9 @@ svg {
   grid-template-columns: 300px minmax(0, 1fr);
   width: min(1140px, 100%);
   min-height: min(720px, calc(100vh - 56px));
-  background: var(--bg-2);
-  border: 1px solid var(--stroke-3);
-  border-radius: 14px;
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--card-radius);
   overflow: hidden;
   box-shadow: var(--shadow-16);
 }
@@ -4637,15 +4700,14 @@ svg {
   grid-template-columns: minmax(190px, 1fr) 130px minmax(180px, 1.2fr) 24px;
   gap: 12px;
   align-items: center;
-  border: 1px solid var(--stroke-4);
-  background: var(--bg-3);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border: 0;
+  background: var(--surface-icon);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
   opacity: 0.72;
 }
 .provider-setup-card.enabled {
   opacity: 1;
-  border-color: var(--stroke-3);
 }
 .provider-toggle {
   display: flex;

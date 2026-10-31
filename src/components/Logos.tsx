@@ -150,12 +150,10 @@ const LOGO_SLUGS: [RegExp, string, string][] = [
   [/xai|^x$/i, "x", "ffffff"],
 ];
 
-const FALLBACK_COLORS = ["#615ced", "#2f7d6b", "#a15445", "#3f6f9e", "#7b5aa6", "#8a6a2f"];
-
 export function ModelLogo({
   publisher,
   name,
-  size = 32,
+  size = 44,
   dark = false,
 }: {
   publisher: string;
@@ -192,19 +190,13 @@ export function ModelLogo({
     );
   }
 
-  let hash = 0;
-  for (const character of publisher) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  const background = FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
-
   return (
     <span
       className={`model-logo${dark ? " dark" : ""}`}
       style={{
         width: size,
         height: size,
-        background,
-        color: "#fff",
-        fontSize: Math.max(11, Math.round(size * 0.38)),
+        fontSize: Math.max(11, Math.round(size * 0.36)),
       }}
       aria-hidden="true"
       title={publisher}

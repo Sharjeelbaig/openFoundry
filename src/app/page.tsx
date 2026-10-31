@@ -219,14 +219,12 @@ export default function HomePage() {
           <div className="quick-row mt-12">
             {QUICK.map((item) => (
               <Link href={item.href} className="quick-card" key={item.title}>
-                <span>
+                <span className="quick-icon">{item.icon}</span>
+                <span style={{ minWidth: 0 }}>
                   <span className="quick-title">{item.title}</span>
                   <span className="quick-desc" style={{ display: "block" }}>
                     {item.desc}
                   </span>
-                </span>
-                <span style={{ color: "var(--fg-3)", display: "inline-flex" }}>
-                  {item.icon}
                 </span>
               </Link>
             ))}
@@ -247,7 +245,13 @@ export default function HomePage() {
                   key={model.key}
                   href={`/discover/models/${encodeURIComponent(model.key)}`}
                 >
-                  <ModelLogo publisher={publisherLabel(model)} name={model.displayName} />
+                  <span className="model-tile-plate">
+                    <ModelLogo
+                      publisher={publisherLabel(model)}
+                      name={model.displayName}
+                      size={36}
+                    />
+                  </span>
                   <span style={{ minWidth: 0 }}>
                     <span className="model-tile-name">{model.displayName}</span>
                     <span className="model-tile-pub">{publisherLabel(model)}</span>

@@ -558,7 +558,7 @@ export default function Catalog() {
                             <ModelLogo
                               publisher={publisherLabel(model)}
                               name={model.displayName}
-                              size={36}
+                              size={44}
                             />
                             <div className="min-w-0" style={{ flex: 1 }}>
                               <div className="catalog-card-name">{model.displayName}</div>
