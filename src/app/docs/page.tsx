@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DEPLOYMENT_TYPES } from "@/lib/deployment-types";
 
 export const metadata = {
   title: "Docs — openFoundry local mirror",
@@ -8,6 +9,8 @@ const SECTIONS = [
   ["overview", "Overview"],
   ["getting-started", "Getting started"],
   ["models", "Models and deployments"],
+  ["deployment-types", "Deployment types"],
+  ["runtime-nodes", "Runtime nodes"],
   ["agents", "Agents"],
   ["knowledge", "Knowledge and retrieval"],
   ["tools", "Tools"],
@@ -82,6 +85,84 @@ api-key: <deployment api key>
           record. It does not delete the cached weights.
         </p>
 
+        <h3 id="deployment-types">Deployment types</h3>
+        <p>
+          The <span className="mono">Deployment type</span> field uses Microsoft
+          Foundry&apos;s own SKU labels, and the deployments table shows the same value.
+          The Serverless, Managed compute and Adapter tabs follow Foundry&apos;s sections.
+          Foundry&apos;s SKUs glue three separate ideas together; openFoundry keeps them
+          apart so the parts that can be real on one computer are real:
+        </p>
+        <ul>
+          <li>
+            <strong>Serving mode</strong> — how a request is served, enforced locally.
+            Standard and Developer metering with a tokens-per-minute rate limit (429 +
+            <span className="mono"> Retry-After</span> when exceeded); Provisioned and
+            Dedicated reserve concurrency slots with a measured queue; Batch accepts only
+            asynchronous jobs; Developer is gated to evaluation.
+          </li>
+          <li>
+            <strong>Scope</strong> — where a request is routed. Global may use any online
+            runtime node, Data Zone only nodes tagged for a zone, Region is pinned to one
+            node, and Device is this computer. Routing is real; the data-residency
+            guarantee is the one part that stays simulated.
+          </li>
+          <li>
+            <strong>Billing</strong> — always $0 locally. Token counts are real; any
+            Azure-equivalent figure is clearly an estimate.
+          </li>
+        </ul>
+        <div className="table-card">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Deployment type</th>
+                <th>Serving mode</th>
+                <th>Scope</th>
+                <th>Foundry option</th>
+                <th>Section</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DEPLOYMENT_TYPES.map((type) => (
+                <tr key={type.label}>
+                  <td>
+                    {type.label}
+                    {!type.available && <span className="muted"> · unavailable</span>}
+                  </td>
+                  <td className="muted">{type.servingMode}</td>
+                  <td className="muted">{type.scope}</td>
+                  <td className="muted">{type.option}</td>
+                  <td className="muted">{type.kind}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Types that need infrastructure this computer cannot provide (Arc, VM Managed
+          Compute, Provisioned Throughput Classic) are disabled in the deploy dialog with
+          the reason shown. <span className="mono">Local Provisioned Throughput</span> is
+          the default and describes the instant local runtime.
+        </p>
+
+        <h3 id="runtime-nodes">Runtime nodes</h3>
+        <p>
+          A runtime node is a separate runtime endpoint with a region and zone label.
+          Build → Models → <span className="mono">Runtime nodes</span> lists them. When you
+          deploy a Regional or Data Zone type, openFoundry starts an isolated Ollama daemon
+          for that region on its own port — sharing the model cache, so nothing is
+          re-downloaded — and pins the deployment to it. Global deployments route across
+          every online node. Foundry Local, LM Studio and llama.cpp are single servers, so
+          their deployments keep the region label but use their one endpoint.
+        </p>
+        <p>
+          Provisioned deployments accept a fixed number of concurrent requests. Requests
+          beyond that wait in a queue, and if the queue cannot be served within 30 seconds
+          the request is rejected with <span className="mono">429</span>, mirroring a PTU
+          deployment running out of throughput.
+        </p>
+
         <h2 id="agents">Agents</h2>
         <p>
           An agent stores a model, instructions, sampling parameters, tools, knowledge
@@ -104,6 +185,40 @@ api-key: <deployment api key>
           supports <span className="mono">stream: true</span>. Traces record the prompt,
           response, latency, token counts and citations.
         </p>
+
+        <h3 id="foundry-sdk">Running azure-ai-projects labs</h3>
+        <p>
+          The project surface uses Foundry&apos;s path shape:
+          <span className="mono">/api/projects/&lt;project&gt;</span>. The Azure SDK appends{" "}
+          <span className="mono">/openai/v1</span> itself, so point{" "}
+          <span className="mono">AIProjectClient</span> at the project endpoint and leave
+          the rest of the lab alone:
+        </p>
+        <pre className="code-block">{`from azure.ai.projects import AIProjectClient
+from local_auth import ApiKeyCredential
+
+with AIProjectClient(
+    endpoint="http://127.0.0.1:3001/api/projects/openfoundry-lab",
+    credential=ApiKeyCredential("<project api key>"),
+) as project:
+    agent = project.agents.create_version(
+        agent_name="astronomy-agent",
+        definition={"kind": "prompt", "model": "<deployment>", "instructions": "..."},
+        enforce_https=False,
+    )`}</pre>
+        <p>
+          <span className="mono">AIProjectClient</span> only accepts a{" "}
+          <span className="mono">TokenCredential</span>, so the lab wraps the project key
+          in a small bearer-token shim. <span className="mono">enforce_https=False</span>{" "}
+          is the SDK&apos;s supported opt-out for a loopback HTTP endpoint. Agent
+          versions, conversations, Responses with function tools and agent deletion are
+          served locally.
+        </p>
+        <ul>
+          <li>Responses are non-streaming on the project surface.</li>
+          <li>Function tools come from the agent definition, as they do in Foundry.</li>
+          <li>The deployment name resolves to a local deployment or a model the runtime reports.</li>
+        </ul>
 
         <h2 id="knowledge">Knowledge and retrieval</h2>
         <p>
@@ -165,6 +280,13 @@ api-key: <project api key>
                 ["/api/v1/embeddings", "Authenticated embeddings from an embedding deployment", "POST"],
                 ["/api/v1/deployments/<name>/chat/completions", "Authenticated deployment chat", "POST"],
                 ["/api/v1/agents/<id>/chat/completions", "Authenticated per-agent chat", "POST"],
+                ["/api/projects/<project>/openai/v1/responses", "Foundry Responses API for agent runs", "POST"],
+                ["/api/projects/<project>/openai/v1/conversations", "Create or list conversations", "GET / POST"],
+                ["/api/projects/<project>/openai/v1/conversations/<id>/items", "Append or list conversation items", "GET / POST"],
+                ["/api/projects/<project>/openai/v1/models", "Models reachable from this project", "GET"],
+                ["/api/projects/<project>/openai/v1/chat/completions", "Project-scoped chat completions", "POST"],
+                ["/api/projects/<project>/agents/<name>/versions", "Create or list agent versions", "GET / POST"],
+                ["/api/projects/<project>/agents/<name>/versions/<version>", "Get or delete an agent version", "GET / DELETE"],
                 ["/api/chat", "Agent-aware streaming chat with retrieval and tools", "POST"],
                 ["/api/agents", "Agent CRUD", "GET / POST / PATCH / DELETE"],
                 ["/api/knowledge", "Knowledge bases, uploads and text", "GET / POST"],
@@ -206,11 +328,12 @@ api-key: <project api key>
 
         <h2 id="limits">Limitations</h2>
         <ul>
-          <li>There is no cloud resource, subscription, quota or billing behind any page.</li>
+          <li>There is no cloud resource, subscription, quota or billing behind any page. Local serving behaviour (metering, rate limits, reserved slots, queues, batch) is real; only data residency is simulated.</li>
           <li>No fine-tuning runtime is bundled; datasets can be exported for an external trainer.</li>
           <li>Guardrails are prompt instructions, not a moderation model.</li>
+          <li>The project Responses surface is non-streaming; chat completions support streaming.</li>
           <li>Local models are smaller than hosted frontier models and can hallucinate.</li>
-          <li>Cloud-only features such as managed compute, private networking and cloud access control are represented as local equivalents, not emulated.</li>
+          <li>Deployment types that need Azure-only infrastructure (Arc, VM Managed Compute, Provisioned Throughput Classic) are disabled with an explanation; register a runtime node to approximate Arc or VM compute against another machine.</li>
         </ul>
 
         <div className="banner mt-16">

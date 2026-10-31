@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { completeChat } from "@/lib/chat";
 import { getDeployments, saveDeployments } from "@/lib/store";
+import { nodeForDeployment } from "@/lib/nodes";
 import { ChatMessage } from "@/lib/types";
 import { getGateway } from "@/lib/gateway";
 import { isDeploymentKey, unauthorized } from "@/lib/auth";
@@ -119,6 +120,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const node = await nodeForDeployment(deployment);
     const result = await completeChat({
       model: deployment.modelId,
       provider: deployment.provider,
@@ -126,6 +128,7 @@ export async function POST(req: NextRequest) {
       temperature: body.temperature,
       topP: body.top_p,
       maxTokens: body.max_tokens,
+      baseUrl: node?.baseUrl,
     });
     deployment.requests += 1;
     deployment.tokens += result.promptTokens + result.completionTokens;

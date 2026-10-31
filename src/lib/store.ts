@@ -8,12 +8,19 @@ import {
   Deployment,
   KnowledgeBase,
   LocalSettings,
+  RuntimeNode,
   Trace,
 } from "./types";
+import { deploymentTypeFor } from "./deployment-types";
 
 const DATA_DIR =
   process.env.OPENFOUNDRY_DATA_DIR?.trim() ||
   path.join(process.cwd(), "data");
+
+/** Absolute path of the JSON data directory (settings, deployments, nodes...). */
+export function dataDir(): string {
+  return DATA_DIR;
+}
 
 const FOUNDRY_URL =
   process.env.FOUNDRY_LOCAL_URL || "http://127.0.0.1:50414";
@@ -67,12 +74,65 @@ export async function getAgent(id: string): Promise<Agent | undefined> {
   return agents.find((a) => a.id === id);
 }
 
+/**
+ * Older builds stored an invented kind ("Serverless" for a managed-compute SKU)
+ * and labels such as "Local managed compute". Derive the section, the real
+ * serving mode and the routing scope from the SKU so tables, tabs, detail
+ * panels and the request router all agree with Foundry.
+ */
+function normalizeDeployment(deployment: Deployment): Deployment {
+  const type = deploymentTypeFor(deployment.sku);
+  const kind = deployment.kind === "Adapter" ? "Adapter" : type.kind;
+  const servingMode = deployment.servingMode || type.servingMode;
+  const scope = deployment.scope || type.scope;
+  const zone = deployment.zone ?? (scope === "Data Zone" ? "US" : undefined);
+  const region =
+    deployment.region ||
+    (scope === "Region"
+      ? "East US"
+      : scope === "Device"
+      ? "On device"
+      : undefined);
+  const tpm =
+    deployment.tpm ??
+    (servingMode === "Standard"
+      ? 240000
+      : servingMode === "Developer"
+      ? 50000
+      : undefined);
+  const reservedSlots =
+    deployment.reservedSlots ??
+    (type.reserved || servingMode === "Dedicated"
+      ? Math.max(1, deployment.capacity)
+      : undefined);
+  return {
+    ...deployment,
+    sku: type.label,
+    kind,
+    servingMode,
+    scope,
+    zone,
+    region,
+    tpm,
+    reservedSlots,
+  };
+}
+
 export async function getDeployments(): Promise<Deployment[]> {
-  return readJson<Deployment[]>("deployments.json", []);
+  const deployments = await readJson<Deployment[]>("deployments.json", []);
+  return deployments.map(normalizeDeployment);
 }
 
 export async function saveDeployments(items: Deployment[]): Promise<void> {
   await writeJson("deployments.json", items);
+}
+
+export async function getNodes(): Promise<RuntimeNode[]> {
+  return readJson<RuntimeNode[]>("nodes.json", []);
+}
+
+export async function saveNodes(items: RuntimeNode[]): Promise<void> {
+  await writeJson("nodes.json", items);
 }
 
 export async function getKnowledgeBases(): Promise<KnowledgeBase[]> {

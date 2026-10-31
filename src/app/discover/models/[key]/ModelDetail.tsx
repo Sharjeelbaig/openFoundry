@@ -33,7 +33,13 @@ import {
   runtimeLabel,
   taskLabel,
 } from "@/lib/model-info";
-import type { Deployment, LocalModel, Trace } from "@/lib/types";
+import type { DataZone, Deployment, LocalModel, Trace } from "@/lib/types";
+import {
+  LOCAL_DEPLOYMENT_TYPE,
+  deploymentTypeFor,
+  deploymentTypesByOption,
+} from "@/lib/deployment-types";
+import { REGIONS, ZONES } from "@/lib/regions";
 
 type Tab = "Details" | "Deployments" | "Benchmarks" | "Responsible AI" | "License";
 
@@ -478,7 +484,7 @@ export default function ModelDetail({ modelKey }: { modelKey: string }) {
                     <tr>
                       <th>Name</th>
                       <th style={{ width: 130 }}>Status</th>
-                      <th style={{ width: 150 }}>Type</th>
+                      <th style={{ width: 170 }}>Deployment type</th>
                       <th style={{ width: 180 }}>Created</th>
                       <th style={{ width: 190 }}>Actions</th>
                     </tr>
@@ -490,7 +496,7 @@ export default function ModelDetail({ modelKey }: { modelKey: string }) {
                         <td>
                           <StatusBadge status={deployment.status} />
                         </td>
-                        <td>{deployment.kind}</td>
+                        <td>{deployment.sku}</td>
                         <td>{formatDate(deployment.createdAt)}</td>
                         <td>
                           <div className="inline-actions">
@@ -836,27 +842,39 @@ function DeployDrawer({
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
   const [name, setName] = useState(defaultName);
-  const [type, setType] = useState("Global Managed Compute");
-  const [template, setTemplate] = useState("Local OpenAI-compatible endpoint");
-  const [accelerator, setAccelerator] = useState(
-    model.provider === "ollama" ? "Apple Metal (Ollama)" : "Apple GPU (local)"
-  );
-  const [instances, setInstances] = useState(1);
+  const [type, setType] = useState(LOCAL_DEPLOYMENT_TYPE);
+  const [description, setDescription] = useState("");
+  const [modelVersion, setModelVersion] = useState(model.version || "latest");
+  const [autoUpdate, setAutoUpdate] = useState(true);
+  const [guardrails, setGuardrails] = useState<"Default" | "Strict" | "Off">("Default");
+  const [zone, setZone] = useState<DataZone>("US");
+  const [region, setRegion] = useState("East US");
+  const [tpm, setTpm] = useState(240000);
+  const [units, setUnits] = useState(1);
   const [checking, setChecking] = useState(true);
   const [capacityOk, setCapacityOk] = useState<boolean | null>(null);
   const [creating, setCreating] = useState(false);
+  const deploymentType = deploymentTypeFor(type);
+  const servingMode = deploymentType.servingMode;
+  const scope = deploymentType.scope;
+  const isProvisioned = Boolean(deploymentType.reserved) || servingMode === "Dedicated";
+  const isTokenMetered = servingMode === "Standard" || servingMode === "Developer";
+
+  useEffect(() => {
+    setTpm(servingMode === "Developer" ? 50000 : 240000);
+  }, [servingMode]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!model.sizeBytes) {
         setCapacityOk(true);
       } else {
-        setCapacityOk(!freeMem || model.sizeBytes * instances < freeMem * 0.9);
+        setCapacityOk(!freeMem || model.sizeBytes * units < freeMem * 0.9);
       }
       setChecking(false);
     }, 700);
     return () => clearTimeout(timer);
-  }, [model.sizeBytes, freeMem, instances]);
+  }, [model.sizeBytes, freeMem, units]);
 
   const create = async () => {
     if (!name.trim()) return;
@@ -868,9 +886,17 @@ function DeployDrawer({
         body: JSON.stringify({
           modelKey: model.key,
           name,
-          kind: type === "Global Managed Compute" ? "Serverless" : "Managed compute",
-          sku: type,
-          capacity: instances,
+          kind: deploymentType.kind,
+          sku: deploymentType.label,
+          capacity: isProvisioned ? units : 1,
+          reservedSlots: isProvisioned ? units : undefined,
+          tpm: isTokenMetered ? tpm : undefined,
+          description,
+          modelVersion,
+          autoUpdate,
+          guardrails,
+          zone: scope === "Data Zone" ? zone : undefined,
+          region: scope === "Region" ? region : undefined,
         }),
       });
       const json = (await res.json()) as { deployment?: Deployment; error?: string };
@@ -908,74 +934,173 @@ function DeployDrawer({
           <label className="field">
             <span className="field-label">Deployment type</span>
             <select className="select" value={type} onChange={(event) => setType(event.target.value)}>
-              <option>Global Managed Compute</option>
-              <option>Local managed compute</option>
+              {deploymentTypesByOption().map((group) => (
+                <optgroup key={group.option} label={group.option}>
+                  {group.types.map((item) => (
+                    <option key={item.label} value={item.label} disabled={!item.available}>
+                      {item.label}
+                      {!item.available ? " — not available on this computer" : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
+            <span className="field-hint">{deploymentType.description}</span>
           </label>
 
-          <label className="field">
-            <span className="field-label">
-              Deployment template <span className="required">*</span>
-            </span>
-            <select
-              className="select"
-              value={template}
-              onChange={(event) => setTemplate(event.target.value)}
-            >
-              <option>Local OpenAI-compatible endpoint</option>
-              <option>Ollama chat runtime</option>
-              <option>Local runtime chat runtime</option>
-            </select>
-          </label>
+          {scope === "Region" && (
+            <label className="field">
+              <span className="field-label">Region</span>
+              <select
+                className="select"
+                value={region}
+                onChange={(event) => setRegion(event.target.value)}
+              >
+                {REGIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <span className="field-hint">
+                Pinned to an isolated local runtime for this region.
+              </span>
+            </label>
+          )}
 
-          <label className="field">
-            <span className="field-label">
-              Accelerator type <span className="required">*</span>
-            </span>
-            <select
-              className="select"
-              value={accelerator}
-              onChange={(event) => setAccelerator(event.target.value)}
-            >
-              <option>Apple GPU (local)</option>
-              <option>Apple Metal (Ollama)</option>
-              <option>CPU (local)</option>
-            </select>
-          </label>
+          {scope === "Data Zone" && (
+            <label className="field">
+              <span className="field-label">Data zone</span>
+              <select
+                className="select"
+                value={zone}
+                onChange={(event) => setZone(event.target.value as DataZone)}
+              >
+                {ZONES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <span className="field-hint">
+                Requests route only to local runtimes tagged for this data zone.
+              </span>
+            </label>
+          )}
 
           <div className="field">
-            <span className="field-label">
-              Model instances <span className="required">*</span>
-            </span>
-            <div className="instance-row">
-              <input
-                type="range"
-                className="range"
-                min={1}
-                max={10}
-                value={instances}
-                onChange={(event) => setInstances(Number(event.target.value))}
-                aria-label="Model instances"
-              />
-              <input
-                className="input instance-input"
-                type="number"
-                min={1}
-                max={10}
-                value={instances}
-                onChange={(event) =>
-                  setInstances(Math.min(10, Math.max(1, Number(event.target.value))))
-                }
-              />
-              <span className="muted">/10</span>
+            <span className="field-label">Model version settings</span>
+            <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <select
+                className="select"
+                value={modelVersion}
+                onChange={(event) => setModelVersion(event.target.value)}
+                aria-label="Model version"
+              >
+                <option value="latest">latest</option>
+                {model.version && model.version !== "latest" && (
+                  <option value={model.version}>{model.version}</option>
+                )}
+              </select>
+              <select
+                className="select"
+                value={autoUpdate ? "on" : "off"}
+                onChange={(event) => setAutoUpdate(event.target.value === "on")}
+                aria-label="Model auto-update"
+              >
+                <option value="on">Auto-update enabled</option>
+                <option value="off">Auto-update disabled</option>
+              </select>
             </div>
           </div>
+
+          {isTokenMetered && (
+            <label className="field">
+              <span className="field-label">Tokens per minute rate limit</span>
+              <input
+                className="input"
+                type="number"
+                min={1000}
+                step={1000}
+                value={tpm}
+                onChange={(event) => setTpm(Math.max(1000, Number(event.target.value)))}
+              />
+              <span className="field-hint">
+                Enforced locally: requests over this rate receive 429 with Retry-After.
+              </span>
+            </label>
+          )}
+
+          {isProvisioned && (
+            <div className="field">
+              <span className="field-label">
+                {servingMode === "Dedicated"
+                  ? "Reserved model instances"
+                  : "Provisioned throughput units"}
+                <span className="required"> *</span>
+              </span>
+              <div className="instance-row">
+                <input
+                  type="range"
+                  className="range"
+                  min={1}
+                  max={10}
+                  value={units}
+                  onChange={(event) => setUnits(Number(event.target.value))}
+                  aria-label="Reserved units"
+                />
+                <input
+                  className="input instance-input"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={units}
+                  onChange={(event) =>
+                    setUnits(Math.min(10, Math.max(1, Number(event.target.value))))
+                  }
+                />
+                <span className="muted">/10</span>
+              </div>
+              <span className="field-hint">
+                Reserves {units} local concurrency {units === 1 ? "slot" : "slots"};
+                extra requests queue and are measured.
+              </span>
+            </div>
+          )}
+
+          <label className="field">
+            <span className="field-label">Guardrails</span>
+            <select
+              className="select"
+              value={guardrails}
+              onChange={(event) =>
+                setGuardrails(event.target.value as "Default" | "Strict" | "Off")
+              }
+            >
+              <option value="Default">Default</option>
+              <option value="Strict">Strict</option>
+              <option value="Off">Off</option>
+            </select>
+          </label>
+
+          <label className="field">
+            <span className="field-label">Description</span>
+            <textarea
+              className="textarea"
+              style={{ minHeight: 72 }}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="What is this deployment for?"
+            />
+          </label>
 
           <div className="banner">
             <Shield20Regular />
             <span>
-              Capacity is checked against this computer&apos;s memory. No cloud resource is created and no cloud quota is consumed. Instances are a
-              logical setting for local concurrency.
+              {servingMode} serving runs for real on this computer: token metering,
+              rate limits, reserved slots and queues are enforced. Data residency is the
+              one part that stays simulated — everything runs on this machine, so nothing
+              is billed and no cloud quota is consumed.
             </span>
           </div>
           <p className="capacity-note">

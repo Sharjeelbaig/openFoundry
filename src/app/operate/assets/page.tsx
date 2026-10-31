@@ -92,7 +92,7 @@ export default function AssetsPage() {
         provider: deployment.providerLabel,
         updatedAt: deployment.updatedAt,
         href: "/build/models/deployments",
-        detail: `${deployment.modelName} · ${deployment.kind}`,
+        detail: `${deployment.modelName} · ${deployment.sku}`,
       });
     }
     for (const base of knowledgeBases) {

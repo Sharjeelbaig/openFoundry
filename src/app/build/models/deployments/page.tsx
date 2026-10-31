@@ -27,6 +27,22 @@ const KIND_LABEL: Record<KindTab, string> = {
   Adapter: "Adapter deployments",
 };
 
+/** Human-readable scope/region, matching the routing the server performs. */
+function whereRuns(deployment: Deployment): string {
+  switch (deployment.scope) {
+    case "Global":
+      return "Global";
+    case "Data Zone":
+      return `Data Zone · ${deployment.zone || "US"}`;
+    case "Region":
+      return deployment.region || "Region";
+    case "Device":
+      return "On device";
+    default:
+      return deployment.region || "On device";
+  }
+}
+
 export default function DeploymentsPage() {
   const { toast } = useToast();
   const [topTab, setTopTab] = useState<TopTab>("Deployments");
@@ -38,6 +54,7 @@ export default function DeploymentsPage() {
   const [codeFor, setCodeFor] = useState<Deployment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Deployment | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [nodesOpen, setNodesOpen] = useState(false);
   const [batchName, setBatchName] = useState("");
   const [batchDeployment, setBatchDeployment] = useState("");
   const [batchPrompts, setBatchPrompts] = useState("");
@@ -50,7 +67,13 @@ export default function DeploymentsPage() {
     3000
   );
   const deployments = data?.deployments ?? [];
+  const nodes = data?.nodes ?? [];
   const jobs = batchData?.jobs ?? [];
+  const nodeLabel = (id?: string) => {
+    if (!id) return "Default runtime";
+    const node = nodes.find((item) => item.id === id);
+    return node ? `${node.name} · ${node.status}` : "Isolated runtime";
+  };
 
   const filtered = useMemo(
     () =>
@@ -204,6 +227,9 @@ export default function DeploymentsPage() {
               />
             </div>
             <span className="grow" />
+            <button className="btn btn-secondary" onClick={() => setNodesOpen(true)}>
+              Runtime nodes{nodes.length ? ` (${nodes.length})` : ""}
+            </button>
             <button className="btn btn-secondary" onClick={() => setPtuOpen(true)}>
               PTU Calculator
             </button>
@@ -279,7 +305,10 @@ export default function DeploymentsPage() {
                         <span style={{ display: "block" }}>{deployment.modelName}</span>
                         <span className="text-12 muted">{deployment.providerLabel}</span>
                       </td>
-                      <td>{deployment.kind}</td>
+                      <td>
+                        <span style={{ display: "block" }}>{deployment.sku}</span>
+                        <span className="text-12 muted">{whereRuns(deployment)}</span>
+                      </td>
                       <td>
                         <StatusBadge status={deployment.status} />
                       </td>
@@ -455,9 +484,13 @@ export default function DeploymentsPage() {
             <div className="drawer-body">
               <div className="row" style={{ gap: 8 }}>
                 <StatusBadge status={detail.status} />
-                <span className="badge gray">{detail.kind}</span>
                 <span className="badge gray">{detail.sku}</span>
+                {detail.servingMode && <span className="badge gray">{detail.servingMode}</span>}
               </div>
+              <p className="muted text-12">
+                {whereRuns(detail)}
+                {detail.nodeId ? ` · ${nodeLabel(detail.nodeId)}` : " · Default runtime"}
+              </p>
               {detail.status === "Creating" && (
                 <div className="banner info">
                   <Spinner />
@@ -488,8 +521,33 @@ export default function DeploymentsPage() {
                   <div className="manage-field-value mono">{detail.modelId}</div>
                 </div>
                 <div>
-                  <div className="manage-field-label">Model instances</div>
-                  <div className="manage-field-value">{detail.capacity}</div>
+                  <div className="manage-field-label">Serving mode</div>
+                  <div className="manage-field-value">{detail.servingMode || "—"}</div>
+                </div>
+                <div>
+                  <div className="manage-field-label">Routing scope</div>
+                  <div className="manage-field-value">{whereRuns(detail)}</div>
+                </div>
+                <div>
+                  <div className="manage-field-label">Runtime node</div>
+                  <div className="manage-field-value">{nodeLabel(detail.nodeId)}</div>
+                </div>
+                {detail.servingMode === "Provisioned" || detail.servingMode === "Dedicated" ? (
+                  <div>
+                    <div className="manage-field-label">Reserved slots</div>
+                    <div className="manage-field-value">{detail.reservedSlots ?? detail.capacity}</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="manage-field-label">Rate limit</div>
+                    <div className="manage-field-value">
+                      {detail.tpm ? `${formatNumber(detail.tpm)} tokens/min` : "—"}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <div className="manage-field-label">Model version</div>
+                  <div className="manage-field-value">{detail.modelVersion || "latest"}</div>
                 </div>
                 <div>
                   <div className="manage-field-label">Requests served</div>
@@ -603,6 +661,89 @@ print(response.choices[0].message.content)`}</pre>
               </button>
               <button className="btn btn-danger" onClick={() => remove(confirmDelete)}>
                 Delete deployment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {nodesOpen && (
+        <div className="dialog-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setNodesOpen(false); }}>
+          <div className="dialog wide" role="dialog" aria-modal="true" aria-label="Runtime nodes">
+            <div className="dialog-head">
+              <div>
+                <h2 className="dialog-title">Runtime nodes</h2>
+                <p className="dialog-sub">
+                  Each node is a separate runtime endpoint. Regional and Data Zone
+                  deployments are pinned to their own node so their traffic stays
+                  isolated.
+                </p>
+              </div>
+              <button className="icon-button" onClick={() => setNodesOpen(false)} aria-label="Close">
+                <Dismiss20Regular />
+              </button>
+            </div>
+            <div className="dialog-body">
+              <div className="table-card">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Node</th>
+                      <th style={{ width: 90 }}>Provider</th>
+                      <th style={{ width: 180 }}>Scope</th>
+                      <th style={{ width: 110 }}>Status</th>
+                      <th>Endpoint</th>
+                      <th style={{ width: 80 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nodes.map((node) => (
+                      <tr key={node.id}>
+                        <td className="cell-strong">{node.name}</td>
+                        <td>{node.provider}</td>
+                        <td>
+                          {node.zone === "Device"
+                            ? "On device"
+                            : `${node.region} · ${node.zone}`}
+                        </td>
+                        <td>
+                          <StatusBadge status={node.status === "Online" ? "Running" : "Stopped"} />
+                        </td>
+                        <td className="mono text-12 truncate" style={{ maxWidth: 220 }}>
+                          {node.baseUrl}
+                        </td>
+                        <td>
+                          {node.managed && (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={async () => {
+                                await fetch(`/api/nodes?id=${encodeURIComponent(node.id)}`, {
+                                  method: "DELETE",
+                                });
+                                toast(`Stopped ${node.name}`, "success");
+                                refresh();
+                              }}
+                            >
+                              Stop
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {nodes.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="muted" style={{ textAlign: "center", padding: 36 }}>
+                          No runtime nodes detected.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="dialog-footer">
+              <button className="btn btn-primary" onClick={() => setNodesOpen(false)}>
+                Close
               </button>
             </div>
           </div>

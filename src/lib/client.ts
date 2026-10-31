@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Agent, Deployment, KnowledgeBase, LocalModel, ProviderStatus, Trace } from "./types";
+import type {
+  Agent,
+  Deployment,
+  DeploymentsResponse,
+  KnowledgeBase,
+  LocalModel,
+  ProviderStatus,
+  Trace,
+} from "./types";
 
 export function useApi<T>(
   url: string,
@@ -52,10 +60,7 @@ export function useModels(intervalMs = 15000) {
 }
 
 export function useDeployments(intervalMs = 4000) {
-  return useApi<{ deployments: Deployment[]; providers: ProviderStatus[] }>(
-    "/api/deployments",
-    intervalMs
-  );
+  return useApi<DeploymentsResponse>("/api/deployments", intervalMs);
 }
 
 export function useAgents() {

@@ -2,6 +2,16 @@ import "server-only";
 import { NextRequest } from "next/server";
 import { streamCompletion } from "./chat";
 import { Deployment } from "./types";
+import { nodeForDeployment } from "./nodes";
+import {
+  acquireSlot,
+  admit,
+  estimateTokens,
+  markResident,
+  meter,
+  rejectionResponse,
+  releaseSlot,
+} from "./serving";
 
 interface ChatBody {
   messages?: { role: "system" | "user" | "assistant"; content: string }[];
@@ -32,6 +42,24 @@ export async function deploymentChat(
       400
     );
 
+  const purpose = req.headers.get("x-foundry-purpose") || undefined;
+  const node = await nodeForDeployment(deployment);
+  const baseUrl = node?.baseUrl;
+
+  const estimated = estimateTokens(body.messages, body.max_tokens ?? 1024);
+  const rejection = admit(deployment, estimated, { purpose });
+  if (rejection) return rejectionResponse(rejection);
+
+  const acquired = await acquireSlot(deployment, 30_000);
+  if (!acquired)
+    return rejectionResponse({
+      kind: "capacity",
+      slots: deployment.reservedSlots || 1,
+      retryAfter: 15,
+    });
+
+  if (deployment.servingMode === "Instant") markResident(deployment.id);
+
   const id = `chatcmpl-${Date.now().toString(36)}`;
   const created = Math.floor(Date.now() / 1000);
 
@@ -47,6 +75,7 @@ export async function deploymentChat(
         temperature: body.temperature,
         topP: body.top_p,
         maxTokens: body.max_tokens,
+        baseUrl,
       })) {
         if (event.type === "delta") text += event.text;
         if (event.type === "usage") {
@@ -64,7 +93,10 @@ export async function deploymentChat(
         },
         502
       );
+    } finally {
+      releaseSlot(deployment);
     }
+    void meter(deployment.id, promptTokens, completionTokens);
     return json({
       id,
       object: "chat.completion",
@@ -91,6 +123,8 @@ export async function deploymentChat(
       async start(controller) {
         const send = (data: unknown) =>
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        let promptTokens = 0;
+        let completionTokens = 0;
         try {
           for await (const event of streamCompletion({
             model: deployment.modelId,
@@ -99,6 +133,7 @@ export async function deploymentChat(
             temperature: body.temperature,
             topP: body.top_p,
             maxTokens: body.max_tokens,
+            baseUrl,
           })) {
             if (event.type === "delta") {
               send({
@@ -114,6 +149,10 @@ export async function deploymentChat(
                   },
                 ],
               });
+            }
+            if (event.type === "usage") {
+              promptTokens = event.promptTokens;
+              completionTokens = event.completionTokens;
             }
           }
           send({
@@ -132,6 +171,8 @@ export async function deploymentChat(
             },
           });
         } finally {
+          releaseSlot(deployment);
+          void meter(deployment.id, promptTokens, completionTokens);
           controller.close();
         }
       },

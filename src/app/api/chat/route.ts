@@ -1,9 +1,18 @@
 import { NextRequest } from "next/server";
 import { streamCompletion } from "@/lib/chat";
 import { retrieveCitations } from "@/lib/rag";
-import { appendTrace, getAgent, newId } from "@/lib/store";
+import { appendTrace, getAgent, getDeployments, newId } from "@/lib/store";
+import { nodeForDeployment } from "@/lib/nodes";
+import {
+  acquireSlot,
+  admit,
+  estimateTokens,
+  meter,
+  rejectionMessage,
+  releaseSlot,
+} from "@/lib/serving";
 import { searchWeb, tryCalculate } from "@/lib/websearch";
-import { ChatMessage, ProviderId } from "@/lib/types";
+import { ChatMessage, Deployment, ProviderId } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,6 +73,7 @@ export async function POST(req: NextRequest) {
         let tools = body.tools || [];
         let guardrail = body.guardrail;
         let agentName = "";
+        let heldDeployment: Deployment | null = null;
 
         try {
           if (body.agentId) {
@@ -155,6 +165,39 @@ export async function POST(req: NextRequest) {
             ...body.messages.filter((m) => m.role !== "system"),
           ];
 
+          // When the selected model matches a deployment, serve it through the
+          // deployment's own runtime node and enforce its serving rules, so the
+          // playground behaves exactly like that deployment's endpoint.
+          const deployments = await getDeployments();
+          const deployment =
+            deployments.find(
+              (item) =>
+                item.provider === provider &&
+                item.modelId === model &&
+                item.status === "Running"
+            ) ||
+            deployments.find(
+              (item) => item.provider === provider && item.modelId === model
+            ) ||
+            null;
+
+          if (deployment) {
+            const rejection = admit(
+              deployment,
+              estimateTokens(messages, body.maxTokens ?? 1024),
+              { purpose: req.headers.get("x-foundry-purpose") || undefined }
+            );
+            if (rejection) throw new Error(rejectionMessage(rejection));
+            const acquired = await acquireSlot(deployment, 30_000);
+            if (!acquired)
+              throw new Error(
+                `Insufficient provisioned capacity on ${deployment.name}. All reserved slots are busy; try again shortly.`
+              );
+            heldDeployment = deployment;
+          }
+
+          const node = deployment ? await nodeForDeployment(deployment) : null;
+
           send({
             type: "meta",
             model,
@@ -162,6 +205,7 @@ export async function POST(req: NextRequest) {
             citations,
             embeddingModel,
             agent: agentName || null,
+            deployment: deployment?.name || null,
           });
 
           for await (const event of streamCompletion({
@@ -172,6 +216,7 @@ export async function POST(req: NextRequest) {
             topP: body.topP,
             maxTokens: body.maxTokens,
             signal: requestSignal,
+            baseUrl: node?.baseUrl,
           })) {
             if (event.type === "delta") {
               answer += event.text;
@@ -189,6 +234,9 @@ export async function POST(req: NextRequest) {
             );
           }
           if (!completionTokens) completionTokens = approxTokens(answer);
+
+          if (deployment)
+            void meter(deployment.id, promptTokens, completionTokens);
 
           const latencyMs = Date.now() - started;
           send({
@@ -220,6 +268,7 @@ export async function POST(req: NextRequest) {
             error instanceof Error ? error.message : "The model request failed";
           send({ type: "error", message });
         } finally {
+          if (heldDeployment) releaseSlot(heldDeployment);
           controller.close();
         }
       },

@@ -15,17 +15,24 @@ import {
   nowIso,
   saveDeployments,
 } from "@/lib/store";
-import { Deployment, DeploymentKind } from "@/lib/types";
+import { DataZone, Deployment, DeploymentKind } from "@/lib/types";
+import { ensureNode, listNodes, ZONE_REGION } from "@/lib/nodes";
+import {
+  LOCAL_DEPLOYMENT_TYPE,
+  deploymentTypeFor,
+  isKnownDeploymentType,
+} from "@/lib/deployment-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [deployments, providers] = await Promise.all([
+  const [deployments, providers, nodes] = await Promise.all([
     getDeployments(),
     getProviders(),
+    listNodes(),
   ]);
-  return NextResponse.json({ deployments, providers });
+  return NextResponse.json({ deployments, providers, nodes });
 }
 
 export async function POST(req: NextRequest) {
@@ -35,9 +42,32 @@ export async function POST(req: NextRequest) {
     kind?: DeploymentKind;
     sku?: string;
     capacity?: number;
+    description?: string;
+    zone?: DataZone;
+    region?: string;
+    modelVersion?: string;
+    autoUpdate?: boolean;
+    guardrails?: "Default" | "Strict" | "Off";
+    tpm?: number;
+    reservedSlots?: number;
   };
   if (!body.modelKey)
     return NextResponse.json({ error: "modelKey is required" }, { status: 400 });
+  if (body.sku && !isKnownDeploymentType(body.sku))
+    return NextResponse.json(
+      { error: `Unknown deployment type "${body.sku}"` },
+      { status: 400 }
+    );
+  const deploymentType = deploymentTypeFor(body.sku || LOCAL_DEPLOYMENT_TYPE);
+  if (!deploymentType.available)
+    return NextResponse.json(
+      {
+        error: `"${deploymentType.label}" cannot run on this computer. ${
+          deploymentType.unavailableReason || ""
+        }`.trim(),
+      },
+      { status: 400 }
+    );
   const model = await findModel(body.modelKey);
   if (!model)
     return NextResponse.json({ error: "Model not found" }, { status: 404 });
@@ -50,6 +80,31 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  const servingMode = deploymentType.servingMode;
+  const scope = deploymentType.scope;
+  const zone: DataZone | undefined =
+    scope === "Data Zone" ? body.zone || "US" : undefined;
+  const region =
+    scope === "Region"
+      ? body.region || "East US"
+      : scope === "Data Zone"
+      ? ZONE_REGION[(zone || "US") as DataZone]
+      : scope === "Device"
+      ? "On device"
+      : undefined;
+  const tpm =
+    body.tpm ||
+    (servingMode === "Standard"
+      ? 240000
+      : servingMode === "Developer"
+      ? 50000
+      : undefined);
+  const reservedSlots =
+    body.reservedSlots ||
+    (deploymentType.reserved || servingMode === "Dedicated"
+      ? Math.max(1, body.capacity || 1)
+      : undefined);
 
   const deployments = await getDeployments();
   const baseName =
@@ -74,18 +129,45 @@ export async function POST(req: NextRequest) {
     provider: model.provider,
     providerLabel: model.providerLabel,
     status: "Creating",
-    kind: body.kind || "Serverless",
-    sku: body.sku || "Local GPU",
-    capacity: body.capacity || 1,
+    kind: body.kind === "Adapter" ? "Adapter" : deploymentType.kind,
+    sku: deploymentType.label,
+    capacity: body.capacity || reservedSlots || 1,
     endpoint: `${req.nextUrl.origin}/api/v1/deployments/${name}`,
     apiKey: `local-${newId("key").slice(-20)}`,
     createdAt: now,
     updatedAt: now,
     requests: 0,
     tokens: 0,
+    servingMode,
+    scope,
+    zone,
+    region,
+    tpm,
+    reservedSlots,
+    modelVersion: body.modelVersion,
+    autoUpdate: body.autoUpdate ?? true,
+    description: body.description?.trim() || undefined,
+    guardrails: body.guardrails || "Default",
   };
   deployments.unshift(deployment);
   await saveDeployments(deployments);
+
+  // The scope may need its own isolated runtime node. Spawning one can take a
+  // few seconds, so the deployment starts on the default runtime and is pinned
+  // to the new node as soon as it is ready.
+  if ((scope === "Region" || scope === "Data Zone") && model.provider === "ollama") {
+    void (async () => {
+      const node = await ensureNode(model.provider, { region, zone });
+      if (!node) return;
+      const current = await getDeployments();
+      const found = current.find((item) => item.id === id);
+      if (found) {
+        found.nodeId = node.id;
+        found.updatedAt = nowIso();
+        await saveDeployments(current);
+      }
+    })();
+  }
 
   if (model.provider === "ollama") {
     void warmOllama(model.id);

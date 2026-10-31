@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { completeChat } from "@/lib/chat";
 import { getDeployments, newId, nowIso, readJson, writeJson } from "@/lib/store";
+import { nodeForDeployment } from "@/lib/nodes";
+import { meter } from "@/lib/serving";
 import { BatchJob } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
     const current = await load();
     const target = current.find((item) => item.id === job.id);
     if (!target) return;
+    const node = await nodeForDeployment(deployment).catch(() => null);
     for (const prompt of target.prompts) {
       try {
         const result = await completeChat({
@@ -59,6 +62,7 @@ export async function POST(req: NextRequest) {
           provider: deployment.provider,
           messages: [{ role: "user", content: prompt }],
           maxTokens: 512,
+          baseUrl: node?.baseUrl,
         });
         target.results.push({
           prompt,
@@ -66,6 +70,11 @@ export async function POST(req: NextRequest) {
           promptTokens: result.promptTokens,
           completionTokens: result.completionTokens,
         });
+        await meter(
+          deployment.id,
+          result.promptTokens,
+          result.completionTokens
+        ).catch(() => {});
       } catch (error) {
         target.results.push({
           prompt,

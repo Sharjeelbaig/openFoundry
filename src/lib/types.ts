@@ -71,10 +71,26 @@ export interface ProviderStatus {
 export interface DeploymentsResponse {
   deployments: Deployment[];
   providers: ProviderStatus[];
+  nodes?: RuntimeNode[];
 }
 
 export type DeploymentStatus = "Running" | "Creating" | "Stopped" | "Failed";
 export type DeploymentKind = "Serverless" | "Managed compute" | "Adapter";
+
+/** How a deployed model serves requests. Real local behaviour. */
+export type ServingMode =
+  | "Standard"
+  | "Provisioned"
+  | "Batch"
+  | "Developer"
+  | "Instant"
+  | "Dedicated";
+
+/** Where requests are routed. Routing is real; residency is simulated. */
+export type DeploymentScope = "Global" | "Data Zone" | "Region" | "Device";
+
+/** Azure data zone the deployment is pinned to when scope is "Data Zone". */
+export type DataZone = "US" | "EU" | "APAC";
 
 export interface Deployment {
   id: string;
@@ -84,7 +100,9 @@ export interface Deployment {
   provider: ProviderId;
   providerLabel: string;
   status: DeploymentStatus;
+  /** Section in Build → Models (Serverless / Managed compute / Adapter). */
   kind: DeploymentKind;
+  /** Deployment type label, exactly as Microsoft Foundry shows it (e.g. "Global Standard"). */
   sku: string;
   capacity: number;
   endpoint: string;
@@ -93,6 +111,51 @@ export interface Deployment {
   updatedAt: string;
   requests: number;
   tokens: number;
+  /** Real serving behaviour, derived from the deployment type. */
+  servingMode?: ServingMode;
+  /** Routing scope, derived from the deployment type. */
+  scope?: DeploymentScope;
+  /** Data zone for Data Zone scopes (US / EU / APAC). */
+  zone?: DataZone;
+  /** Runtime node that serves this deployment. */
+  nodeId?: string;
+  /** Human-readable region label (Azure region name, or "On device"). */
+  region?: string;
+  /** Tokens-per-minute rate limit for token-based deployments. */
+  tpm?: number;
+  /** Reserved concurrency slots for provisioned / dedicated deployments. */
+  reservedSlots?: number;
+  /** Model version pinned at deploy time. */
+  modelVersion?: string;
+  /** Whether the platform may move the deployment to a newer model version. */
+  autoUpdate?: boolean;
+  /** Free-form description, mirroring Foundry's dialog field. */
+  description?: string;
+  /** Guardrail policy applied to requests. */
+  guardrails?: "Default" | "Strict" | "Off";
+}
+
+/**
+ * A concrete runtime endpoint on this machine that can serve models. Nodes carry
+ * a region/zone label so a deployment can be pinned to a genuinely separate
+ * process (a second Ollama daemon, a Docker container, a remote server).
+ */
+export interface RuntimeNode {
+  id: string;
+  name: string;
+  provider: ProviderId;
+  baseUrl: string;
+  /** Azure-style region label, e.g. "East US" or "On device". */
+  region: string;
+  /** Data zone the node belongs to. */
+  zone: DataZone | "Device";
+  /** True when openFoundry started this runtime and can stop it. */
+  managed: boolean;
+  status: "Online" | "Offline" | "Starting";
+  /** Isolated model store for managed nodes. */
+  modelDir?: string;
+  pid?: number;
+  lastSeenAt?: string;
 }
 
 export type AgentStatus = "Running" | "Stopped" | "Draft";
@@ -253,6 +316,34 @@ export interface EvaluationRun {
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+}
+
+/** A function call the model asked for, in OpenAI wire format. */
+export interface WireToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/**
+ * Chat message in the OpenAI wire format. Unlike ChatMessage this can carry the
+ * tool turns: an assistant message that requested calls, and the tool replies.
+ */
+export interface WireMessage {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_calls?: WireToolCall[];
+  tool_call_id?: string;
+}
+
+/** A function declaration handed to the model. */
+export interface ChatTool {
+  type: "function";
+  function: {
+    name: string;
+    description?: string;
+    parameters: Record<string, unknown>;
+  };
 }
 
 export interface QuotaRequest {
