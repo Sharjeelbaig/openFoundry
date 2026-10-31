@@ -38,67 +38,6 @@
   color-scheme: dark;
 }
 
-[data-theme="light"] {
-  --bg: #f6f6f7;
-  --bg-elevated: #ffffff;
-  --bg-2: #ffffff;
-  --bg-3: #efeff1;
-  --bg-hover: #e3e3e7;
-  --fg-1: #171717;
-  --fg-2: #3a3a3f;
-  --fg-3: #66666f;
-  --fg-disabled: #9a9aa3;
-  --stroke-1: #9a9aa3;
-  --stroke-2: #c7c7cf;
-  --stroke-3: #d8d8df;
-  --stroke-4: #e6e6ec;
-  --brand: #643fb2;
-  --brand-hover: #7452c5;
-  --brand-pressed: #4c2d8a;
-  --brand-selected: #5a3aa7;
-  --brand-stroke: #7a57d6;
-  --brand-tint: #f0ecf8;
-  --success: #2f8f2f;
-  --success-strong: #4f9a00;
-  --warning: #b86a2b;
-  --danger: #c74550;
-  color-scheme: light;
-}
-
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: #b8b8bf;
-  border-color: var(--bg);
-}
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: #9999a3;
-}
-[data-theme="light"] .card-hover:hover {
-  background: var(--bg-hover);
-}
-[data-theme="light"] .model-logo.dark {
-  background: var(--bg-3);
-  color: var(--fg-1);
-  border-color: var(--stroke-3);
-}
-[data-theme="light"] .voice-card {
-  background: var(--bg-3);
-}
-[data-theme="light"] .bento-card:first-child {
-  background:
-    radial-gradient(75% 130% at 8% 0%, rgba(92, 66, 158, 0.22), transparent 62%),
-    linear-gradient(104deg, #e9e2f6 0%, #ddd4ef 48%, #eeeaf6 100%);
-}
-[data-theme="light"] .bento-card:last-child {
-  background:
-    radial-gradient(80% 130% at 88% 0%, rgba(105, 96, 132, 0.14), transparent 62%),
-    linear-gradient(104deg, #e8e4ef 0%, #ddd8e6 52%, #eeeaf6 100%);
-}
-[data-theme="light"] .of-knowledge-visual {
-  background:
-    radial-gradient(420px 220px at 50% 0%, rgba(240, 162, 95, 0.12), transparent 70%),
-    linear-gradient(145deg, #f0ecf8, #e6e6ec);
-}
-
 * {
   box-sizing: border-box;
 }
@@ -295,14 +234,14 @@ svg {
   gap: 2px;
   min-width: 0;
 }
-.theme-switch {
+.new-foundry {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-right: 14px;
   white-space: nowrap;
 }
-.theme-switch-label {
+.new-foundry-label {
   font-size: 12px;
   color: var(--fg-2);
 }
@@ -3073,7 +3012,7 @@ svg {
   .topnav {
     gap: 4px;
   }
-  .theme-switch {
+  .new-foundry {
     margin-right: 8px;
   }
   .catalog-grid {
@@ -3091,7 +3030,7 @@ svg {
   .header-search {
     width: 190px;
   }
-  .theme-switch-label {
+  .new-foundry-label {
     display: none;
   }
   .builder-body {

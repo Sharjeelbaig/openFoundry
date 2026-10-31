@@ -18,14 +18,8 @@ export default async function RootLayout({
 }) {
   const settings = await getSettings();
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="Dark">
       <body>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{const t=localStorage.getItem('openfoundry:theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}",
-          }}
-        />
         <AppShell settings={settings} systemHost={hostName()}>
           {children}
         </AppShell>
