@@ -107,7 +107,9 @@ src/components/          Workspace UI, setup wizard, download center
 src/lib/                 Providers, store, model discovery, downloads
 src-tauri/               Tauri shell, loading screen, icons
 scripts/                 Desktop resource preparation
-public/                  openFoundry artwork
+public/brand/            openFoundry mark and app tile sources
+public/                  Other openFoundry artwork
+BRAND.md                 Mark, colour and usage rules
 ```
 
 ## License

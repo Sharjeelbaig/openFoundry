@@ -86,7 +86,7 @@ export default function Header({
           <span className="brand-logo">
             <FoundryLogo />
           </span>
-          <span className="brand-title">openFoundry</span>
+          <span className="brand-title"><span className="brand-open">open</span><strong>Foundry</strong></span>
         </Link>
         <span className="header-divider" aria-hidden="true" />
         <div style={{ position: "relative" }}>

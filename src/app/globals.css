@@ -4996,3 +4996,40 @@ svg {
   margin: 0 0 14px;
   line-height: 18px;
 }
+
+/* new mark lockup */
+.brand-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  letter-spacing: -0.02em;
+}
+.brand-title .brand-open {
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.brand-title strong {
+  color: var(--fg-1);
+  font-weight: 650;
+}
+.brand:hover .brand-open {
+  color: var(--fg-2);
+}
+.setup-brand strong {
+  letter-spacing: -0.02em;
+}
+.setup-brand-open {
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.setup-brand strong .setup-brand-open {
+  display: inline;
+  font-size: inherit;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.brand-logo,
+.brand-logo svg {
+  width: 22px;
+  height: 22px;
+}

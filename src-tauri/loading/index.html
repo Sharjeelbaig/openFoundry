@@ -42,9 +42,15 @@
   <body>
     <main>
       <div class="mark" aria-hidden="true">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="#f0a25f">
-          <path d="M12 2.4 14.8 9l6.8 1.1-5 4.8 1.2 6.7-5.8-3.1-5.8 3.1 1.2-6.7-5-4.8L9.2 9 12 2.4Z" />
-          <rect x="10.6" y="15.1" width="2.8" height="6.2" rx="1.2" />
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <linearGradient id="of-loading-copper" x1="8" y1="6" x2="10.4" y2="26" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#ffc57e" />
+              <stop offset="1" stop-color="#d86831" />
+            </linearGradient>
+          </defs>
+          <path d="M8 6h15.8v4.6H13.2v3.6h8.5v4.6h-8.5V26H8V6Z" fill="#f4efe6" />
+          <path d="M8 6h2.4v20H8z" fill="url(#of-loading-copper)" />
         </svg>
       </div>
       <h1>Starting openFoundry</h1>

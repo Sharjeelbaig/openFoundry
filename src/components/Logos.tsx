@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
-export function OpenFoundryLogo({ size = 20 }: { size?: number }) {
+const F_FRONT =
+  "M8 6h15.8v4.6H13.2v3.6h8.5v4.6h-8.5V26H8V6Z";
+const F_COPPER = "M8 6h2.4v20H8z";
+
+export function OpenFoundryLogo({
+  size = 20,
+  mono = false,
+}: {
+  size?: number;
+  mono?: boolean;
+}) {
+  const reactId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const copperId = `of-cast-${reactId}`;
   return (
     <svg
       height={size}
@@ -13,20 +25,111 @@ export function OpenFoundryLogo({ size = 20 }: { size?: number }) {
       role="presentation"
       aria-hidden="true"
     >
+      {!mono && (
+        <defs>
+          <linearGradient
+            id={copperId}
+            x1="8"
+            y1="6"
+            x2="10.4"
+            y2="26"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#ffc57e" />
+            <stop offset="1" stopColor="#d86831" />
+          </linearGradient>
+        </defs>
+      )}
+      <path d={F_FRONT} fill="currentColor" />
+      <path
+        d={F_COPPER}
+        fill={mono ? "currentColor" : `url(#${copperId})`}
+      />
+    </svg>
+  );
+}
+
+/**
+ * The product tile. Use this at larger sizes where the icon has room to carry
+ * the background and material treatment; the standalone mark is used in dense
+ * chrome such as the app header.
+ */
+export function OpenFoundryAppIcon({ size = 72 }: { size?: number }) {
+  const reactId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const copperId = `of-icon-copper-${reactId}`;
+  const bgId = `of-icon-bg-${reactId}`;
+  const glowId = `of-icon-glow-${reactId}`;
+  const shadowId = `of-icon-shadow-${reactId}`;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 1024 1024"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
       <defs>
-        <linearGradient id="of-header-mark" x1="4" y1="2" x2="28" y2="30">
-          <stop stopColor="#f0a25f" />
-          <stop offset="1" stopColor="#c56532" />
+        <linearGradient
+          id={bgId}
+          x1="120"
+          y1="0"
+          x2="870"
+          y2="1024"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#2b241d" />
+          <stop offset=".5" stopColor="#141414" />
+          <stop offset="1" stopColor="#0d0d0e" />
         </linearGradient>
+        <radialGradient
+          id={glowId}
+          cx="0"
+          cy="0"
+          r="1"
+          gradientTransform="translate(500 430) rotate(90) scale(430)"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#b96832" stopOpacity=".28" />
+          <stop offset="1" stopColor="#b96832" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient
+          id={copperId}
+          x1="8"
+          y1="6"
+          x2="10.4"
+          y2="26"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#ffc57e" />
+          <stop offset="1" stopColor="#d86831" />
+        </linearGradient>
+        <filter id={shadowId} x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow
+            dx="0"
+            dy="22"
+            stdDeviation="24"
+            floodColor="#000000"
+            floodOpacity=".38"
+          />
+        </filter>
       </defs>
-      <path
-        d="M16 2.5 18 9l6.2 2L18 13l-2 6.5L14 13l-6.2-2L14 9l2-6.5Z"
-        fill="url(#of-header-mark)"
+      <rect width="1024" height="1024" rx="228" fill={`url(#${bgId})`} />
+      <rect
+        x="3"
+        y="3"
+        width="1018"
+        height="1018"
+        rx="225"
+        stroke="#41382f"
+        strokeWidth="3"
       />
-      <path
-        d="M8.5 19.5h15l-1.7 4.6h-4v3.2h-3.6v-3.2h-4L8.5 19.5Z"
-        fill="url(#of-header-mark)"
-      />
+      <ellipse cx="500" cy="430" rx="430" ry="430" fill={`url(#${glowId})`} />
+      <g transform="translate(-29 -32) scale(34)" filter={`url(#${shadowId})`}>
+        <path d={F_FRONT} fill="#f4efe6" />
+        <path d={F_COPPER} fill={`url(#${copperId})`} />
+      </g>
     </svg>
   );
 }

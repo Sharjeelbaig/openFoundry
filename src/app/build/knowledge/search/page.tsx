@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { OpenFoundryLogo } from "@/components/Logos";
+import { OpenFoundryAppIcon } from "@/components/Logos";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
@@ -161,7 +161,7 @@ export default function KnowledgePage() {
           ) : bases.length === 0 ? (
             <div className="knowledge-hero">
               <div className="knowledge-visual of-knowledge-visual">
-                <OpenFoundryLogo size={86} />
+                <OpenFoundryAppIcon size={86} />
                 <strong>Ground your agent in your own knowledge</strong>
                 <span>Documents stay on this computer.</span>
               </div>

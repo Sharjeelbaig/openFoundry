@@ -1,0 +1,10 @@
+<svg width="512" height="512" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="copper" x1="8" y1="6" x2="10.4" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFC57E"/>
+      <stop offset="1" stop-color="#D86831"/>
+    </linearGradient>
+  </defs>
+  <path d="M8 6h15.8v4.6H13.2v3.6h8.5v4.6h-8.5V26H8V6Z" fill="#F4EFE6"/>
+  <path d="M8 6h2.4v20H8z" fill="url(#copper)"/>
+</svg>

@@ -178,7 +178,7 @@ export default function SetupWizard({
           <div className="setup-brand">
             <OpenFoundryLogo size={30} />
             <div>
-              <strong>openFoundry</strong>
+              <strong><span className="setup-brand-open">open</span>Foundry</strong>
               <span>A local AI workbench</span>
             </div>
           </div>
