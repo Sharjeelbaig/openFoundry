@@ -10,25 +10,25 @@ import {
   useState,
 } from "react";
 import {
-  Add20Regular,
   ArrowClockwise20Regular,
   ArrowLeft20Regular,
+  ArrowSync20Regular,
   Attach20Regular,
   Book20Regular,
-  Brain20Regular,
+  ChatAdd20Regular,
   Checkmark20Regular,
+  CheckmarkCircle16Filled,
   ChevronDown20Regular,
-  ChevronRight20Regular,
   ChevronUp20Regular,
+  Code20Filled,
   Code20Regular,
   Delete20Regular,
   Dismiss20Regular,
   DocumentArrowDown20Regular,
-  History20Regular,
   MoreHorizontal20Regular,
+  Open16Regular,
   Options20Regular,
   Play20Regular,
-  QuestionCircle20Regular,
   Save20Regular,
   Send20Regular,
   Settings20Regular,
@@ -36,14 +36,15 @@ import {
   Sparkle20Regular,
   Wrench20Regular,
 } from "@fluentui/react-icons";
-import { formatDate, formatNumber, useApi, useModels } from "@/lib/client";
+import { formatDate, formatNumber, formatVersionStamp, useApi, useDeployments, useModels } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
+import ModelSelect from "@/components/ModelSelect";
 import type {
   Agent,
   Citation,
+  Guardrail,
   KnowledgeBase,
-  LocalModel,
   Trace,
 } from "@/lib/types";
 
@@ -80,6 +81,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     `/api/agents/${encodeURIComponent(agentId)}`
   );
   const { data: modelData } = useModels(30000);
+  const { data: deploymentData } = useDeployments(5000);
   const { data: knowledgeData, refresh: refreshKnowledge } = useApi<{
     knowledgeBases: KnowledgeBase[];
   }>("/api/knowledge");
@@ -87,7 +89,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     "/api/memory"
   );
   const { data: guardrailData } = useApi<{
-    guardrails: { id: string; name: string }[];
+    guardrails: Guardrail[];
   }>("/api/guardrails");
   const tracesApi = useApi<{ traces: Trace[] }>(
     `/api/traces?agentId=${encodeURIComponent(agentId)}`,
@@ -96,6 +98,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
 
   const agent = data?.agent;
   const models = modelData?.models ?? [];
+  const deployments = deploymentData?.deployments ?? [];
   const knowledgeBases = knowledgeData?.knowledgeBases ?? [];
   const memoryStores = memoryData?.stores ?? [];
   const guardrailResources = guardrailData?.guardrails ?? [];
@@ -119,11 +122,12 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const [sections, setSections] = useState({
     instructions: true,
     tools: true,
-    knowledge: true,
+    knowledge: false,
     memory: false,
     guardrail: false,
   });
   const [paramsOpen, setParamsOpen] = useState(false);
+  const [chatParamsOpen, setChatParamsOpen] = useState(false);
   const [addToolsOpen, setAddToolsOpen] = useState(false);
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
@@ -154,15 +158,11 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
+  const modelHydrated = useRef(false);
 
   useEffect(() => {
     if (!agent || hydrated.current) return;
     hydrated.current = true;
-    setModelKey(
-      models.find((m) => m.id === agent.model)?.key ||
-        models.find((m) => m.provider === agent.provider)?.key ||
-        `foundry:${agent.model}`
-    );
     setInstructions(agent.instructions);
     setTemperature(agent.temperature);
     setTopP(agent.topP);
@@ -177,6 +177,21 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     setName(agent.name);
     setDescription(agent.description);
     setVersion(agent.version);
+  }, [agent, models]);
+
+  /*
+   * Resolve the picker's value from the agent once the model list has arrived.
+   * The list is fetched in parallel with the agent, so it can land a moment
+   * later; resolving against an empty list would leave the control blank.
+   */
+  useEffect(() => {
+    if (!agent || modelHydrated.current || !models.length) return;
+    modelHydrated.current = true;
+    setModelKey(
+      models.find((m) => m.id === agent.model)?.key ||
+        models.find((m) => m.provider === agent.provider)?.key ||
+        `foundry:${agent.model}`
+    );
   }, [agent, models]);
 
   useEffect(() => {
@@ -354,17 +369,17 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     router.push("/build/agents");
   };
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (override?: string, base?: ChatTurn[]) => {
+    const text = (override ?? input).trim();
     if (!text || streaming || !agent) return;
     if (!currentModel) {
       toast("Pick a model first", "error");
       return;
     }
     const userTurn: ChatTurn = { role: "user", content: text };
-    const next = [...messages, userTurn];
+    const next = [...(base ?? messages), userTurn];
     setMessages(next);
-    setInput("");
+    if (override === undefined) setInput("");
     setStreaming(true);
     let assistant = "";
     let citations: Citation[] = [];
@@ -469,6 +484,18 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     } finally {
       setStreaming(false);
     }
+  };
+
+  /** Re-run the last user turn, dropping the reply that followed it. */
+  const regenerate = () => {
+    if (streaming) return;
+    const lastUserIndex = [...messages]
+      .map((turn, index) => ({ turn, index }))
+      .reverse()
+      .find((entry) => entry.turn.role === "user")?.index;
+    if (lastUserIndex === undefined) return;
+    const lastUser = messages[lastUserIndex];
+    void send(lastUser.content, messages.slice(0, lastUserIndex));
   };
 
   const uploadFiles = async (files: FileList | null) => {
@@ -623,13 +650,92 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const section = (key: keyof typeof sections) =>
     setSections((current) => ({ ...current, [key]: !current[key] }));
 
+  /** Shared model-parameter popover, reachable from the picker row and the chat header. */
+  const paramsMenu = (
+    <div className="menu-popover" style={{ right: 0, top: 38, width: 300 }}>
+      <div className="menu-head">
+        <strong>Model parameters</strong>
+        <button
+          className="icon-button small"
+          onClick={() => {
+            setParamsOpen(false);
+            setChatParamsOpen(false);
+          }}
+          aria-label="Close"
+        >
+          <Dismiss20Regular />
+        </button>
+      </div>
+      <div className="menu-body">
+        <label className="field mb-12">
+          <span className="field-label">Temperature · {temperature.toFixed(2)}</span>
+          <input
+            type="range"
+            className="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={temperature}
+            onChange={(e) => setTemperature(Number(e.target.value))}
+          />
+        </label>
+        <label className="field mb-12">
+          <span className="field-label">Top P · {topP.toFixed(2)}</span>
+          <input
+            type="range"
+            className="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={topP}
+            onChange={(e) => setTopP(Number(e.target.value))}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">Max tokens</span>
+          <input
+            className="input"
+            type="number"
+            min={16}
+            max={8192}
+            value={maxTokens}
+            onChange={(e) => setMaxTokens(Number(e.target.value))}
+          />
+        </label>
+      </div>
+    </div>
+  );
+
+  const selectedGuardrail =
+    guardrailResources.find((resource) => resource.id === guardrailId) ||
+    guardrailResources.find((resource) => resource.name === "DefaultV2") ||
+    guardrailResources.find((resource) => resource.name === "Default") ||
+    guardrailResources[0];
+
+  /** "Content harms (4), Jailbreak (1)" style summary of a guardrail's controls. */
+  const guardrailRiskLine = (resource: Guardrail | undefined, withControls: boolean) => {
+    const controls = (resource?.controls ?? []).filter(
+      (control) => control.enabled === withControls
+    );
+    const groups = [...new Set(controls.map((control) => control.group))];
+    if (groups.length === 0) return "None";
+    return groups
+      .map((group) =>
+        withControls
+          ? `${group} (${controls.filter((c) => c.group === group).length})`
+          : group
+      )
+      .join(", ");
+  };
+
   return (
     <div className="agent-builder">
       <div className="builder-head">
         <div className="builder-title-row">
           <button
-            className="icon-button"
-            aria-label="Back to agents"
+            className="icon-button head-back"
+            aria-label="Back"
+            title="Back"
             onClick={() => router.push("/build/agents")}
           >
             <ArrowLeft20Regular />
@@ -637,27 +743,34 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
           <h1 className="builder-title" title={name}>
             {name}
           </h1>
-          <span
-            className={`status-dot ${agent.status === "Running" ? "" : "muted"}`}
-            title={agent.status}
-          />
+          {agent.status === "Running" ? (
+            <span className="head-status" role="img" aria-label="Agent running">
+              <CheckmarkCircle16Filled />
+            </span>
+          ) : (
+            <span className="status-dot muted" title={agent.status} />
+          )}
         </div>
         <div className="builder-actions">
           <div style={{ position: "relative" }}>
             <button
-              className="project-switcher"
-              style={{ height: 32, fontSize: 12 }}
+              className="head-version"
               onClick={() => setVersionOpen(!versionOpen)}
               aria-expanded={versionOpen}
             >
-              Version: {version ?? agent.version} ({formatDate(
-                agent.history.find((h) => h.version === (version ?? agent.version))?.savedAt ||
-                  agent.updatedAt
-              )})
-              <ChevronDown20Regular style={{ width: 12, height: 12 }} />
+              <span className="head-version-label">Version:</span>
+              <span className="head-version-value">
+                {version ?? agent.version} (
+                {formatVersionStamp(
+                  agent.history.find((h) => h.version === (version ?? agent.version))
+                    ?.savedAt || agent.updatedAt
+                )}
+                )
+                <ChevronDown20Regular className="head-version-chevron" />
+              </span>
             </button>
             {versionOpen && (
-              <div className="menu-popover" style={{ right: 0, top: 36, minWidth: 250 }}>
+              <div className="menu-popover" style={{ right: 0, top: 28, minWidth: 250 }}>
                 <div className="muted text-12" style={{ padding: "6px 10px" }}>
                   VERSION HISTORY
                 </div>
@@ -684,28 +797,30 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
             )}
           </div>
           <button
-            className="btn btn-secondary"
+            className="head-btn head-btn-save"
             disabled={!dirty || saving}
             onClick={() => save()}
           >
-            {saving ? <Spinner /> : <Save20Regular />} Save
+            {saving ? <Spinner /> : null} Save
           </button>
-          <button className="btn btn-secondary" onClick={() => setCodeOpen(true)}>
-            <Code20Regular /> Continue in code
+          <button
+            className="head-btn head-btn-code"
+            onClick={() => setCodeOpen(true)}
+          >
+            <Code20Filled /> Continue in code
           </button>
-          <div className="deploy-split">
-            <button className="btn btn-primary" onClick={() => publish("publish")}>
-              Publish
-            </button>
+          <div style={{ position: "relative" }}>
             <button
-              className="btn btn-primary deploy-caret"
-              aria-label="Publish options"
+              className="head-btn head-btn-publish"
+              aria-label="Publish"
+              aria-expanded={publishOpen}
               onClick={() => setPublishOpen(!publishOpen)}
             >
-              <ChevronDown20Regular />
+              Publish
+              <ChevronDown20Regular className="head-publish-chevron" />
             </button>
             {publishOpen && (
-              <div className="menu-popover" style={{ top: 36, minWidth: 240 }}>
+              <div className="menu-popover" style={{ right: 0, top: 36, minWidth: 240 }}>
                 <button className="menu-item" onClick={() => publish("publish")}>
                   <Play20Regular /> Publish new version
                 </button>
@@ -720,7 +835,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
           </div>
           <div style={{ position: "relative" }}>
             <button
-              className="icon-button"
+              className="icon-button head-more"
               aria-label="More actions"
               onClick={() => setMoreOpen(!moreOpen)}
             >
@@ -779,524 +894,541 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
       {tab === "Playground" && (
         <div className="builder-body">
           <div className="builder-config">
-            <div className="model-select-row">
-              <select
-                className="select"
-                value={modelKey}
-                onChange={(event) => setModelKey(event.target.value)}
-                aria-label="Model"
-              >
-                {models.length === 0 && <option value="">Discovering models…</option>}
-                {models.slice(0, 60).map((model: LocalModel) => (
-                  <option key={model.key} value={model.key}>
-                    {model.displayName} · {model.providerLabel}
-                  </option>
-                ))}
-              </select>
-              <div style={{ position: "relative" }}>
+            <div className="config-scroll">
+              <div className="config-card config-card-top">
+                <div className="model-select-row">
+                  <ModelSelect
+                    deployments={deployments}
+                    models={models}
+                    value={modelKey}
+                    onChange={setModelKey}
+                    onBrowseMore={() => router.push("/discover/models")}
+                  />
+                  <div style={{ position: "relative" }}>
+                    <button
+                      className="icon-button model-params"
+                      aria-label="Parameters"
+                      title="Parameters"
+                      onClick={() => setParamsOpen(!paramsOpen)}
+                    >
+                      <Options20Regular />
+                    </button>
+                    {paramsOpen && paramsMenu}
+                  </div>
+                </div>
+
+                <div className="voice-card">
+                  <span className="voice-copy">
+                    <span className="voice-title">Voice mode</span>
+                    <span className="voice-desc">
+                      Switch the agent to a voice-first experience.
+                    </span>
+                  </span>
+                  <button
+                    role="switch"
+                    aria-checked={voiceMode}
+                    aria-label="Voice mode"
+                    className="switch"
+                    onClick={() => setVoiceMode(!voiceMode)}
+                  />
+                </div>
+              </div>
+
+              <div className="config-card">
                 <button
-                  className="icon-button"
-                  aria-label="Parameters"
-                  title="Parameters"
-                  onClick={() => setParamsOpen(!paramsOpen)}
+                  className="config-head"
+                  aria-expanded={sections.instructions}
+                  onClick={() => section("instructions")}
                 >
-                  <Options20Regular />
+                  <span>Instructions</span>
+                  {sections.instructions ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
                 </button>
-                {paramsOpen && (
-                  <div
-                    className="menu-popover"
-                    style={{ right: 0, top: 42, width: 300, padding: 12 }}
-                  >
-                    <div className="row between mb-8">
-                      <strong className="text-13">Model parameters</strong>
-                      <button className="icon-button small" onClick={() => setParamsOpen(false)} aria-label="Close">
-                        <Dismiss20Regular />
+                {sections.instructions && (
+                  <div className="config-body">
+                    <textarea
+                      className="textarea config-instructions"
+                      placeholder="Write your prompt here to give your agent instructions."
+                      value={instructions}
+                      onChange={(event) => setInstructions(event.target.value)}
+                    />
+                    <button className="btn-pill" onClick={() => setTab("Optimize")}>
+                      Improve instructions
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="config-card">
+                <button
+                  className="config-head"
+                  aria-expanded={sections.tools}
+                  onClick={() => section("tools")}
+                >
+                  <span>Tools</span>
+                  {sections.tools ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
+                </button>
+                {sections.tools && (
+                  <div className="config-body stack">
+                    <p className="config-desc">
+                      Build a unified endpoint for invoking tools and agents, leverage tool
+                      search to save input tokens.{" "}
+                      <a
+                        className="config-link"
+                        href="https://learn.microsoft.com/azure/ai-foundry/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Learn more about toolbox <Open16Regular />
+                      </a>
+                    </p>
+                    {tools.includes("web-search") && (
+                      <div className="banner info">
+                        <Shield20Regular />
+                        <span>
+                          Web search uses DuckDuckGo from this machine at request time. It has
+                          no cloud cost, but results leave your computer to the search provider.
+                        </span>
+                      </div>
+                    )}
+                    {tools.includes("web-search") && (
+                      <div className="tool-row">
+                        <Wrench20Regular />
+                        <span className="grow">Web search</span>
+                        <span className="badge green">Enabled</span>
+                        <button
+                          className="icon-button small"
+                          aria-label="Remove web search"
+                          onClick={() => setTools(tools.filter((t) => t !== "web-search"))}
+                        >
+                          <Dismiss20Regular />
+                        </button>
+                      </div>
+                    )}
+                    {tools.includes("file-search") && (
+                      <div className="tool-row">
+                        <Book20Regular />
+                        <span className="grow">Local file search</span>
+                        <span className="badge green">Enabled</span>
+                        <button
+                          className="icon-button small"
+                          aria-label="Remove file search"
+                          onClick={() => setTools(tools.filter((t) => t !== "file-search"))}
+                        >
+                          <Dismiss20Regular />
+                        </button>
+                      </div>
+                    )}
+                    {tools.includes("calculator") && (
+                      <div className="tool-row">
+                        <Options20Regular />
+                        <span className="grow">Calculator</span>
+                        <span className="badge green">Enabled</span>
+                        <button
+                          className="icon-button small"
+                          aria-label="Remove calculator"
+                          onClick={() => setTools(tools.filter((t) => t !== "calculator"))}
+                        >
+                          <Dismiss20Regular />
+                        </button>
+                      </div>
+                    )}
+                    <div className="row" style={{ gap: 10, position: "relative" }}>
+                      <button
+                        className="btn-pill lg add-tools"
+                        onClick={() => setAddToolsOpen(!addToolsOpen)}
+                      >
+                        Add <ChevronDown20Regular />
                       </button>
+                      <button
+                        className="btn-pill lg"
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        Upload files
+                      </button>
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        hidden
+                        accept=".txt,.md,.csv,.json,.html,.pdf"
+                        onChange={(event) => uploadFiles(event.target.files)}
+                      />
+                      {addToolsOpen && (
+                        <div className="menu-popover" style={{ left: 0, top: 38, minWidth: 280 }}>
+                          {[
+                            {
+                              id: "web-search",
+                              label: "Web search",
+                              desc: "DuckDuckGo results injected as context",
+                            },
+                            {
+                              id: "file-search",
+                              label: "Local file search",
+                              desc: "Retrieve from connected knowledge bases",
+                            },
+                            {
+                              id: "calculator",
+                              label: "Calculator",
+                              desc: "Evaluate arithmetic in prompts",
+                            },
+                          ].map((tool) => (
+                            <button
+                              key={tool.id}
+                              className="menu-item"
+                              style={{ height: "auto", padding: "8px 10px", alignItems: "flex-start" }}
+                              onClick={() => {
+                                if (!tools.includes(tool.id)) setTools([...tools, tool.id]);
+                                setAddToolsOpen(false);
+                              }}
+                            >
+                              <span>
+                                <span style={{ display: "block" }}>{tool.label}</span>
+                                <span className="muted text-12" style={{ display: "block" }}>
+                                  {tool.desc}
+                                </span>
+                              </span>
+                              {tools.includes(tool.id) && <Checkmark20Regular />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <label className="field mb-12">
-                      <span className="field-label">Temperature · {temperature.toFixed(2)}</span>
-                      <input
-                        type="range"
-                        className="range"
-                        min={0}
-                        max={2}
-                        step={0.05}
-                        value={temperature}
-                        onChange={(e) => setTemperature(Number(e.target.value))}
-                      />
-                    </label>
-                    <label className="field mb-12">
-                      <span className="field-label">Top P · {topP.toFixed(2)}</span>
-                      <input
-                        type="range"
-                        className="range"
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        value={topP}
-                        onChange={(e) => setTopP(Number(e.target.value))}
-                      />
-                    </label>
-                    <label className="field">
-                      <span className="field-label">Max tokens</span>
-                      <input
-                        className="input"
-                        type="number"
-                        min={16}
-                        max={8192}
-                        value={maxTokens}
-                        onChange={(e) => setMaxTokens(Number(e.target.value))}
-                      />
-                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div className="config-card">
+                <button
+                  className="config-head"
+                  aria-expanded={sections.knowledge}
+                  onClick={() => section("knowledge")}
+                >
+                  <span>Knowledge</span>
+                  {sections.knowledge ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
+                </button>
+                {sections.knowledge && (
+                  <div className="config-body stack">
+                    <p className="config-desc">
+                      Add knowledge bases for grounding.{" "}
+                      <a
+                        className="config-link"
+                        href="https://learn.microsoft.com/azure/ai-foundry/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Learn more <Open16Regular />
+                      </a>{" "}
+                      about best practices.
+                    </p>
+                    {knowledgeIds.length > 0 && (
+                      <div className="stack" style={{ gap: 6 }}>
+                        {knowledgeIds.map((id) => {
+                          const kb = knowledgeBases.find((item) => item.id === id);
+                          return (
+                            <div className="row between" key={id}>
+                              <span className="row" style={{ gap: 8 }}>
+                                <Book20Regular style={{ color: "var(--fg-3)" }} />
+                                <span>
+                                  <span className="text-14" style={{ display: "block" }}>
+                                    {kb?.name || id}
+                                  </span>
+                                  <span className="text-12 muted">
+                                    {kb
+                                      ? `${kb.documents.length} documents · ${kb.embeddingModel}`
+                                      : "Loading..."}
+                                  </span>
+                                </span>
+                              </span>
+                              <button
+                                className="icon-button small"
+                                aria-label="Remove knowledge base"
+                                onClick={() =>
+                                  setKnowledgeIds(knowledgeIds.filter((item) => item !== id))
+                                }
+                              >
+                                <Dismiss20Regular />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <button className="btn-pill lg" onClick={() => setKnowledgeOpen(true)}>
+                      Add <ChevronDown20Regular />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="config-card">
+                <button
+                  className="config-head"
+                  aria-expanded={sections.memory}
+                  onClick={() => section("memory")}
+                >
+                  <span className="row" style={{ gap: 8 }}>
+                    Memory <span className="preview-tag">Preview</span>
+                  </span>
+                  {sections.memory ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
+                </button>
+                {sections.memory && (
+                  <div className="config-body stack">
+                    <p className="config-desc">
+                      Memory retains context to personalize and improve interactions. A memory
+                      store will be auto-created for you. It will use the model you have deployed
+                      for this agent.{" "}
+                      <a
+                        className="config-link"
+                        href="https://learn.microsoft.com/azure/ai-foundry/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Learn more <Open16Regular />
+                      </a>{" "}
+                      about cost.
+                    </p>
+                    {memoryStores.length > 0 ? (
+                      <>
+                        <select
+                          className="select"
+                          value={memoryStoreId}
+                          aria-label="Memory store"
+                          onChange={(e) => {
+                            setMemoryStoreId(e.target.value);
+                            setMemoryEnabled(Boolean(e.target.value));
+                          }}
+                        >
+                          <option value="">No memory store</option>
+                          {memoryStores.map((store) => (
+                            <option key={store.id} value={store.id}>
+                              {store.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-12 muted">
+                          The store extracts durable facts from each turn and recalls the most
+                          relevant ones into the system prompt.
+                        </p>
+                      </>
+                    ) : (
+                      <Link className="btn-pill lg" href="/build/memory">
+                        Add <ChevronDown20Regular />
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="config-card">
+                <button
+                  className="config-head"
+                  aria-expanded={sections.guardrail}
+                  onClick={() => section("guardrail")}
+                >
+                  <span className="row" style={{ gap: 8 }}>
+                    Guardrail <span className="preview-tag">Preview</span>
+                  </span>
+                  {sections.guardrail ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
+                </button>
+                {sections.guardrail && (
+                  <div className="config-body stack">
+                    <p className="config-desc">
+                      Add safety and security controls to your guardrail to help reduce risks and
+                      support deployments.{" "}
+                      <a
+                        className="config-link"
+                        href="https://learn.microsoft.com/azure/ai-foundry/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Learn more <Open16Regular />
+                      </a>
+                    </p>
+                    <div className="guardrail-summary">
+                      <span>
+                        Name: <strong>{selectedGuardrail?.name || "Default"}</strong>
+                      </span>
+                      <span>Risks with controls: {guardrailRiskLine(selectedGuardrail, true)}</span>
+                      <span>
+                        Risks without controls: {guardrailRiskLine(selectedGuardrail, false)}
+                      </span>
+                    </div>
+                    <select
+                      className="select"
+                      value={guardrailId}
+                      aria-label="Guardrail"
+                      onChange={(e) => setGuardrailId(e.target.value)}
+                    >
+                      <option value="">Default safety prompt</option>
+                      {guardrailResources.map((resource) => (
+                        <option key={resource.id} value={resource.id}>
+                          {resource.name}
+                        </option>
+                      ))}
+                    </select>
+                    {!guardrailId && (
+                      <p className="text-12 muted">
+                        This agent has not been assigned a guardrail. It is inheriting its
+                        model&apos;s guardrail.
+                      </p>
+                    )}
+                    {!guardrailId && (
+                      <select
+                        className="select"
+                        value={guardrail}
+                        aria-label="Guardrail mode"
+                        onChange={(e) => setGuardrail(e.target.value as Agent["guardrail"])}
+                      >
+                        <option value="Default">Default</option>
+                        <option value="Strict">Strict</option>
+                        <option value="Off">Off</option>
+                      </select>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="voice-card mt-16">
-              <span>
-                <span className="voice-title">Voice mode</span>
-                <span className="voice-desc" style={{ display: "block" }}>
-                  Switch the agent to a voice-first experience.
-                </span>
-              </span>
-              <button
-                role="switch"
-                aria-checked={voiceMode}
-                aria-label="Voice mode"
-                className="switch"
-                onClick={() => setVoiceMode(!voiceMode)}
-              />
-            </div>
-
-            <div className="config-section mt-16">
-              <button className="config-head" onClick={() => section("instructions")}>
-                <span>Instructions</span>
-                {sections.instructions ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
+            <div className="config-footer">
+              <button className="btn-pill" onClick={() => setTab("Optimize")}>
+                <Sparkle20Regular /> Optimize <ChevronDown20Regular />
               </button>
-              {sections.instructions && (
-                <div className="config-body">
-                  <textarea
-                    className="textarea config-instructions"
-                    placeholder="Write your prompt here to give your agent instructions."
-                    value={instructions}
-                    onChange={(event) => setInstructions(event.target.value)}
-                  />
-                  <div className="muted text-12 mt-4">
-                    {instructions.length} characters · this prompt is sent as the
-                    system message on every local request.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="config-section">
-              <button className="config-head" onClick={() => section("tools")}>
-                <span>Tools</span>
-                {sections.tools ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
-              </button>
-              {sections.tools && (
-                <div className="config-body stack" style={{ gap: 10 }}>
-                  <p className="text-12 muted">
-                    Build a unified endpoint for invoking tools and agents. Tools
-                    run on this computer against the local runtime.
-                  </p>
-                  <div className="banner">
-                    <Shield20Regular />
-                    <span>
-                      Web search uses DuckDuckGo from this machine at request time.
-                      It has no cloud cost, but results leave your computer to the
-                      search provider.
-                    </span>
-                  </div>
-                  {tools.includes("web-search") && (
-                    <div className="tool-row">
-                      <Wrench20Regular />
-                      <span className="grow">Web search</span>
-                      <span className="badge green">Enabled</span>
-                      <button
-                        className="icon-button small"
-                        aria-label="Remove web search"
-                        onClick={() => setTools(tools.filter((t) => t !== "web-search"))}
-                      >
-                        <Dismiss20Regular />
-                      </button>
-                    </div>
-                  )}
-                  {tools.includes("file-search") && (
-                    <div className="tool-row">
-                      <Book20Regular />
-                      <span className="grow">Local file search</span>
-                      <span className="badge green">Enabled</span>
-                      <button
-                        className="icon-button small"
-                        aria-label="Remove file search"
-                        onClick={() => setTools(tools.filter((t) => t !== "file-search"))}
-                      >
-                        <Dismiss20Regular />
-                      </button>
-                    </div>
-                  )}
-                  {tools.includes("calculator") && (
-                    <div className="tool-row">
-                      <Options20Regular />
-                      <span className="grow">Calculator</span>
-                      <span className="badge green">Enabled</span>
-                      <button
-                        className="icon-button small"
-                        aria-label="Remove calculator"
-                        onClick={() => setTools(tools.filter((t) => t !== "calculator"))}
-                      >
-                        <Dismiss20Regular />
-                      </button>
-                    </div>
-                  )}
-                  <div className="row" style={{ gap: 8, position: "relative" }}>
-                    <button className="btn btn-secondary" onClick={() => setAddToolsOpen(!addToolsOpen)}>
-                      <Add20Regular /> Add
-                    </button>
-                    <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>
-                      {uploading ? <Spinner /> : <Attach20Regular />} Upload files
-                    </button>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      multiple
-                      hidden
-                      accept=".txt,.md,.csv,.json,.html,.pdf"
-                      onChange={(event) => uploadFiles(event.target.files)}
-                    />
-                    {addToolsOpen && (
-                      <div className="menu-popover" style={{ left: 0, top: 36, minWidth: 280 }}>
-                        {[
-                          {
-                            id: "web-search",
-                            label: "Web search",
-                            desc: "DuckDuckGo results injected as context",
-                          },
-                          {
-                            id: "file-search",
-                            label: "Local file search",
-                            desc: "Retrieve from connected knowledge bases",
-                          },
-                          {
-                            id: "calculator",
-                            label: "Calculator",
-                            desc: "Evaluate arithmetic in prompts",
-                          },
-                        ].map((tool) => (
-                          <button
-                            key={tool.id}
-                            className="menu-item"
-                            style={{ height: "auto", padding: "8px 10px", alignItems: "flex-start" }}
-                            onClick={() => {
-                              if (!tools.includes(tool.id))
-                                setTools([...tools, tool.id]);
-                              setAddToolsOpen(false);
-                            }}
-                          >
-                            <span>
-                              <span style={{ display: "block" }}>{tool.label}</span>
-                              <span className="muted text-12" style={{ display: "block" }}>
-                                {tool.desc}
-                              </span>
-                            </span>
-                            {tools.includes(tool.id) && <Checkmark20Regular />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="config-section">
-              <button className="config-head" onClick={() => section("knowledge")}>
-                <span>Knowledge</span>
-                {sections.knowledge ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
-              </button>
-              {sections.knowledge && (
-                <div className="config-body">
-                  {knowledgeIds.length === 0 ? (
-                    <p className="text-12 muted">
-                      No knowledge bases connected. Attach one to ground answers
-                      with citations from your own documents.
-                    </p>
-                  ) : (
-                    <div className="stack" style={{ gap: 6 }}>
-                      {knowledgeIds.map((id) => {
-                        const kb = knowledgeBases.find((item) => item.id === id);
-                        return (
-                          <div className="row between" key={id}>
-                            <span className="row" style={{ gap: 8 }}>
-                              <Book20Regular style={{ color: "var(--fg-3)" }} />
-                              <span>
-                                <span className="text-14" style={{ display: "block" }}>
-                                  {kb?.name || id}
-                                </span>
-                                <span className="text-12 muted">
-                                  {kb
-                                    ? `${kb.documents.length} documents · ${kb.embeddingModel}`
-                                    : "Loading…"}
-                                </span>
-                              </span>
-                            </span>
-                            <button
-                              className="icon-button small"
-                              aria-label="Remove knowledge base"
-                              onClick={() =>
-                                setKnowledgeIds(knowledgeIds.filter((item) => item !== id))
-                              }
-                            >
-                              <Dismiss20Regular />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <button
-                    className="btn btn-secondary btn-sm mt-8"
-                    onClick={() => setKnowledgeOpen(true)}
-                  >
-                    <Add20Regular /> Connect knowledge
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="config-section">
-              <button className="config-head" onClick={() => section("memory")}>
-                <span className="row" style={{ gap: 6 }}>
-                  Memory <span className="preview-tag">Preview</span>
-                </span>
-                {sections.memory ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
-              </button>
-              {sections.memory && (
-                <div className="config-body">
-                  {memoryStores.length === 0 ? (
-                    <div className="row between">
-                      <span className="text-12 muted">
-                        No memory stores yet. Create one in Memory to retain context
-                        across conversations.
-                      </span>
-                      <Link
-                        className="btn btn-sm btn-secondary"
-                        href="/build/memory"
-                      >
-                        Create memory store
-                      </Link>
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        className="select"
-                        value={memoryStoreId}
-                        aria-label="Memory store"
-                        onChange={(e) => {
-                          setMemoryStoreId(e.target.value);
-                          setMemoryEnabled(Boolean(e.target.value));
-                        }}
-                      >
-                        <option value="">No memory store</option>
-                        {memoryStores.map((store) => (
-                          <option key={store.id} value={store.id}>
-                            {store.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-12 muted mt-8">
-                        The store extracts durable facts from each turn and recalls the
-                        most relevant ones into the system prompt.
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="config-section">
-              <button className="config-head" onClick={() => section("guardrail")}>
-                <span className="row" style={{ gap: 6 }}>
-                  Guardrail <span className="preview-tag">Preview</span>
-                </span>
-                {sections.guardrail ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
-              </button>
-              {sections.guardrail && (
-                <div className="config-body">
-                  <select
-                    className="select"
-                    value={guardrailId}
-                    aria-label="Guardrail"
-                    onChange={(e) => setGuardrailId(e.target.value)}
-                  >
-                    <option value="">Default safety prompt</option>
-                    {guardrailResources.map((resource) => (
-                      <option key={resource.id} value={resource.id}>
-                        {resource.name}
-                      </option>
-                    ))}
-                  </select>
-                  {!guardrailId && (
-                    <select
-                      className="select mt-8"
-                      value={guardrail}
-                      onChange={(e) =>
-                        setGuardrail(e.target.value as Agent["guardrail"])
-                      }
-                    >
-                      <option value="Default">Default</option>
-                      <option value="Strict">Strict</option>
-                      <option value="Off">Off</option>
-                    </select>
-                  )}
-                  <p className="text-12 muted mt-8">
-                    Select a guardrail resource from Build → Guardrails, or use the
-                    built-in Default / Strict / Off safety prompt. Controls are
-                    enforced on user input and model output.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="optimize-row row between">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setTab("Optimize")}
-              >
-                <Sparkle20Regular /> Optimize
-              </button>
-              <span className="text-12 muted">
-                {currentModel?.cached ? "Downloaded locally" : "Will download on first run"}
-              </span>
             </div>
           </div>
 
           <div className="builder-chat">
             <div className="chat-head">
-              <button
-                className={`chat-tab${chatMode === "Chat" ? " active" : ""}`}
-                onClick={() => setChatMode("Chat")}
-              >
-                Chat
-              </button>
-              <button
-                className={`chat-tab${chatMode === "YAML" ? " active" : ""}`}
-                onClick={() => setChatMode("YAML")}
-              >
-                YAML
-              </button>
+              <div className="chat-tabs" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={chatMode === "Chat"}
+                  className={`chat-tab${chatMode === "Chat" ? " active" : ""}`}
+                  onClick={() => setChatMode("Chat")}
+                >
+                  Chat
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={chatMode === "YAML"}
+                  className={`chat-tab${chatMode === "YAML" ? " active" : ""}`}
+                  onClick={() => setChatMode("YAML")}
+                >
+                  YAML
+                </button>
+              </div>
               <span className="spacer" />
               <div style={{ position: "relative" }}>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setMetricsOpen(!metricsOpen)}
-                >
+                <button className="chat-head-btn" onClick={() => setMetricsOpen(!metricsOpen)}>
                   Metrics <ChevronDown20Regular />
                 </button>
                 {metricsOpen && (
-                  <div className="menu-popover" style={{ right: 0, top: 32, width: 280, padding: 12 }}>
-                    <div className="row between mb-8">
-                      <strong className="text-13">Last response</strong>
+                  <div className="menu-popover" style={{ right: 0, top: 32, width: 280 }}>
+                    <div className="menu-head">
+                      <strong>Last response</strong>
                       <button className="icon-button small" onClick={() => setMetricsOpen(false)} aria-label="Close">
                         <Dismiss20Regular />
                       </button>
                     </div>
-                    {usage ? (
-                      <div className="stack text-12" style={{ gap: 6 }}>
-                        <span className="row between"><span className="muted">Model</span><span>{usage.model}</span></span>
-                        <span className="row between"><span className="muted">Prompt tokens</span><span>{usage.promptTokens}</span></span>
-                        <span className="row between"><span className="muted">Completion tokens</span><span>{usage.completionTokens}</span></span>
-                        <span className="row between"><span className="muted">Latency</span><span>{usage.latencyMs} ms</span></span>
-                        <span className="row between"><span className="muted">Embeddings</span><span className="truncate" style={{maxWidth:150}}>{usage.embeddingModel}</span></span>
-                      </div>
-                    ) : (
-                      <p className="muted text-12">Send a message to see tokens and latency.</p>
-                    )}
+                    <div className="menu-body">
+                      {usage ? (
+                        <div className="stack text-12" style={{ gap: 6 }}>
+                          <span className="row between"><span className="muted">Model</span><span>{usage.model}</span></span>
+                          <span className="row between"><span className="muted">Prompt tokens</span><span>{usage.promptTokens}</span></span>
+                          <span className="row between"><span className="muted">Completion tokens</span><span>{usage.completionTokens}</span></span>
+                          <span className="row between"><span className="muted">Latency</span><span>{usage.latencyMs} ms</span></span>
+                          <span className="row between"><span className="muted">Embeddings</span><span className="truncate" style={{ maxWidth: 150 }}>{usage.embeddingModel}</span></span>
+                        </div>
+                      ) : (
+                        <p className="muted text-12">Send a message to see tokens and latency.</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-              <button className="icon-button small" aria-label="Chat settings" onClick={() => setParamsOpen(true)}>
-                <Settings20Regular />
-              </button>
+              <div style={{ position: "relative" }}>
+                <button
+                  className="icon-button small"
+                  aria-label="Configure chat parameters"
+                  title="Configure"
+                  onClick={() => setChatParamsOpen(!chatParamsOpen)}
+                >
+                  <Settings20Regular />
+                </button>
+                {chatParamsOpen && paramsMenu}
+              </div>
               <button
                 className="icon-button small"
-                aria-label="Help"
-                onClick={() => window.open("https://learn.microsoft.com/azure/ai-foundry/", "_blank")}
+                aria-label="New chat"
+                title="New chat"
+                onClick={() => {
+                  setMessages([]);
+                  setUsage(null);
+                  if (agent) localStorage.removeItem(`foundry-local:memory:${agent.id}`);
+                }}
               >
-                <QuestionCircle20Regular />
+                <ChatAdd20Regular />
               </button>
             </div>
 
-            {chatMode === "YAML" ? (
-              <pre className="yaml-view">{yaml}</pre>
-            ) : (
-              <>
-                <div className="chat-body" ref={chatBodyRef}>
-                  {messages.length === 0 ? (
-                    <div className="chat-empty">
-                      <h2>{name}</h2>
-                      <p>Send a message to start testing your agent</p>
-                      {currentModel && (
-                        <span className="badge gray mt-8">
-                          {currentModel.displayName} · {currentModel.providerLabel}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="chat-messages">
-                      {messages.map((turn, index) => (
-                        <div className={`chat-msg ${turn.role}`} key={index}>
-                          <span className="chat-msg-label">
-                            {turn.role === "user" ? "You" : name}
-                          </span>
-                          <div className="chat-bubble">
-                            {turn.content}
-                            {streaming &&
-                              index === messages.length - 1 &&
-                              turn.role === "assistant" && (
-                                <span className="chat-streaming" />
-                              )}
-                          </div>
-                          {turn.citations && turn.citations.length > 0 && (
-                            <div className="chat-citations">
-                              {turn.citations.map((citation, citationIndex) => (
-                                <div className="chat-citation" key={citationIndex}>
-                                  [{citationIndex + 1}] {citation.documentName} ·{" "}
-                                  {citation.score.toFixed(3)}
-                                  <div className="mt-4">{citation.chunk.slice(0, 240)}…</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {turn.error && (
-                            <div className="banner error">{turn.error}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            <div className="chat-feed" ref={chatBodyRef}>
+              {chatMode === "YAML" ? (
+                <pre className="yaml-view">{yaml}</pre>
+              ) : messages.length === 0 ? (
+                <div className="chat-empty">
+                  <h2>{name}</h2>
+                  <p>Send a message to start testing your agent</p>
                 </div>
-                <div className="chat-composer">
-                  <div className="chat-input-wrap">
-                    <textarea
-                      className="chat-input"
-                      placeholder="Message the agent…"
-                      value={input}
-                      onChange={(event) => setInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          void send();
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="chat-composer-actions">
+              ) : (
+                <div className="chat-messages">
+                  {messages.map((turn, index) => (
+                    <div className={`chat-msg ${turn.role}`} key={index}>
+                      <span className="chat-msg-label">
+                        {turn.role === "user" ? "You" : name}
+                      </span>
+                      <div className="chat-bubble">
+                        {turn.content}
+                        {streaming &&
+                          index === messages.length - 1 &&
+                          turn.role === "assistant" && <span className="chat-streaming" />}
+                      </div>
+                      {turn.citations && turn.citations.length > 0 && (
+                        <div className="chat-citations">
+                          {turn.citations.map((citation, citationIndex) => (
+                            <div className="chat-citation" key={citationIndex}>
+                              [{citationIndex + 1}] {citation.documentName} ·{" "}
+                              {citation.score.toFixed(3)}
+                              <div className="mt-4">{citation.chunk.slice(0, 240)}...</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {turn.error && <div className="banner error">{turn.error}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {chatMode === "Chat" && (
+              <>
+                <div className="chat-input-wrap">
+                  <textarea
+                    className="chat-input"
+                    placeholder="Message the agent..."
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        void send();
+                      }
+                    }}
+                  />
+                  <div className="chat-input-actions">
                     <button
                       className="icon-button small"
                       aria-label="Attach files"
+                      title="Attach files"
                       onClick={() => fileRef.current?.click()}
                     >
                       <Attach20Regular />
@@ -1304,30 +1436,25 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                     <span className="spacer" />
                     <button
                       className="icon-button small"
-                      aria-label="New chat"
-                      title="New chat"
-                      onClick={() => {
-                        setMessages([]);
-                        setUsage(null);
-                        if (agent) localStorage.removeItem(`foundry-local:memory:${agent.id}`);
-                      }}
+                      aria-label="Regenerate the last reply"
+                      title="Regenerate the last reply"
+                      disabled={streaming || !messages.some((turn) => turn.role === "user")}
+                      onClick={() => regenerate()}
                     >
-                      <History20Regular />
+                      <ArrowSync20Regular />
                     </button>
                     <button
-                      className="icon-button"
+                      className="icon-button send-button"
                       aria-label="Send"
+                      title="Send"
                       disabled={streaming || !input.trim()}
-                      onClick={send}
-                      style={{ color: "var(--brand-stroke)" }}
+                      onClick={() => void send()}
                     >
                       {streaming ? <Spinner /> : <Send20Regular />}
                     </button>
                   </div>
-                  <div className="chat-disclaimer">
-                    AI-generated content may be incorrect
-                  </div>
                 </div>
+                <div className="chat-disclaimer">AI-generated content may be incorrect</div>
               </>
             )}
           </div>
@@ -1357,13 +1484,13 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                 <div className="form-grid">
                   <label className="field">
                     <span className="field-label">Model</span>
-                    <select className="select" value={modelKey} onChange={(e) => setModelKey(e.target.value)}>
-                      {models.slice(0, 60).map((model) => (
-                        <option key={model.key} value={model.key}>
-                          {model.displayName} · {model.providerLabel}
-                        </option>
-                      ))}
-                    </select>
+                    <ModelSelect
+                      deployments={deployments}
+                      models={models}
+                      value={modelKey}
+                      onChange={setModelKey}
+                      onBrowseMore={() => router.push("/discover/models")}
+                    />
                   </label>
                   <label className="field">
                     <span className="field-label">Voice mode</span>

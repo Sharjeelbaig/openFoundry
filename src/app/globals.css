@@ -86,7 +86,11 @@
   --radius-lg: 8px;
   --radius-xl: 12px;
   --pill: 10000px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  /* Exactly the stack Microsoft Foundry's Fluent components resolve to
+     (`Aptos, sans-serif`). Aptos ships with Microsoft 365, so on a machine that
+     has it text renders identically to the portal; elsewhere it falls back to
+     the platform's default sans, same as the portal does. */
+  --font: Aptos, sans-serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Cascadia Mono", monospace;
   --header-h: 48px;
   --footer-h: 36px;
@@ -5819,4 +5823,868 @@ svg {
 .field-select-inline {
   display: flex;
   gap: 8px;
+}
+
+/* ------------------------------------------------------------------
+   Agent playground — matched to Microsoft Foundry's agent build screen.
+   Scoped under .agent-builder so the standalone /playground screen keeps
+   its own (shared) chat styles.
+   ------------------------------------------------------------------ */
+
+.agent-builder .builder-body {
+  grid-template-columns: 500px minmax(0, 1fr);
+  column-gap: 0;
+  gap: 0;
+  padding-bottom: 0;
+}
+
+/* left configuration column ------------------------------------- */
+.agent-builder .builder-config {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  border-right: 1px solid var(--bg);
+}
+.agent-builder .config-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.agent-builder .config-card {
+  padding: 12px;
+  border-bottom: 1px solid var(--bg);
+}
+.agent-builder .config-card-top {
+  padding: 16px 16px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.agent-builder .config-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 0 10px 0 12px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  color: var(--fg-1);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.agent-builder .config-head:hover {
+  background: var(--tile-hover);
+}
+.agent-builder .config-head svg {
+  color: var(--fg-2);
+}
+.agent-builder .config-body {
+  margin-top: 12px;
+}
+.agent-builder .config-footer {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+}
+.agent-builder .config-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--fg-1);
+}
+.agent-builder .config-link {
+  color: var(--link-fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.agent-builder .config-link:hover {
+  color: var(--link-fg-hover);
+  text-decoration: underline;
+}
+
+/* pill / outline buttons ---------------------------------------- */
+.agent-builder .btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 10000px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.agent-builder .btn-pill:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.agent-builder .btn-pill svg {
+  width: 16px;
+  height: 16px;
+}
+.agent-builder .config-footer .btn-pill {
+  height: 32px;
+  padding: 5px 12px;
+  border-color: var(--stroke-1);
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+
+/* model picker --------------------------------------------------- */
+.agent-builder .model-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-builder .model-select-row .model-params {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 10000px;
+}
+.agent-builder .model-select-row .model-params:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.agent-builder .model-select {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.agent-builder .model-select-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  height: 32px;
+  padding: 5px 10px 5px 12px;
+  background: var(--surface-icon);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--fg-1);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+.agent-builder .model-select-trigger:hover,
+.agent-builder .model-select-trigger[aria-expanded="true"] {
+  border-color: var(--stroke-2);
+}
+.agent-builder .model-select-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-builder .model-select-label {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.agent-builder .model-select-value {
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-builder .model-select-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+.agent-builder .model-select-chevron {
+  justify-self: end;
+  color: var(--fg-3);
+}
+.agent-builder .model-select-popover {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  z-index: 70;
+  width: 419px;
+  max-width: 100%;
+  max-height: min(779px, 62vh);
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface-card);
+  border-radius: 6px;
+  box-shadow:
+    rgba(0, 0, 0, 0.14) 0 8px 16px,
+    rgba(0, 0, 0, 0.12) 0 0 2px;
+}
+.agent-builder .model-select-group {
+  display: flex;
+  flex-direction: column;
+}
+.agent-builder .model-select-group-label {
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-3);
+}
+.agent-builder .model-select-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.agent-builder .model-select-option:hover {
+  background: var(--bg-hover);
+}
+.agent-builder .model-select-option-deployment {
+  height: 40px;
+}
+.agent-builder .model-select-option.selected {
+  box-shadow: inset 0 0 0 1px var(--fg-1);
+}
+.agent-builder .model-select-option.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.agent-builder .model-select-check {
+  flex: 0 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-1);
+}
+.agent-builder .model-select-option-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-builder .model-select-browse {
+  height: 34px;
+  margin-top: 4px;
+  padding: 0 8px;
+  border-top: 1px solid var(--stroke-3);
+  border-radius: 0 0 4px 4px;
+  font-size: 14px;
+}
+.agent-builder .model-select-browse .model-select-check {
+  display: none;
+}
+
+/* voice card ------------------------------------------------------ */
+.agent-builder .voice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-2);
+  border-radius: 8px;
+}
+.agent-builder .voice-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agent-builder .voice-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.agent-builder .voice-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--fg-3);
+}
+.agent-builder .voice-card .switch {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 20px;
+  margin-top: 4px;
+}
+
+/* instructions ---------------------------------------------------- */
+.agent-builder .config-instructions {
+  width: 100%;
+  min-height: 112px;
+  max-height: 260px;
+  padding: 6px 12px;
+  background: var(--surface-icon);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--fg-1);
+  font-size: 14px;
+  line-height: 20px;
+  resize: vertical;
+}
+.agent-builder .config-instructions:focus {
+  border-color: var(--stroke-2);
+}
+.agent-builder .config-body .btn-pill {
+  margin-top: 12px;
+}
+
+/* guardrail summary ---------------------------------------------- */
+.agent-builder .guardrail-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--fg-2);
+}
+
+/* popovers -------------------------------------------------------- */
+.agent-builder .menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+}
+.agent-builder .menu-body {
+  padding: 4px 8px 8px;
+}
+
+/* chat column ----------------------------------------------------- */
+.agent-builder .builder-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px 0 16px 16px;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+.agent-builder .chat-head {
+  flex: 0 0 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  border-bottom: 0;
+}
+.agent-builder .chat-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-icon);
+  border-radius: 6px;
+}
+.agent-builder .chat-head .chat-tab {
+  height: 30px;
+  padding: 2px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-1);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.agent-builder .chat-head .chat-tab.active {
+  background: var(--surface-card);
+  color: var(--fg-1);
+  font-weight: 400;
+}
+.agent-builder .chat-head .spacer {
+  flex: 1;
+}
+.agent-builder .chat-head-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 10000px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+.agent-builder .chat-head-btn:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.agent-builder .chat-head-btn svg {
+  width: 12px;
+  height: 12px;
+}
+.agent-builder .chat-head .icon-button.small {
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border-radius: 10000px;
+  color: var(--fg-2);
+}
+
+.agent-builder .chat-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px 12px;
+  background: var(--surface-icon);
+  border-radius: 8px;
+}
+.agent-builder .chat-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+.agent-builder .chat-empty h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+.agent-builder .chat-empty p {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--fg-3);
+}
+.agent-builder .yaml-view {
+  padding: 0;
+  height: auto;
+}
+
+.agent-builder .chat-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 90px;
+  padding: 12px 12px 6px;
+  background: var(--surface-icon);
+  border-radius: 6px;
+}
+.agent-builder .chat-input {
+  flex: 1 1 auto;
+  min-height: 40px;
+  max-height: 180px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--fg-1);
+  font-size: 14px;
+  line-height: 20px;
+  resize: none;
+  outline: none;
+}
+.agent-builder .chat-input::placeholder {
+  color: var(--fg-3);
+}
+.agent-builder .chat-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+}
+.agent-builder .chat-input-actions .spacer {
+  flex: 1;
+}
+.agent-builder .chat-input-actions .icon-button.small {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+.agent-builder .chat-input-actions .send-button {
+  width: 28px;
+  height: 28px;
+  margin: -2px -2px -2px 0;
+  border-radius: 10000px;
+  color: var(--fg-2);
+}
+.agent-builder .chat-input-actions .send-button:disabled {
+  color: var(--fg-disabled);
+}
+.agent-builder .chat-disclaimer {
+  margin: 0;
+  padding: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--fg-3);
+  text-align: center;
+}
+
+/* alignment pass --------------------------------------------------- */
+.agent-builder {
+  padding: 20px 0 0;
+}
+.agent-builder .builder-head {
+  min-height: 32px;
+  padding: 0 24px;
+}
+.agent-builder .builder-tabs {
+  height: 32px;
+  margin: 0;
+  padding: 0 16px;
+}
+.agent-builder .builder-chat {
+  padding: 16px;
+}
+.agent-builder .config-scroll {
+  scrollbar-width: none;
+}
+.agent-builder .config-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.agent-builder .config-body .btn-pill {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+.agent-builder .config-body.stack {
+  gap: 10px;
+}
+.agent-builder .config-body {
+  padding: 0 12px;
+}
+
+/* model picker: exact Foundry popover metrics ---------------------- */
+.agent-builder .model-select-badge {
+  border: 1px solid var(--stroke-2);
+}
+.agent-builder .model-select-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 640px;
+  border: 1px solid var(--stroke-3);
+}
+.agent-builder .model-select-group {
+  gap: 2px;
+  padding: 0 8px;
+}
+.agent-builder .model-select-group::after {
+  content: "";
+  display: block;
+  height: 5px;
+  margin: 0 -4px 4px;
+  border-bottom: 1px solid var(--stroke-2);
+}
+.agent-builder .model-select-group-label {
+  height: 32px;
+  padding: 8px 6px;
+}
+.agent-builder .model-select-option {
+  gap: 4px;
+}
+.agent-builder .model-select-check {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0 2px 0 -2px;
+}
+.agent-builder .model-select-option-text {
+  margin-left: 4px;
+}
+.agent-builder .model-select-browse {
+  height: 32px;
+  margin: 0;
+  padding: 6px 8px;
+  border-top: 0;
+  border-radius: 4px;
+}
+.agent-builder .model-select-option .model-logo.brand {
+  background: transparent;
+  border-radius: 0;
+}
+.agent-builder .model-select-option .model-logo img {
+  width: 100%;
+  height: 100%;
+}
+.agent-builder .model-select-popover {
+  scrollbar-width: none;
+}
+.agent-builder .model-select-popover::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* agent header — matched to Foundry's build screen header ----------- */
+.agent-builder .builder-head {
+  min-height: 32px;
+  height: 32px;
+  gap: 8px;
+  padding: 0 24px;
+}
+.agent-builder .builder-title-row {
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-builder .builder-title {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.agent-builder .head-back {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin: -5px;
+  padding: 5px;
+  border-radius: 10000px;
+  color: var(--fg-2);
+}
+.agent-builder .head-back:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.agent-builder .head-back svg {
+  width: 20px;
+  height: 20px;
+}
+.agent-builder .head-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--success);
+}
+.agent-builder .builder-actions {
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+/* version chip */
+.agent-builder .head-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 3px 6px 3px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  cursor: pointer;
+}
+.agent-builder .head-version:hover {
+  background: var(--bg-hover);
+}
+.agent-builder .head-version-label {
+  color: var(--fg-2);
+}
+.agent-builder .head-version-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.agent-builder .head-version-chevron {
+  width: 12px;
+  height: 12px;
+}
+
+/* action pills */
+.agent-builder .head-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 32px;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: 10000px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.agent-builder .head-btn-save {
+  background: var(--brand-stroke);
+  border-color: transparent;
+  color: var(--fg-1);
+}
+.agent-builder .head-btn-save:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
+.agent-builder .head-btn-save:disabled {
+  background: var(--surface-icon);
+  color: var(--fg-disabled);
+  cursor: default;
+}
+.agent-builder .head-btn-code {
+  background: transparent;
+  border-color: var(--stroke-1);
+  color: var(--fg-1);
+}
+.agent-builder .head-btn-code:hover {
+  background: var(--bg-hover);
+}
+.agent-builder .head-btn-code svg {
+  width: 20px;
+  height: 20px;
+}
+.agent-builder .head-btn-publish {
+  background: var(--bg-2);
+  border-color: var(--stroke-1);
+  color: var(--fg-1);
+}
+.agent-builder .head-btn-publish:hover {
+  background: var(--bg-hover);
+}
+.agent-builder .head-publish-chevron {
+  width: 20px;
+  height: 20px;
+}
+.agent-builder .head-more {
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border-radius: 10000px;
+  color: var(--fg-2);
+}
+.agent-builder .head-more:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.agent-builder .head-more svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* tab strip — matched to Foundry's tab list ------------------------- */
+.agent-builder .builder-tabs {
+  height: 33px;
+  padding: 0 16px;
+  gap: 0;
+  align-items: stretch;
+  border-bottom: 1px solid var(--bg);
+}
+.agent-builder .builder-tabs .tab {
+  position: relative;
+  height: 32px;
+  padding: 6px;
+  gap: 6px;
+  border-bottom: 0;
+  color: var(--fg-2);
+  font-weight: 400;
+}
+.agent-builder .builder-tabs .tab:hover {
+  color: var(--fg-1);
+}
+.agent-builder .builder-tabs .tab.active {
+  color: var(--fg-1);
+  font-weight: 600;
+  border-bottom-color: transparent;
+}
+.agent-builder .builder-tabs .tab.active::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 10000px;
+  background: var(--brand-stroke);
+}
+.agent-builder .builder-tabs .preview-tag {
+  height: 16px;
+  margin-left: 2px;
+  padding: 0 4px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 2px;
+  color: var(--fg-3);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: normal;
+}
+
+/* config section bodies — matched to Foundry ----------------------- */
+.agent-builder .config-instructions {
+  display: block;
+}
+.agent-builder .config-desc {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--fg-3);
+}
+.agent-builder .config-body .btn-pill.lg {
+  height: 32px;
+  padding: 5px 12px;
+  border-color: var(--stroke-1);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font-size: 14px;
+  font-weight: 600;
+}
+.agent-builder .config-body .btn-pill.lg:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.agent-builder .config-body .btn-pill.lg.add-tools {
+  background: var(--surface-card);
+}
+.agent-builder .config-body .btn-pill.lg svg {
+  width: 16px;
+  height: 16px;
+}
+.agent-builder .config-body {
+  margin-top: 0;
+}
+.agent-builder .config-body:not(.stack) {
+  margin-bottom: 12px;
+}
+.agent-builder .config-body.stack {
+  gap: 12px;
+}
+.agent-builder .config-body .btn-pill.lg {
+  margin-top: 0;
+}
+/* chat column rhythm: feed and input are spaced, disclaimer is flush */
+.agent-builder .builder-chat {
+  gap: 0;
+}
+.agent-builder .chat-head {
+  margin-bottom: 16px;
+}
+.agent-builder .chat-input-wrap {
+  margin-top: 16px;
+}
+.agent-builder .chat-disclaimer {
+  margin: 0;
 }

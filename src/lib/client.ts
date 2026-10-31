@@ -100,6 +100,24 @@ export function formatShortDate(value?: string): string {
   ).slice(2)}`;
 }
 
+/** "Today 2:07 AM" / "Yesterday 6:40 PM" / "Mar 5 9:12 AM" — Foundry's version stamp. */
+export function formatVersionStamp(value?: string): string {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  const time = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+  if (days === 0) return `Today ${time}`;
+  if (days === 1) return `Yesterday ${time}`;
+  const month = date.toLocaleString(undefined, { month: "short" });
+  return `${month} ${date.getDate()} ${time}`;
+}
+
 export function formatBytes(bytes?: number): string {
   if (!bytes || bytes <= 0) return "--";
   const units = ["B", "KB", "MB", "GB", "TB"];
