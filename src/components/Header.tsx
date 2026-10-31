@@ -34,15 +34,19 @@ export default function Header({
   projectName,
   userName,
   userInitials,
+  initialTheme,
 }: {
   projectName: string;
   userName: string;
   userInitials: string;
+  initialTheme: "dark" | "light";
 }) {
   const pathname = usePathname();
   const { toast } = useToast();
   const { jobs, activeJobs, setPanelOpen } = useDownloads();
-  const [newFoundry, setNewFoundry] = useState(true);
+  // Seeded from the same cookie the server read, so the control renders in the
+  // active theme on the first paint and never fights hydration.
+  const [theme, setTheme] = useState<"dark" | "light">(initialTheme);
   const [menu, setMenu] = useState<"project" | "profile" | "notifications" | "feedback" | null>(null);
   const [feedback, setFeedback] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -150,18 +154,23 @@ export default function Header({
 
       <div className="header-right">
         <div className="new-foundry">
-          <span className="new-foundry-label">New look</span>
+          <span className="new-foundry-label">
+            {theme === "dark" ? "Light" : "Dark"}
+          </span>
           <button
             className="switch"
             role="switch"
-            aria-checked={newFoundry}
-            aria-label="Toggle new look experience"
+            aria-checked={theme === "dark"}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={() => {
-              setNewFoundry((value) => !value);
+              const next = theme === "dark" ? "light" : "dark";
+              setTheme(next);
+              document.documentElement.dataset.theme = next;
+              document.cookie = `openfoundry:theme=${next}; path=/; max-age=31536000; SameSite=Lax`;
               toast(
-                newFoundry
-                  ? "Classic navigation enabled. Local features stay the same."
-                  : "New look enabled."
+                next === "light"
+                  ? "Light theme enabled."
+                  : "Dark theme enabled."
               );
             }}
           />

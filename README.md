@@ -100,6 +100,8 @@ redistribute them.
 - JSON workspace store under the OS app-data directory in desktop builds, or `data/` in
   the web build.
 - Direct provider APIs; no openFoundry cloud service and no telemetry.
+- Light and dark themes from one token set; the header switch stores the choice in a
+  cookie so the server renders the right palette on the first paint.
 
 ## Repository layout
 

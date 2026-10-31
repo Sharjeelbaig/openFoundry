@@ -23,6 +23,33 @@
   --success-strong: #7fba00;
   --warning: #faa06b;
   --danger: #dc626d;
+  --link-fg: #c9aaf9;
+  --link-fg-hover: #a175f3;
+  --purple-fg: #c9b3f7;
+  --purple-fg-bright: #c4b0ff;
+  --purple-fg-soft: #d3c6ff;
+  --purple-fg-muted: #d3c1fa;
+  --purple-fg-step: #d9c9f8;
+  --purple-fg-icon: #b8a0f5;
+  --green-fg: #9fe0a5;
+  --green-fg-soft: #a9e5a1;
+  --yellow-fg: #f3cf82;
+  --amber-fg: #f0b429;
+  --red-fg: #ffb3ad;
+  --red-fg-soft: #f1a0a8;
+  --red-fg-strong: #ff9ba3;
+  --orange-fg: #e5a06b;
+  --code-bg: #0b0b0b;
+  --code-fg: #d6d6d6;
+  --yaml-fg: #dcdcdc;
+  --tile-hover: #242424;
+  --tile-strong: #161616;
+  --tile-muted: #181818;
+  --avatar-bg: #1f3a5f;
+  --avatar-fg: #cfe4ff;
+  --mark-fg: #f2f2f2;
+  --scrollbar-thumb: #3a3a3a;
+  --scrollbar-thumb-hover: #4a4a4a;
   --radius-sm: 2px;
   --radius: 4px;
   --radius-lg: 8px;
@@ -36,6 +63,112 @@
   --shadow-8: 0 0 2px rgba(0, 0, 0, 0.24), 0 4px 8px rgba(0, 0, 0, 0.28);
   --shadow-16: 0 0 2px rgba(0, 0, 0, 0.24), 0 8px 16px rgba(0, 0, 0, 0.28);
   color-scheme: dark;
+}
+
+/* ------------------------------------------------- Microsoft Foundry light theme
+   Light tokens follow the Fluent 2 neutral and brand ramps that the Foundry
+   portal uses. Everything here is scoped to data-theme="light"; the dark palette
+   above stays authoritative and unchanged. */
+[data-theme="light"] {
+  --bg: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --bg-2: #ffffff;
+  --bg-3: #fafafa;
+  --bg-hover: #ebebeb;
+  --fg-1: #242424;
+  --fg-2: #424242;
+  --fg-3: #616161;
+  --fg-disabled: #bdbdbd;
+  --stroke-1: #616161;
+  --stroke-2: #d1d1d1;
+  --stroke-3: #e0e0e0;
+  --stroke-4: #f0f0f0;
+  --brand: #643fb2;
+  --brand-hover: #57379c;
+  --brand-pressed: #472d80;
+  --brand-selected: #523594;
+  --brand-stroke: #7a57d6;
+  --brand-tint: #f2edfb;
+  --success: #0e700e;
+  --success-strong: #4f9a00;
+  --warning: #bc4b09;
+  --danger: #b10e1c;
+  --link-fg: #5b3fa8;
+  --link-fg-hover: #4a2f92;
+  --purple-fg: #5b3fa8;
+  --purple-fg-bright: #5b3fa8;
+  --purple-fg-soft: #5b3fa8;
+  --purple-fg-muted: #5b3fa8;
+  --purple-fg-step: #5b3fa8;
+  --purple-fg-icon: #5b3fa8;
+  --green-fg: #0e700e;
+  --green-fg-soft: #0e700e;
+  --yellow-fg: #7a5c00;
+  --amber-fg: #9a6700;
+  --red-fg: #b10e1c;
+  --red-fg-soft: #b10e1c;
+  --red-fg-strong: #b10e1c;
+  --orange-fg: #a4520c;
+  --code-bg: #ffffff;
+  --code-fg: #242424;
+  --yaml-fg: #242424;
+  --tile-hover: #ededf0;
+  --tile-strong: #f0f0f2;
+  --tile-muted: #f5f5f7;
+  --avatar-bg: #efe9fa;
+  --avatar-fg: #5b3fa8;
+  --mark-fg: #242424;
+  --scrollbar-thumb: #c7c7cf;
+  --scrollbar-thumb-hover: #a6a6b0;
+  --shadow-8: 0 0 2px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-16: 0 0 2px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+}
+
+[data-theme="light"] .badge {
+  background: rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .empty-illustration {
+  color: var(--stroke-2);
+}
+[data-theme="light"] .bento-card:first-child {
+  background:
+    radial-gradient(75% 130% at 8% 0%, rgba(100, 63, 178, 0.2), transparent 62%),
+    linear-gradient(104deg, #efe8fa 0%, #e7dff6 48%, #f7f4fc 100%);
+}
+[data-theme="light"] .bento-card:last-child {
+  background:
+    radial-gradient(80% 130% at 88% 0%, rgba(105, 96, 132, 0.12), transparent 62%),
+    linear-gradient(104deg, #ece9f2 0%, #e4e0ec 52%, #f7f4fc 100%);
+}
+[data-theme="light"] .of-knowledge-visual {
+  background:
+    radial-gradient(420px 220px at 50% 0%, rgba(240, 162, 95, 0.14), transparent 70%),
+    linear-gradient(145deg, #f7f3fd, #eeeef3);
+}
+/*
+ * The knowledge graph is artwork, not chrome, so it keeps its dark canvas in
+ * both themes and carries its own foreground colours.
+ */
+[data-theme="light"] .knowledge-visual {
+  color: #ffffff;
+}
+[data-theme="light"] .knowledge-visual .kg-title strong {
+  color: #ffffff;
+}
+[data-theme="light"] .knowledge-visual .kg-title span {
+  color: rgba(255, 255, 255, 0.72);
+}
+[data-theme="light"] .setup-screen {
+  background:
+    radial-gradient(900px 500px at 12% 0%, rgba(197, 101, 50, 0.1), transparent 60%),
+    radial-gradient(700px 500px at 95% 20%, rgba(100, 63, 178, 0.08), transparent 60%),
+    var(--bg);
+}
+[data-theme="light"] .setup-rail {
+  background:
+    radial-gradient(500px 300px at 0% 0%, rgba(240, 162, 95, 0.1), transparent 65%),
+    var(--bg-3);
 }
 
 * {
@@ -100,12 +233,12 @@ svg {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: var(--scrollbar-thumb);
   border: 2px solid var(--bg);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4a4a4a;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ------------------------------------------------------------------ shell */
@@ -144,7 +277,7 @@ svg {
 .brand-logo {
   width: 20px;
   height: 20px;
-  color: #f2f2f2;
+  color: var(--mark-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -628,7 +761,7 @@ svg {
 .btn-danger {
   background: transparent;
   border-color: rgba(241, 112, 123, 0.5);
-  color: #ff9ba3;
+  color: var(--red-fg-strong);
 }
 .btn-danger:hover:not(:disabled) {
   background: rgba(241, 112, 123, 0.12);
@@ -665,7 +798,7 @@ svg {
   gap: 8px;
 }
 .link {
-  color: #c9aaf9;
+  color: var(--link-fg);
   cursor: pointer;
   background: none;
   border: 0;
@@ -673,7 +806,7 @@ svg {
   font: inherit;
 }
 .link:hover {
-  color: #a175f3;
+  color: var(--link-fg-hover);
   text-decoration: underline;
 }
 
@@ -945,12 +1078,12 @@ svg {
 .badge.purple {
   border-color: rgba(146, 99, 241, 0.45);
   background: rgba(100, 63, 178, 0.18);
-  color: #c9b3f7;
+  color: var(--purple-fg);
 }
 .badge.green {
   border-color: rgba(108, 203, 95, 0.45);
   background: rgba(108, 203, 95, 0.1);
-  color: #a9e5a1;
+  color: var(--green-fg-soft);
 }
 .badge.gray {
   border-color: var(--stroke-3);
@@ -1122,7 +1255,7 @@ svg {
   padding: 16px;
 }
 .card-hover:hover {
-  background: #242424;
+  background: var(--tile-hover);
   border-color: var(--stroke-3);
 }
 .panel {
@@ -1482,7 +1615,7 @@ svg {
   overflow: hidden;
 }
 .model-logo.dark {
-  background: #161616;
+  background: var(--tile-strong);
   color: #fff;
   border: 1px solid var(--stroke-3);
 }
@@ -2142,7 +2275,7 @@ svg {
   width: 40px;
 }
 .voice-card {
-  background: #181818;
+  background: var(--tile-muted);
   border-radius: var(--radius-lg);
   padding: 12px 16px;
   display: flex;
@@ -2373,11 +2506,11 @@ svg {
   font-size: 12px;
   line-height: 19px;
   white-space: pre;
-  color: #dcdcdc;
+  color: var(--yaml-fg);
   height: 100%;
 }
 .yaml-view .yaml-key {
-  color: #c9b3f7;
+  color: var(--purple-fg);
 }
 .builder-tab-content {
   flex: 1;
@@ -2392,7 +2525,7 @@ svg {
   margin-bottom: 16px;
 }
 .code-block {
-  background: #0b0b0b;
+  background: var(--code-bg);
   border: 1px solid var(--stroke-3);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
@@ -2400,7 +2533,7 @@ svg {
   font-family: var(--mono);
   font-size: 12px;
   line-height: 19px;
-  color: #d6d6d6;
+  color: var(--code-fg);
   white-space: pre;
 }
 .history-row {
@@ -2518,7 +2651,7 @@ svg {
   height: 32px;
   border-radius: 6px;
   background: rgba(100, 63, 178, 0.22);
-  color: #c9b3f7;
+  color: var(--purple-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2671,8 +2804,8 @@ svg {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #1f3a5f;
-  color: #cfe4ff;
+  background: var(--avatar-bg);
+  color: var(--avatar-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2843,7 +2976,7 @@ svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #d3c1fa;
+  color: var(--purple-fg-muted);
   flex: none;
 }
 .disclaimer-badge svg {
@@ -2871,7 +3004,7 @@ svg {
 .disclaimer-point svg {
   width: 16px;
   height: 16px;
-  color: #b8a0f5;
+  color: var(--purple-fg-icon);
   margin-top: 2px;
 }
 .disclaimer-providers {
@@ -3540,7 +3673,7 @@ svg {
   color: #54b054;
 }
 .control-icon.warning {
-  color: #f0b429;
+  color: var(--amber-fg);
 }
 .control-icon.gray {
   color: var(--fg-3);
@@ -3557,10 +3690,10 @@ svg {
   word-break: break-word;
 }
 .badge.green {
-  color: #9fe0a5;
+  color: var(--green-fg);
 }
 .badge.warning {
-  color: #f3cf82;
+  color: var(--yellow-fg);
 }
 
 /* ------------------------------------------------------------------ manage */
@@ -3965,14 +4098,14 @@ svg {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #9fe0a5;
+  color: var(--green-fg);
   background: rgba(84, 176, 84, 0.1);
   border: 1px solid rgba(84, 176, 84, 0.35);
   border-radius: var(--radius);
   padding: 6px 8px;
 }
 .service-result.error {
-  color: #f1a0a8;
+  color: var(--red-fg-soft);
   background: rgba(241, 112, 123, 0.1);
   border-color: rgba(241, 112, 123, 0.35);
 }
@@ -4321,7 +4454,7 @@ svg {
 .setup-steps li.active > span {
   border-color: var(--brand-stroke);
   background: var(--brand-tint);
-  color: #d9c9f8;
+  color: var(--purple-fg-step);
 }
 .setup-steps li.active strong {
   color: var(--fg-1);
@@ -4350,7 +4483,7 @@ svg {
   flex: 1;
 }
 .setup-kicker {
-  color: #e5a06b;
+  color: var(--orange-fg);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -4757,15 +4890,15 @@ svg {
   color: var(--fg-2);
 }
 .notification-icon.running {
-  color: #c4b0ff;
+  color: var(--purple-fg-bright);
   background: rgba(124, 77, 255, 0.16);
 }
 .notification-icon.complete {
-  color: #9fe0a5;
+  color: var(--green-fg);
   background: rgba(65, 170, 90, 0.14);
 }
 .notification-icon.error {
-  color: #ffb3ad;
+  color: var(--red-fg);
   background: rgba(208, 74, 64, 0.14);
 }
 
@@ -4819,7 +4952,7 @@ svg {
   color: var(--fg-2);
 }
 .download-center-glyph.active {
-  color: #d3c6ff;
+  color: var(--purple-fg-soft);
   background: linear-gradient(135deg, rgba(124, 77, 255, 0.38), rgba(124, 77, 255, 0.12));
 }
 .download-center-title {
@@ -4923,7 +5056,7 @@ svg {
   gap: 5px;
   align-items: flex-start;
   margin: 6px 0 0;
-  color: #ffb3ad;
+  color: var(--red-fg);
   font-size: 11px;
   line-height: 15px;
 }
@@ -4945,7 +5078,7 @@ svg {
   align-items: center;
   gap: 4px;
   font-size: 10.5px;
-  color: #9fe0a5;
+  color: var(--green-fg);
 }
 .download-log {
   display: flex;

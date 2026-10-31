@@ -14,10 +14,12 @@ export default function AppShell({
   children,
   settings,
   systemHost,
+  theme,
 }: {
   children: React.ReactNode;
   settings: LocalSettings;
   systemHost: string;
+  theme: "dark" | "light";
 }) {
   const pathname = usePathname();
   const showFooter = pathname === "/" || pathname.startsWith("/discover");
@@ -48,6 +50,7 @@ export default function AppShell({
             projectName={settings.projectName}
             userName={settings.userName}
             userInitials={settings.userInitials}
+            initialTheme={theme}
           />
           <div className="app-body">
             <Sidebar />
