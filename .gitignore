@@ -31,6 +31,9 @@ next-env.d.ts
 
 # Local runtime data (settings, agents, traces, downloads)
 data/
+# Keep the shipped tool catalog data.
+!src/data/
+!src/data/**
 
 # Generated desktop sidecar resources
 .desktop-cache/

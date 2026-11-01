@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import {
   getAgents,
   getDeployments,
+  getHttpTools,
   getKnowledgeBases,
+  getMcpServers,
   getSettings,
   getTraces,
   readJson,
@@ -20,11 +22,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [agents, deployments, knowledgeBases, traces, settings, gateway, evaluations, routines, workflows, batch, quotaRequests] =
+  const [agents, deployments, knowledgeBases, mcpServers, httpTools, traces, settings, gateway, evaluations, routines, workflows, batch, quotaRequests] =
     await Promise.all([
       getAgents(),
       getDeployments(),
       getKnowledgeBases(),
+      getMcpServers(),
+      getHttpTools(),
       getTraces(),
       getSettings(),
       getGateway(),
@@ -41,6 +45,8 @@ export async function GET() {
     agents,
     deployments,
     knowledgeBases,
+    mcpServers,
+    httpTools,
     traces,
     evaluations,
     routines,

@@ -31,6 +31,7 @@ import {
   Play20Regular,
   Save20Regular,
   Send20Regular,
+  Server20Regular,
   Settings20Regular,
   Shield20Regular,
   Sparkle20Regular,
@@ -45,6 +46,8 @@ import type {
   Citation,
   Guardrail,
   KnowledgeBase,
+  McpServer,
+  ToolCatalogEntry,
   Trace,
 } from "@/lib/types";
 import { useOrigin } from "@/components/Origin";
@@ -93,6 +96,13 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const { data: guardrailData } = useApi<{
     guardrails: Guardrail[];
   }>("/api/guardrails");
+  const { data: mcpData } = useApi<{ servers: McpServer[] }>(
+    "/api/mcp",
+    15000
+  );
+  const { data: skillData } = useApi<{ tools: ToolCatalogEntry[] }>(
+    "/api/tools/catalog?type=Skills"
+  );
   const tracesApi = useApi<{ traces: Trace[] }>(
     `/api/traces?agentId=${encodeURIComponent(agentId)}`,
     4000
@@ -104,7 +114,33 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const knowledgeBases = knowledgeData?.knowledgeBases ?? [];
   const memoryStores = memoryData?.stores ?? [];
   const guardrailResources = guardrailData?.guardrails ?? [];
+  const mcpServers = mcpData?.servers ?? [];
+  const skills = skillData?.tools ?? [];
   const traces = tracesApi.data?.traces ?? [];
+
+  const mcpToolEntries = useMemo(
+    () =>
+      mcpServers.flatMap((server) =>
+        server.tools.map((tool) => ({
+          id: `mcp:${server.id}:${tool.name}`,
+          server,
+          tool,
+          label: `${server.name} · ${tool.name}`,
+          description: tool.description || "Tool from an MCP server",
+        }))
+      ),
+    [mcpServers]
+  );
+
+  const skillEntries = useMemo(
+    () =>
+      skills.map((skill) => ({
+        id: `skill:${skill.id}`,
+        label: `${skill.name} · local skill`,
+        description: skill.summary.slice(0, 180),
+      })),
+    [skills]
+  );
 
   const [tab, setTab] = useState<BuilderTab>("Playground");
   const [modelKey, setModelKey] = useState("");
@@ -1032,6 +1068,58 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                         </button>
                       </div>
                     )}
+                    {tools
+                      .filter((id) => id.startsWith("mcp:"))
+                      .map((id) => {
+                        const entry = mcpToolEntries.find((item) => item.id === id);
+                        return (
+                          <div className="tool-row" key={id}>
+                            <Server20Regular />
+                            <span className="grow">
+                              {entry ? entry.label : "Unavailable MCP tool"}
+                              {entry && (
+                                <span className="muted text-12" style={{ display: "block" }}>
+                                  {entry.description}
+                                </span>
+                              )}
+                            </span>
+                            <span className="badge green">Enabled</span>
+                            <button
+                              className="icon-button small"
+                              aria-label={`Remove ${entry?.tool.name || id}`}
+                              onClick={() => setTools(tools.filter((t) => t !== id))}
+                            >
+                              <Dismiss20Regular />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    {tools
+                      .filter((id) => id.startsWith("skill:"))
+                      .map((id) => {
+                        const entry = skillEntries.find((item) => item.id === id);
+                        return (
+                          <div className="tool-row" key={id}>
+                            <Sparkle20Regular />
+                            <span className="grow">
+                              {entry ? entry.label : "Local skill"}
+                              {entry && (
+                                <span className="muted text-12" style={{ display: "block" }}>
+                                  {entry.description}
+                                </span>
+                              )}
+                            </span>
+                            <span className="badge green">Skill</span>
+                            <button
+                              className="icon-button small"
+                              aria-label={`Remove ${entry?.label || id}`}
+                              onClick={() => setTools(tools.filter((t) => t !== id))}
+                            >
+                              <Dismiss20Regular />
+                            </button>
+                          </div>
+                        );
+                      })}
                     <div className="row" style={{ gap: 10, position: "relative" }}>
                       <button
                         className="btn-pill lg add-tools"
@@ -1054,7 +1142,16 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                         onChange={(event) => uploadFiles(event.target.files)}
                       />
                       {addToolsOpen && (
-                        <div className="menu-popover" style={{ left: 0, top: 38, minWidth: 280 }}>
+                        <div
+                          className="menu-popover"
+                          style={{
+                            left: 0,
+                            top: 38,
+                            minWidth: 280,
+                            maxHeight: 320,
+                            overflowY: "auto",
+                          }}
+                        >
                           {[
                             {
                               id: "web-search",
@@ -1071,6 +1168,16 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                               label: "Calculator",
                               desc: "Evaluate arithmetic in prompts",
                             },
+                            ...mcpToolEntries.map((entry) => ({
+                              id: entry.id,
+                              label: entry.label,
+                              desc: entry.description,
+                            })),
+                            ...skillEntries.map((entry) => ({
+                              id: entry.id,
+                              label: entry.label,
+                              desc: entry.description,
+                            })),
                           ].map((tool) => (
                             <button
                               key={tool.id}
@@ -1612,7 +1719,19 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                   </div>
                   <div className="row between">
                     <span className="muted">Tools</span>
-                    <span>{tools.length ? tools.join(", ") : "none"}</span>
+                    <span>
+                      {tools.length
+                        ? tools
+                            .map(
+                              (id) =>
+                                mcpToolEntries.find((entry) => entry.id === id)
+                                  ?.label ||
+                                skillEntries.find((entry) => entry.id === id)?.label ||
+                                id
+                            )
+                            .join(", ")
+                        : "none"}
+                    </span>
                   </div>
                   <div className="row between">
                     <span className="muted">Memory</span>

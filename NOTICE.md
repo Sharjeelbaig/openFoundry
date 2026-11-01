@@ -16,6 +16,16 @@ are used only to identify model provenance. All trademarks remain the property o
 owners. Publishers without an available mark receive a neutral first-letter tile; no
 third-party marks are bundled in this repository.
 
+## Tool catalog
+
+The tools catalog indexes third-party tool, company and product names for
+identification. Those names, marks and documentation links remain the property of
+their publishers. openFoundry does not redistribute vendor icons, vendor skill
+files, connector operation descriptions or hosted connector gateway URLs. Catalog
+summaries and local skill instructions are original local adaptations. Company
+grouping is inferred and may not match the publisher's own taxonomy. No affiliation
+or endorsement is implied. Check the publisher's terms before connecting a tool.
+
 ## Software dependencies
 
 - Tauri — MIT / Apache-2.0

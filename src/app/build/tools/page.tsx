@@ -16,6 +16,8 @@ import {
 import { useApi, useKnowledge } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { Spinner } from "@/components/ui";
+import McpServers from "@/components/McpServers";
+import HttpTools from "@/components/HttpTools";
 import type { Agent, Citation, KnowledgeBase } from "@/lib/types";
 
 interface Tool {
@@ -72,7 +74,9 @@ const TOOLS: Tool[] = [
 
 export default function ToolsPage() {
   const { toast } = useToast();
-  const { data: agentData } = useApi<{ agents: Agent[] }>("/api/agents");
+  const { data: agentData, refresh: refreshAgents } = useApi<{ agents: Agent[] }>(
+    "/api/agents"
+  );
   const { data: knowledgeData } = useKnowledge();
   const agents = agentData?.agents ?? [];
   const bases = knowledgeData?.knowledgeBases ?? [];
@@ -245,12 +249,17 @@ export default function ToolsPage() {
         })}
       </div>
 
+      <McpServers agents={agents} onAgentsChanged={refreshAgents} />
+
+      <HttpTools agents={agents} onAgentsChanged={refreshAgents} />
+
       <div className="banner mt-16">
         <Wrench20Regular />
         <span>
-          Tools are appended to the system prompt by the chat route. The model decides
-          when to use the provided context; no tool is executed by the model itself.
-          That keeps every call auditable on this computer.
+          Built-in tools are appended to the system prompt. MCP tools are different:
+          the model asks for a specific function and the local agent process executes
+          it against the server you configured. Every tool can be tested here before
+          an agent uses it.
         </span>
       </div>
 

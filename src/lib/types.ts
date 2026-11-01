@@ -167,6 +167,168 @@ export interface AgentVersion {
   instructions: string;
 }
 
+export type ToolCatalogType = "Custom" | "Remote MCP" | "Local MCP" | "Skills";
+
+/**
+ * One entry in the local tool catalog. The entry is metadata only; the
+ * `availability` field decides which local action the UI offers.
+ */
+export interface ToolCatalogEntry {
+  id: string;
+  /** URL-safe identifier for the full detail page. */
+  slug: string;
+  name: string;
+  /** Catalog creation date, when the reference published one. */
+  releaseDate?: string;
+  /** Short plain-text summary for cards and drawers. */
+  summary: string;
+  /** Full catalog description; for skills this is the instruction pack. */
+  description: string;
+  /** Full skill instructions, applied to an agent prompt. */
+  instructions?: string;
+  type: ToolCatalogType;
+  kind: string;
+  /** Actual publisher company derived from the catalog metadata. */
+  company: string;
+  category?: string | null;
+  categories: string[];
+  auth: string[];
+  tags: string[];
+  icon?: string | null;
+  connector?: string | null;
+  remoteUrl?: string | null;
+  remoteTransport?: string | null;
+  preview?: boolean;
+  docs: { title: string; url: string }[];
+  availability: "local-skill" | "mcp" | "mcp-local" | "http";
+}
+
+export interface ToolSetupField {
+  name: string;
+  label: string;
+  description: string;
+  required: boolean;
+  secret: boolean;
+  type: "text" | "password" | "select";
+  options: string[];
+  placeholder: string;
+}
+
+export interface ToolSetupOAuth {
+  authorizationUrl?: string | null;
+  tokenUrl?: string | null;
+  refreshUrl?: string | null;
+  scopes?: string[];
+  clientId?: string | null;
+  redirectUrl?: string | null;
+  identityProvider?: string | null;
+  note?: string;
+}
+
+export interface ToolSetupAuthMethod {
+  id: string;
+  label: string;
+  type: "oauth2" | "apiKey" | "bearer" | "custom" | "none";
+  description: string;
+  fields: ToolSetupField[];
+  oauth?: ToolSetupOAuth | null;
+  headerName?: string | null;
+}
+
+export interface ToolSetupOperation {
+  id: string;
+  name: string;
+  method: string;
+  path: string;
+  docs?: string;
+}
+
+export interface ToolSetup {
+  authMethods: ToolSetupAuthMethod[];
+  operations: ToolSetupOperation[];
+  runtimeUrls: string[];
+  baseUrlHint?: string | null;
+  docs: { title: string; url: string }[];
+  note?: string;
+}
+
+export interface OAuthPending {
+  state: string;
+  toolId: string;
+  authMethodId: string;
+  toolName: string;
+  authorizationUrl: string;
+  tokenUrl: string;
+  clientId: string;
+  clientSecret?: string;
+  codeVerifier: string;
+  redirectUri: string;
+  scopes: string[];
+  extraAuthParams: Record<string, string>;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface OAuthTokenRecord {
+  toolId: string;
+  authMethodId: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenType?: string;
+  scope?: string;
+  expiresAt?: string;
+  clientId: string;
+  clientSecret?: string;
+  tokenUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type McpTransport = "stdio" | "http";
+
+/** A user-owned HTTP endpoint exposed to agents as a function. */
+export interface HttpTool {
+  id: string;
+  name: string;
+  description: string;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  url: string;
+  headers?: Record<string, string>;
+  /** Optional request body. `{{argument}}` placeholders are replaced. */
+  bodyTemplate?: string;
+  /** JSON Schema for the function arguments. */
+  inputSchema: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A tool advertised by a user-owned MCP server. */
+export interface McpToolDefinition {
+  name: string;
+  description?: string;
+  inputSchema: Record<string, unknown>;
+}
+
+/** A local or remote Model Context Protocol server registered in the workspace. */
+export interface McpServer {
+  id: string;
+  name: string;
+  transport: McpTransport;
+  /** stdio transport */
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  /** streamable HTTP transport */
+  url?: string;
+  headers?: Record<string, string>;
+  status: "Connected" | "Error" | "Unknown";
+  error?: string;
+  tools: McpToolDefinition[];
+  createdAt: string;
+  updatedAt: string;
+  lastConnectedAt?: string;
+}
+
 export interface Agent {
   id: string;
   name: string;

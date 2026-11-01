@@ -10,10 +10,14 @@ import {
   Deployment,
   Guardrail,
   GuardrailControl,
+  HttpTool,
   KnowledgeBase,
   LocalSettings,
+  McpServer,
   MemoryItem,
   MemoryStore,
+  OAuthPending,
+  OAuthTokenRecord,
   RuntimeNode,
   Trace,
 } from "./types";
@@ -131,6 +135,40 @@ export async function getDeployments(): Promise<Deployment[]> {
 
 export async function saveDeployments(items: Deployment[]): Promise<void> {
   await writeJson("deployments.json", items);
+}
+
+export async function getMcpServers(): Promise<McpServer[]> {
+  return readJson<McpServer[]>("mcp-servers.json", []);
+}
+
+export async function saveMcpServers(items: McpServer[]): Promise<void> {
+  await writeJson("mcp-servers.json", items);
+}
+
+export async function getHttpTools(): Promise<HttpTool[]> {
+  return readJson<HttpTool[]>("http-tools.json", []);
+}
+
+export async function saveHttpTools(items: HttpTool[]): Promise<void> {
+  await writeJson("http-tools.json", items);
+}
+
+export async function getOAuthPending(): Promise<OAuthPending[]> {
+  return readJson<OAuthPending[]>("oauth-pending.json", []);
+}
+
+export async function saveOAuthPending(items: OAuthPending[]): Promise<void> {
+  await writeJson("oauth-pending.json", items);
+}
+
+export async function getOAuthTokens(): Promise<OAuthTokenRecord[]> {
+  return readJson<OAuthTokenRecord[]>("oauth-tokens.json", []);
+}
+
+export async function saveOAuthTokens(
+  items: OAuthTokenRecord[]
+): Promise<void> {
+  await writeJson("oauth-tokens.json", items);
 }
 
 export async function getNodes(): Promise<RuntimeNode[]> {
