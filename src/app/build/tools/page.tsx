@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Add20Regular,
   Book20Regular,
@@ -13,26 +12,21 @@ import {
   Search20Regular,
   Wrench20Regular,
 } from "@fluentui/react-icons";
+import Link from "next/link";
 import { useApi, useKnowledge } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { Spinner } from "@/components/ui";
 import McpServers from "@/components/McpServers";
 import HttpTools from "@/components/HttpTools";
-import type { Agent, Citation, KnowledgeBase } from "@/lib/types";
+import Toolboxes from "@/components/Toolboxes";
+import SkillsPanel from "@/components/SkillsPanel";
+import type { Agent, KnowledgeBase } from "@/lib/types";
 
-interface Tool {
-  id: string;
-  name: string;
-  type: string;
-  icon: React.ReactNode;
-  description: string;
-  behavior: string;
-  config: string;
-  placeholder: string;
-  needsKnowledge?: boolean;
-}
+type Tab = "Toolboxes" | "Tools" | "Skills";
 
-const TOOLS: Tool[] = [
+const TABS: Tab[] = ["Toolboxes", "Tools", "Skills"];
+
+const TOOLS = [
   {
     id: "web-search",
     name: "Web search",
@@ -81,24 +75,6 @@ export default function ToolsPage() {
   const agents = agentData?.agents ?? [];
   const bases = knowledgeData?.knowledgeBases ?? [];
 
-  const [testTool, setTestTool] = useState<Tool | null>(null);
-  const [addTool, setAddTool] = useState<Tool | null>(null);
-  const [agentId, setAgentId] = useState("");
-  const [input, setInput] = useState("");
-  const [knowledgeBaseId, setKnowledgeBaseId] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [result, setResult] = useState<{
-    kind: string;
-    latencyMs: number;
-    results?: { title: string; url: string; snippet: string }[];
-    citations?: Citation[];
-    result?: string | null;
-    note?: string;
-    embeddingModel?: string;
-    error?: string;
-  } | null>(null);
-
   const usage = useMemo(() => {
     const map = new Map<string, Agent[]>();
     for (const agent of agents) {
@@ -109,7 +85,7 @@ export default function ToolsPage() {
     return map;
   }, [agents]);
 
-  const openTest = (tool: Tool) => {
+  const openTest = (tool: (typeof TOOLS)[number]) => {
     setTestTool(tool);
     setInput("");
     setResult(null);
@@ -130,7 +106,16 @@ export default function ToolsPage() {
           knowledgeBaseId: testTool.needsKnowledge ? knowledgeBaseId : undefined,
         }),
       });
-      const json = await res.json();
+      const json = (await res.json()) as {
+        kind: string;
+        latencyMs: number;
+        results?: { title: string; url: string; snippet: string }[];
+        citations?: { documentId: string; documentName: string; chunk: string; score: number }[];
+        result?: string | null;
+        note?: string;
+        embeddingModel?: string;
+        error?: string;
+      };
       if (!res.ok) throw new Error(json.error || "Tool call failed");
       setResult(json);
     } catch (error) {
@@ -168,14 +153,54 @@ export default function ToolsPage() {
     }
   };
 
+  const [tab, setTab] = useState<Tab>("Tools");
+  const [testTool, setTestTool] = useState<(typeof TOOLS)[number] | null>(null);
+  const [addTool, setAddTool] = useState<(typeof TOOLS)[number] | null>(null);
+  const [agentId, setAgentId] = useState("");
+  const [input, setInput] = useState("");
+  const [knowledgeBaseId, setKnowledgeBaseId] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<{
+    kind: string;
+    latencyMs: number;
+    results?: { title: string; url: string; snippet: string }[];
+    citations?: { documentId: string; documentName: string; chunk: string; score: number }[];
+    result?: string | null;
+    note?: string;
+    embeddingModel?: string;
+    error?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("tab");
+    if (requested === "toolboxes" || requested === "tools" || requested === "skills") {
+      setTab(
+        requested === "toolboxes"
+          ? "Toolboxes"
+          : requested === "skills"
+          ? "Skills"
+          : "Tools"
+      );
+    }
+  }, []);
+
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    const value =
+      next === "Toolboxes" ? "toolboxes" : next === "Skills" ? "skills" : "tools";
+    window.history.replaceState(null, "", `/build/tools?tab=${value}`);
+  };
+
   return (
     <div className="page" style={{ paddingTop: 18 }}>
       <div className="page-header" style={{ marginBottom: 8 }}>
         <div>
           <h1 className="page-title">Tools</h1>
           <p className="page-subtitle">
-            Tools run from this computer or from free public endpoints. Each one is
-            testable here before an agent uses it.
+            Built-in tools, local MCP and HTTP tools, skills and toolboxes. Test
+            each one before an agent uses it.
           </p>
         </div>
         <div className="page-header-actions">
@@ -185,83 +210,111 @@ export default function ToolsPage() {
         </div>
       </div>
 
-      <div className="tool-detail-grid mt-16">
-        {TOOLS.map((tool) => {
-          const usedBy = usage.get(tool.id) || [];
-          return (
-            <div className="operate-card tool-detail-card" key={tool.id}>
-              <div className="row between">
-                <span className="row" style={{ gap: 10 }}>
-                  <span className="kb-icon">{tool.icon}</span>
-                  <span>
-                    <strong className="text-14">{tool.name}</strong>
-                    <span className="badge gray" style={{ marginLeft: 8 }}>
-                      {tool.type}
+      <div className="tabbar" style={{ marginBottom: 16 }}>
+        {TABS.map((item) => (
+          <button
+            key={item}
+            className={`tab${tab === item ? " active" : ""}`}
+            onClick={() => switchTab(item)}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+
+      {tab === "Toolboxes" && <Toolboxes />}
+
+      {tab === "Tools" && (
+        <>
+          <div className="tool-detail-grid">
+            {TOOLS.map((tool) => {
+              const usedBy = usage.get(tool.id) || [];
+              return (
+                <div className="operate-card tool-detail-card" key={tool.id}>
+                  <div className="row between">
+                    <span className="row" style={{ gap: 10 }}>
+                      <span className="kb-icon">{tool.icon}</span>
+                      <span>
+                        <strong className="text-14">{tool.name}</strong>
+                        <span className="badge gray" style={{ marginLeft: 8 }}>
+                          {tool.type}
+                        </span>
+                      </span>
                     </span>
-                  </span>
-                </span>
-                <span className="muted text-12">{usedBy.length} agents</span>
-              </div>
-              <p className="text-13 muted" style={{ lineHeight: "20px" }}>
-                {tool.description}
-              </p>
-              <div className="facts-list">
-                <div className="fact-row" style={{ alignItems: "flex-start" }}>
-                  <span>Behavior</span>
-                  <span style={{ maxWidth: 380, textAlign: "left" }}>{tool.behavior}</span>
+                    <span className="muted text-12">{usedBy.length} agents</span>
+                  </div>
+                  <p className="text-13 muted" style={{ lineHeight: "20px" }}>
+                    {tool.description}
+                  </p>
+                  <div className="facts-list">
+                    <div className="fact-row" style={{ alignItems: "flex-start" }}>
+                      <span>Behavior</span>
+                      <span style={{ maxWidth: 380, textAlign: "left" }}>
+                        {tool.behavior}
+                      </span>
+                    </div>
+                    <div className="fact-row" style={{ alignItems: "flex-start" }}>
+                      <span>Configuration</span>
+                      <span style={{ maxWidth: 380, textAlign: "left" }}>
+                        {tool.config}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="chip-row" style={{ marginBottom: 0 }}>
+                    {usedBy.map((agent) => (
+                      <Link
+                        key={agent.id}
+                        href={`/build/agents/${encodeURIComponent(agent.id)}/build`}
+                        className="badge gray"
+                      >
+                        {agent.name}
+                      </Link>
+                    ))}
+                    {usedBy.length === 0 && (
+                      <span className="muted text-12">
+                        Not enabled on any agent yet.
+                      </span>
+                    )}
+                  </div>
+                  <div className="row mt-8" style={{ gap: 8 }}>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => openTest(tool)}
+                    >
+                      <Play20Regular /> Test tool
+                    </button>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      disabled={agents.length === 0}
+                      onClick={() => {
+                        setAgentId(agents[0]?.id || "");
+                        setAddTool(tool);
+                      }}
+                    >
+                      <Add20Regular /> Add to agent
+                    </button>
+                  </div>
                 </div>
-                <div className="fact-row" style={{ alignItems: "flex-start" }}>
-                  <span>Configuration</span>
-                  <span style={{ maxWidth: 380, textAlign: "left" }}>{tool.config}</span>
-                </div>
-              </div>
-              <div className="chip-row" style={{ marginBottom: 0 }}>
-                {usedBy.map((agent) => (
-                  <Link
-                    key={agent.id}
-                    href={`/build/agents/${encodeURIComponent(agent.id)}/build`}
-                    className="badge gray"
-                  >
-                    {agent.name}
-                  </Link>
-                ))}
-                {usedBy.length === 0 && (
-                  <span className="muted text-12">Not enabled on any agent yet.</span>
-                )}
-              </div>
-              <div className="row mt-8" style={{ gap: 8 }}>
-                <button className="btn btn-sm btn-secondary" onClick={() => openTest(tool)}>
-                  <Play20Regular /> Test tool
-                </button>
-                <button
-                  className="btn btn-sm btn-secondary"
-                  disabled={agents.length === 0}
-                  onClick={() => {
-                    setAgentId(agents[0]?.id || "");
-                    setAddTool(tool);
-                  }}
-                >
-                  <Add20Regular /> Add to agent
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
 
-      <McpServers agents={agents} onAgentsChanged={refreshAgents} />
+          <McpServers agents={agents} onAgentsChanged={refreshAgents} />
 
-      <HttpTools agents={agents} onAgentsChanged={refreshAgents} />
+          <HttpTools agents={agents} onAgentsChanged={refreshAgents} />
 
-      <div className="banner mt-16">
-        <Wrench20Regular />
-        <span>
-          Built-in tools are appended to the system prompt. MCP tools are different:
-          the model asks for a specific function and the local agent process executes
-          it against the server you configured. Every tool can be tested here before
-          an agent uses it.
-        </span>
-      </div>
+          <div className="banner mt-16">
+            <Wrench20Regular />
+            <span>
+              Built-in tools run in the server process. MCP and HTTP tools are
+              called when the model requests them. Every tool can be tested here
+              before an agent uses it.
+            </span>
+          </div>
+        </>
+      )}
+
+      {tab === "Skills" && <SkillsPanel />}
 
       {testTool && (
         <div
@@ -270,7 +323,12 @@ export default function ToolsPage() {
             if (event.target === event.currentTarget) setTestTool(null);
           }}
         >
-          <div className="dialog wide" role="dialog" aria-modal="true" aria-label={`Test ${testTool.name}`}>
+          <div
+            className="dialog wide"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Test ${testTool.name}`}
+          >
             <div className="dialog-head">
               <div>
                 <h2 className="dialog-title">Test {testTool.name}</h2>
@@ -278,7 +336,11 @@ export default function ToolsPage() {
                   Runs the exact function the agent runtime would call.
                 </p>
               </div>
-              <button className="icon-button" onClick={() => setTestTool(null)} aria-label="Close">
+              <button
+                className="icon-button"
+                onClick={() => setTestTool(null)}
+                aria-label="Close"
+              >
                 <Dismiss20Regular />
               </button>
             </div>
@@ -313,7 +375,6 @@ export default function ToolsPage() {
                   autoFocus
                 />
               </label>
-
               {result && (
                 <div className="panel" style={{ padding: 12 }}>
                   <div className="row between mb-8">
@@ -388,7 +449,10 @@ export default function ToolsPage() {
               )}
             </div>
             <div className="dialog-footer">
-              <button className="btn btn-secondary" onClick={() => setTestTool(null)}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setTestTool(null)}
+              >
                 Close
               </button>
               <button
@@ -419,7 +483,11 @@ export default function ToolsPage() {
                   chat request.
                 </p>
               </div>
-              <button className="icon-button" onClick={() => setAddTool(null)} aria-label="Close">
+              <button
+                className="icon-button"
+                onClick={() => setAddTool(null)}
+                aria-label="Close"
+              >
                 <Dismiss20Regular />
               </button>
             </div>
@@ -442,16 +510,23 @@ export default function ToolsPage() {
               <div className="banner">
                 <Code20Regular />
                 <span>
-                  You can remove the tool later in the agent builder. Tool decisions are
-                  recorded in the prompt, not hidden in a remote service.
+                  You can remove the tool later in the agent builder. Tool decisions
+                  are recorded in the prompt, not hidden in a remote service.
                 </span>
               </div>
             </div>
             <div className="dialog-footer">
-              <button className="btn btn-secondary" onClick={() => setAddTool(null)}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setAddTool(null)}
+              >
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={enable} disabled={saving || !agentId}>
+              <button
+                className="btn btn-primary"
+                onClick={enable}
+                disabled={saving || !agentId}
+              >
                 {saving ? <Spinner /> : <Add20Regular />} Add tool
               </button>
             </div>

@@ -19,6 +19,7 @@ import {
   OAuthPending,
   OAuthTokenRecord,
   RuntimeNode,
+  Toolbox,
   Trace,
 } from "./types";
 import { deploymentTypeFor } from "./deployment-types";
@@ -151,6 +152,14 @@ export async function getHttpTools(): Promise<HttpTool[]> {
 
 export async function saveHttpTools(items: HttpTool[]): Promise<void> {
   await writeJson("http-tools.json", items);
+}
+
+export async function getToolboxes(): Promise<Toolbox[]> {
+  return readJson<Toolbox[]>("toolboxes.json", []);
+}
+
+export async function saveToolboxes(items: Toolbox[]): Promise<void> {
+  await writeJson("toolboxes.json", items);
 }
 
 export async function getOAuthPending(): Promise<OAuthPending[]> {

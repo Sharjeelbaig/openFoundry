@@ -284,6 +284,19 @@ export interface OAuthTokenRecord {
   updatedAt: string;
 }
 
+export interface Toolbox {
+  id: string;
+  name: string;
+  description: string;
+  /** Tool ids: built-in ids, mcp:<server>:<tool>, http:<id>, skill:<id>. */
+  toolIds: string[];
+  /** When true, only the most relevant tools are passed per request. */
+  toolSearch: boolean;
+  guardrailId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type McpTransport = "stdio" | "http";
 
 /** A user-owned HTTP endpoint exposed to agents as a function. */
