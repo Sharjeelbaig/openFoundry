@@ -48,6 +48,7 @@ import type {
   KnowledgeBase,
   McpServer,
   ToolCatalogEntry,
+  Toolbox,
   Trace,
 } from "@/lib/types";
 import { useOrigin } from "@/components/Origin";
@@ -100,6 +101,10 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     "/api/mcp",
     15000
   );
+  const { data: toolboxData } = useApi<{ toolboxes: Toolbox[] }>(
+    "/api/toolboxes",
+    15000
+  );
   const { data: skillData } = useApi<{ tools: ToolCatalogEntry[] }>(
     "/api/tools/catalog?type=Skills"
   );
@@ -115,6 +120,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const memoryStores = memoryData?.stores ?? [];
   const guardrailResources = guardrailData?.guardrails ?? [];
   const mcpServers = mcpData?.servers ?? [];
+  const toolboxes = toolboxData?.toolboxes ?? [];
   const skills = skillData?.tools ?? [];
   const traces = tracesApi.data?.traces ?? [];
 
@@ -140,6 +146,20 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
         description: skill.summary.slice(0, 180),
       })),
     [skills]
+  );
+
+  const toolboxEntries = useMemo(
+    () =>
+      toolboxes.map((toolbox) => ({
+        id: `toolbox:${toolbox.id}`,
+        label: `${toolbox.name} · toolbox`,
+        description:
+          toolbox.description ||
+          `${toolbox.toolIds.length} tools${
+            toolbox.toolSearch ? " · tool search" : ""
+          }`,
+      })),
+    [toolboxes]
   );
 
   const [tab, setTab] = useState<BuilderTab>("Playground");
@@ -1120,6 +1140,32 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                           </div>
                         );
                       })}
+                      {tools
+                        .filter((id) => id.startsWith("toolbox:"))
+                        .map((id) => {
+                          const entry = toolboxEntries.find((item) => item.id === id);
+                          return (
+                            <div className="tool-row" key={id}>
+                              <Wrench20Regular />
+                              <span className="grow">
+                                {entry ? entry.label : "Toolbox"}
+                                {entry && (
+                                  <span className="muted text-12" style={{ display: "block" }}>
+                                    {entry.description}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="badge green">Toolbox</span>
+                              <button
+                                className="icon-button small"
+                                aria-label={`Remove ${entry?.label || id}`}
+                                onClick={() => setTools(tools.filter((t) => t !== id))}
+                              >
+                                <Dismiss20Regular />
+                              </button>
+                            </div>
+                          );
+                        })}
                     <div className="row" style={{ gap: 10, position: "relative" }}>
                       <button
                         className="btn-pill lg add-tools"
@@ -1174,6 +1220,11 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                               desc: entry.description,
                             })),
                             ...skillEntries.map((entry) => ({
+                              id: entry.id,
+                              label: entry.label,
+                              desc: entry.description,
+                            })),
+                            ...toolboxEntries.map((entry) => ({
                               id: entry.id,
                               label: entry.label,
                               desc: entry.description,
@@ -1727,6 +1778,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                                 mcpToolEntries.find((entry) => entry.id === id)
                                   ?.label ||
                                 skillEntries.find((entry) => entry.id === id)?.label ||
+                                toolboxEntries.find((entry) => entry.id === id)?.label ||
                                 id
                             )
                             .join(", ")

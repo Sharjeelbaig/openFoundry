@@ -28,6 +28,7 @@ import {
 import { searchWeb, tryCalculate } from "@/lib/websearch";
 import { callMcpTool, resolveMcpTools } from "@/lib/mcp";
 import { callHttpTool, resolveHttpTools } from "@/lib/http-tools";
+import { ResolvedTool, resolveToolboxes } from "@/lib/toolboxes";
 import {
   findCatalogEntry,
   parseSkillId,
@@ -264,13 +265,75 @@ export async function POST(req: NextRequest) {
             if (calc) systemParts.push(`Calculator result: ${calc}`);
           }
 
+          const toolboxIds = tools
+            .filter((id) => id.startsWith("toolbox:"))
+            .map((id) => id.slice("toolbox:".length));
+          const toolboxResolution = await resolveToolboxes(
+            toolboxIds,
+            lastUser?.content || ""
+          );
+          for (const builtin of toolboxResolution.builtins) {
+            if (!tools.includes(builtin)) tools.push(builtin);
+          }
           const mcp = await resolveMcpTools(tools);
           const http = await resolveHttpTools(tools);
-          const mcpChatTools: ChatTool[] = [
-            ...mcp.tools.map((tool) => tool.definition),
-            ...http.tools.map((tool) => tool.definition),
+          const resolvedFunctionTools: ResolvedTool[] = [
+            ...mcp.tools.map((resolved) => ({
+              id: resolved.id,
+              functionName: resolved.functionName,
+              definition: resolved.definition,
+              description:
+                resolved.tool.description ||
+                resolved.definition.function.description ||
+                resolved.tool.name,
+              execute: async (args: Record<string, unknown>) =>
+                callMcpTool(resolved.server, resolved.tool.name, args),
+            })),
+            ...http.tools.map((resolved) => ({
+              id: resolved.id,
+              functionName: resolved.functionName,
+              definition: resolved.definition,
+              description:
+                resolved.tool.description ||
+                resolved.definition.function.description ||
+                resolved.tool.name,
+              execute: async (args: Record<string, unknown>) =>
+                callHttpTool(resolved.tool, args),
+            })),
+            ...toolboxResolution.functionTools,
           ];
-          const missingTools = [...mcp.missing, ...http.missing];
+          // Deduplicate function tools by their model-visible name.
+          const usedNames = new Set<string>();
+          const dedupedFunctionTools: ResolvedTool[] = [];
+          for (const tool of resolvedFunctionTools) {
+            let name = tool.functionName;
+            if (usedNames.has(name)) {
+              let suffix = 2;
+              const base = name.slice(0, 58);
+              while (usedNames.has(`${base}_${suffix}`)) suffix += 1;
+              name = `${base}_${suffix}`;
+              tool.functionName = name;
+              tool.definition = {
+                ...tool.definition,
+                function: { ...tool.definition.function, name },
+              };
+            }
+            usedNames.add(name);
+            dedupedFunctionTools.push(tool);
+          }
+          const mcpChatTools: ChatTool[] = dedupedFunctionTools.map(
+            (tool) => tool.definition
+          );
+          const missingTools = [
+            ...mcp.missing,
+            ...http.missing,
+            ...toolboxResolution.missing,
+          ];
+          if (toolboxResolution.applied) {
+            systemParts.push(
+              "Tool search selected the most relevant tools from the attached toolboxes for this request."
+            );
+          }
           if (missingTools.length) {
             systemParts.push(
               `These tools are attached to the agent but are no longer available: ${missingTools.join(
@@ -287,9 +350,10 @@ export async function POST(req: NextRequest) {
           // Local skills are instruction packs from the tool catalog. They run
           // in the same prompt pipeline as agent instructions; no cloud skill
           // service is involved.
-          const skillIds = tools
+          const directSkillIds = tools
             .map(parseSkillId)
             .filter((id): id is string => Boolean(id));
+          const skillIds = [...directSkillIds, ...toolboxResolution.skillIds];
           for (const skillId of skillIds.slice(0, 4)) {
             const entry = findCatalogEntry(skillId);
             if (entry) systemParts.push(skillInstructions(entry));
@@ -428,10 +492,7 @@ export async function POST(req: NextRequest) {
                 break;
               }
               toolRuns += 1;
-              const resolved = mcp.tools.find(
-                (item) => item.functionName === call.function.name
-              );
-              const httpResolved = http.tools.find(
+              const resolved = dedupedFunctionTools.find(
                 (item) => item.functionName === call.function.name
               );
               let toolArgs: Record<string, unknown> = {};
@@ -449,7 +510,7 @@ export async function POST(req: NextRequest) {
                 });
                 continue;
               }
-              if (!resolved && !httpResolved) {
+              if (!resolved) {
                 conversation.push({
                   role: "tool",
                   tool_call_id: call.id,
@@ -458,18 +519,18 @@ export async function POST(req: NextRequest) {
                 continue;
               }
 
-              const toolName = resolved?.tool.name || httpResolved!.tool.name;
-              const sourceName = resolved?.server.name || "HTTP tool";
               send({
                 type: "tool",
                 status: "running",
-                name: toolName,
-                server: sourceName,
+                name: resolved.definition.function.name,
+                server: resolved.id.startsWith("mcp:")
+                  ? "MCP server"
+                  : resolved.id.startsWith("http:")
+                  ? "HTTP tool"
+                  : "Tool",
               });
               try {
-                const result = resolved
-                  ? await callMcpTool(resolved.server, resolved.tool.name, toolArgs)
-                  : await callHttpTool(httpResolved!.tool, toolArgs);
+                const result = await resolved.execute(toolArgs);
                 lastToolResult = result.text;
                 conversation.push({
                   role: "tool",
@@ -479,8 +540,12 @@ export async function POST(req: NextRequest) {
                 send({
                   type: "tool",
                   status: result.isError ? "error" : "done",
-                  name: toolName,
-                  server: sourceName,
+                  name: resolved.definition.function.name,
+                  server: resolved.id.startsWith("mcp:")
+                    ? "MCP server"
+                    : resolved.id.startsWith("http:")
+                    ? "HTTP tool"
+                    : "Tool",
                   preview: result.text.slice(0, 500),
                 });
               } catch (error) {
@@ -495,8 +560,12 @@ export async function POST(req: NextRequest) {
                 send({
                   type: "tool",
                   status: "error",
-                  name: toolName,
-                  server: sourceName,
+                  name: resolved.definition.function.name,
+                  server: resolved.id.startsWith("mcp:")
+                    ? "MCP server"
+                    : resolved.id.startsWith("http:")
+                    ? "HTTP tool"
+                    : "Tool",
                   preview: message,
                 });
               }
