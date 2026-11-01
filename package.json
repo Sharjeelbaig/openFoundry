@@ -14,6 +14,7 @@
     "desktop:prepare": "node scripts/prepare-desktop.mjs",
     "landing:build": "node landing-src/build.mjs",
     "landing:serve": "node scripts/serve-site.mjs",
+    "landing:deploy": "wrangler pages deploy landing --project-name openfoundry --branch main",
     "tauri": "tauri"
   },
   "dependencies": {
