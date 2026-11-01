@@ -5,7 +5,6 @@ import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
-  Badge,
   Button,
   Card,
   Carousel,
@@ -36,21 +35,20 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowDownload20Regular,
-  Bot20Regular,
-  Chat20Regular,
+  Bot24Regular,
+  Chat24Regular,
   Checkmark20Regular,
-  CheckmarkCircle16Filled,
   Code20Regular,
   Copy20Regular,
   DesktopMac20Regular,
-  DocumentSearch20Regular,
-  Globe20Regular,
-  LockClosed20Regular,
+  DocumentSearch24Regular,
+  Globe24Regular,
+  LockClosed24Regular,
   Navigation20Regular,
-  Rocket20Regular,
+  Rocket24Regular,
   Window20Regular,
 } from "@fluentui/react-icons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   COMMANDS,
   DEPLOYMENT_MODES,
@@ -90,7 +88,7 @@ const useStyles = makeStyles({
   },
   container: {
     width: "100%",
-    maxWidth: "1160px",
+    maxWidth: "1320px",
     marginInline: "auto",
     ...shorthands.padding("0", "24px"),
   },
@@ -124,14 +122,28 @@ const useStyles = makeStyles({
   },
   navLink: {
     ...shorthands.padding("6px", "10px"),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    position: "relative",
     color: tokens.colorNeutralForeground2,
     fontSize: tokens.fontSizeBase300,
     textDecorationLine: "none",
     whiteSpace: "nowrap",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground1Hover,
       color: tokens.colorNeutralForeground1,
+      "::after": { transform: "scaleX(1)" },
+    },
+    "::after": {
+      content: '""',
+      position: "absolute",
+      left: "10px",
+      right: "10px",
+      bottom: "0px",
+      height: "2px",
+      backgroundColor: tokens.colorNeutralForeground1,
+      transform: "scaleX(0)",
+      transformOrigin: "left center",
+      transitionProperty: "transform",
+      transitionDuration: "200ms",
+      transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
     },
   },
   headerActions: {
@@ -167,49 +179,85 @@ const useStyles = makeStyles({
     "@media (min-width: 560px)": { display: "inline-flex" },
   },
   hero: {
-    ...shorthands.padding("80px", "0", "72px"),
+    ...shorthands.padding("72px", "0", "80px"),
+    backgroundColor: "#FFF9F5",
     scrollMarginTop: "64px",
   },
-  heroGrid: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr)",
-    rowGap: "48px",
+  heroCenter: {
+    maxWidth: "980px",
+    marginInline: "auto",
+    display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    "@media (min-width: 960px)": {
-      gridTemplateColumns: "minmax(0, 1.06fr) minmax(0, 1fr)",
-      columnGap: "64px",
-    },
+    textAlign: "center",
   },
-  eyebrow: { marginBottom: "20px" },
   heroTitle: {
     margin: 0,
-    maxWidth: "620px",
-    letterSpacing: "-0.02em",
-    lineHeight: "1.12",
+    maxWidth: "800px",
+    fontSize: "clamp(40px, 5.2vw, 62px)",
+    fontWeight: tokens.fontWeightMedium,
+    letterSpacing: "-0.025em",
+    lineHeight: "1.14",
+    animationName: "of-fade-in-base",
+    animationDuration: "1s",
+    animationTimingFunction: "cubic-bezier(0.48, 0.04, 0.16, 1)",
+    animationFillMode: "both",
   },
   heroText: {
     display: "block",
     marginTop: "20px",
-    maxWidth: "560px",
+    maxWidth: "720px",
     color: tokens.colorNeutralForeground2,
+    lineHeight: "1.6",
+    animationName: "of-fade-in-base",
+    animationDuration: "1s",
+    animationTimingFunction: "cubic-bezier(0.48, 0.04, 0.16, 1)",
+    animationFillMode: "both",
+    animationDelay: "100ms",
   },
   heroActions: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
+    justifyContent: "center",
     gap: "12px",
     marginTop: "32px",
+    animationName: "of-fade-in-base",
+    animationDuration: "1s",
+    animationTimingFunction: "cubic-bezier(0.48, 0.04, 0.16, 1)",
+    animationFillMode: "both",
+    animationDelay: "180ms",
   },
   heroCaption: {
+    display: "block",
+    marginTop: "12px",
+    color: tokens.colorNeutralForeground3,
+    textAlign: "center",
+    animationName: "of-fade-in-base",
+    animationDuration: "1s",
+    animationTimingFunction: "cubic-bezier(0.48, 0.04, 0.16, 1)",
+    animationFillMode: "both",
+    animationDelay: "240ms",
+  },
+  caption: {
     display: "block",
     marginTop: "12px",
     color: tokens.colorNeutralForeground3,
   },
   heroShotCard: {
     ...shorthands.padding("0"),
+    width: "100%",
+    marginTop: "56px",
     overflow: "hidden",
+    border: "none",
+    ...shorthands.borderRadius("24px"),
+    backgroundColor: tokens.colorNeutralBackground1,
     boxShadow: tokens.shadow16,
-    ...shorthands.borderColor(tokens.colorNeutralStroke2),
+    animationName: "of-slide-in-bottom",
+    animationDuration: "1s",
+    animationTimingFunction: "cubic-bezier(0.48, 0.04, 0.16, 1)",
+    animationFillMode: "both",
+    animationDelay: "200ms",
   },
   heroShot: {
     display: "block",
@@ -220,43 +268,66 @@ const useStyles = makeStyles({
     ...shorthands.padding("80px", "0"),
     scrollMarginTop: "64px",
   },
-  sectionAlt: { backgroundColor: tokens.colorNeutralBackground2 },
-  sectionHead: { maxWidth: "760px", marginBottom: "40px" },
-  sectionTitle: { display: "block", margin: 0 },
+  sectionAlt: { backgroundColor: "#FFF9F5" },
+  sectionHead: { maxWidth: "820px", marginBottom: "48px" },
+  sectionTitle: {
+    display: "block",
+    margin: 0,
+    letterSpacing: "-0.02em",
+    lineHeight: "1.16",
+  },
   sectionText: {
     display: "block",
-    marginTop: "12px",
+    marginTop: "16px",
     color: tokens.colorNeutralForeground2,
+    lineHeight: "1.6",
   },
   grid3: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "16px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
+    gap: "20px",
   },
   card: {
-    ...shorthands.padding("24px"),
-    rowGap: "12px",
+    ...shorthands.padding("28px"),
+    rowGap: "14px",
+    height: "100%",
+    border: "none",
+    ...shorthands.borderRadius("24px"),
+    backgroundColor: tokens.colorNeutralBackground1,
+    boxShadow: tokens.shadow4,
+    transitionProperty: "transform, box-shadow",
+    transitionDuration: "300ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    ":hover": {
+      transform: "translateY(-4px)",
+      boxShadow: tokens.shadow8,
+    },
   },
   iconTile: {
-    width: "40px",
-    height: "40px",
+    width: "32px",
+    height: "32px",
     display: "grid",
     placeItems: "center",
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground1,
+    color: tokens.colorNeutralForeground1,
+    backgroundColor: "transparent",
   },
   muted: { color: tokens.colorNeutralForeground3 },
-  badge: { alignSelf: "flex-start" },
-  carouselCard: {
-    overflow: "hidden",
-    ...shorthands.padding("0"),
-    boxShadow: tokens.shadow4,
+  index: {
+    display: "block",
+    fontSize: "40px",
+    fontWeight: 300,
+    lineHeight: "48px",
+    letterSpacing: "-0.02em",
+    color: tokens.colorNeutralForeground3,
   },
+  revealItem: { height: "100%" },
   slide: {
     position: "relative",
     aspectRatio: "1680 / 962",
+    overflow: "hidden",
+    ...shorthands.borderRadius("24px"),
     backgroundColor: tokens.colorNeutralBackground3,
+    boxShadow: tokens.shadow16,
   },
   slideImage: {
     display: "block",
@@ -273,7 +344,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     rowGap: "12px",
-    ...shorthands.padding("20px", "24px", "16px"),
+    ...shorthands.padding("24px", "0", "0"),
   },
   carouselTitle: { display: "block" },
   carouselText: {
@@ -299,8 +370,9 @@ const useStyles = makeStyles({
     height: "auto",
     display: "block",
     marginInline: "auto",
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    ...shorthands.borderRadius(tokens.borderRadiusLarge),
+    border: "none",
+    ...shorthands.borderRadius("24px"),
+    boxShadow: tokens.shadow4,
   },
   gutter: { marginTop: "32px" },
   runGrid: {
@@ -316,7 +388,10 @@ const useStyles = makeStyles({
   codeCard: {
     ...shorthands.padding("0"),
     overflow: "hidden",
+    border: "none",
+    ...shorthands.borderRadius("24px"),
     boxShadow: tokens.shadow4,
+    backgroundColor: tokens.colorNeutralBackground1,
   },
   codeHead: {
     display: "flex",
@@ -344,14 +419,15 @@ const useStyles = makeStyles({
     alignItems: "start",
   },
   stepNum: {
-    width: "28px",
-    height: "28px",
-    display: "grid",
-    placeItems: "center",
-    ...shorthands.borderRadius("50%"),
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorNeutralForeground1,
+    width: "32px",
+    height: "32px",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    fontSize: "20px",
     fontWeight: tokens.fontWeightSemibold,
+    lineHeight: "28px",
+    color: tokens.colorNeutralForeground3,
   },
   factRow: {
     display: "flex",
@@ -363,19 +439,25 @@ const useStyles = makeStyles({
   },
   checksum: {
     display: "flex",
-    alignItems: "center",
-    columnGap: "8px",
-    flexWrap: "wrap",
+    flexDirection: "column",
+    rowGap: "6px",
     marginTop: "16px",
     ...shorthands.padding("10px", "12px"),
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    border: "none",
+    ...shorthands.borderRadius(tokens.borderRadiusXLarge),
     backgroundColor: tokens.colorNeutralBackground2,
   },
+  checksumHead: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: "8px",
+  },
   checksumCode: {
-    flex: "1 1 240px",
+    width: "100%",
     fontFamily: tokens.fontFamilyMonospace,
-    fontSize: tokens.fontSizeBase200,
+    fontSize: "11px",
+    lineHeight: "16px",
     wordBreak: "break-all",
     color: tokens.colorNeutralForeground2,
   },
@@ -386,6 +468,10 @@ const useStyles = makeStyles({
     flexDirection: "column",
     rowGap: "20px",
     alignItems: "flex-start",
+    border: "none",
+    ...shorthands.borderRadius("24px"),
+    backgroundColor: "#FFF9F5",
+    boxShadow: tokens.shadow4,
     "@media (min-width: 760px)": {
       flexDirection: "row",
       alignItems: "center",
@@ -399,8 +485,17 @@ const useStyles = makeStyles({
     marginTop: "0",
     flexShrink: 0,
   },
+  button: {
+    ...shorthands.borderRadius(tokens.borderRadiusXLarge),
+  },
+  disabledCta: {
+    color: tokens.colorNeutralForeground2,
+    backgroundColor: "transparent",
+    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke1),
+    opacity: 1,
+  },
   footer: {
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: "#FFF9F5",
     ...shorthands.borderTop("1px", "solid", tokens.colorNeutralStroke2),
     ...shorthands.padding("56px", "0", "32px"),
   },
@@ -450,12 +545,12 @@ const useStyles = makeStyles({
 });
 
 const FEATURE_ICONS: Record<string, React.ReactNode> = {
-  models: <Globe20Regular />,
-  playground: <Chat20Regular />,
-  agents: <Bot20Regular />,
-  knowledge: <DocumentSearch20Regular />,
-  deployments: <Rocket20Regular />,
-  local: <LockClosed20Regular />,
+  models: <Globe24Regular />,
+  playground: <Chat24Regular />,
+  agents: <Bot24Regular />,
+  knowledge: <DocumentSearch24Regular />,
+  deployments: <Rocket24Regular />,
+  local: <LockClosed24Regular />,
 };
 
 function GithubMark() {
@@ -486,10 +581,69 @@ function useDelayedFlag(active: boolean, delay: number) {
   return show;
 }
 
-function SlideImage({ src, alt }: { src: string; alt: string }) {
+function Reveal({
+  children,
+  delay = 0,
+  kind = "fade",
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  kind?: "fade" | "slide";
+  className?: string;
+}) {
+  const styles = useStyles();
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setShown(true);
+            observer.disconnect();
+            return;
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -48px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={mergeClasses(styles.revealItem, className)}
+      data-reveal={shown ? "shown" : "pending"}
+      data-reveal-kind={kind}
+      style={{ "--of-delay": `${delay}ms` } as React.CSSProperties}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SlideImage({
+  src,
+  alt,
+  active,
+}: {
+  src: string;
+  alt: string;
+  active: boolean;
+}) {
   const styles = useStyles();
   const [loaded, setLoaded] = useState(false);
-  const showSkeleton = useDelayedFlag(!loaded, 300);
+  const showSkeleton = useDelayedFlag(active && !loaded, 300);
   const imageRef = useCallback((node: HTMLImageElement | null) => {
     if (node?.complete) setLoaded(true);
   }, []);
@@ -497,7 +651,7 @@ function SlideImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div className={styles.slide}>
       {showSkeleton && (
-        <Skeleton className={styles.skeletonWrap}>
+        <Skeleton className={styles.skeletonWrap} aria-label="Loading screenshot">
           <SkeletonItem
             shape="rectangle"
             animation="wave"
@@ -643,7 +797,7 @@ export function App() {
               as="a"
               href={DOWNLOAD_URL}
               appearance="primary"
-              className={styles.headerDownload}
+              className={mergeClasses(styles.headerDownload, styles.button)}
               icon={<ArrowDownload20Regular />}
               onClick={startDownload}
             >
@@ -655,22 +809,12 @@ export function App() {
 
       <main id="main" tabIndex={-1}>
         <section className={styles.hero}>
-          <div className={mergeClasses(styles.container, styles.heroGrid)}>
-            <div>
-              <Badge
-                appearance="tint"
-                color="brand"
-                size="large"
-                className={styles.eyebrow}
-                icon={<CheckmarkCircle16Filled />}
-              >
-                Free and open source
-              </Badge>
-
+          <div className={styles.container}>
+            <div className={styles.heroCenter}>
               <Text
                 as="h1"
                 size={900}
-                weight="semibold"
+                weight="medium"
                 block
                 className={styles.heroTitle}
               >
@@ -689,6 +833,7 @@ export function App() {
                   href={DOWNLOAD_URL}
                   appearance="primary"
                   size="large"
+                  className={styles.button}
                   icon={
                     starting ? (
                       <Spinner size="tiny" />
@@ -705,6 +850,7 @@ export function App() {
                   href="#run"
                   appearance="secondary"
                   size="large"
+                  className={styles.button}
                   icon={<Code20Regular />}
                 >
                   Run the web version
@@ -712,6 +858,7 @@ export function App() {
                 <Button
                   appearance="secondary"
                   size="large"
+                  className={mergeClasses(styles.button, styles.disabledCta)}
                   icon={<Window20Regular />}
                   disabledFocusable
                 >
@@ -720,15 +867,15 @@ export function App() {
               </div>
 
               <Text size={200} block className={styles.heroCaption}>
-                Apple silicon · macOS 13.5 or later · {SIZE_MB} MB · Version{" "}
-                {VERSION}
+                Free and open source · Apple silicon · macOS 13.5+ ·{" "}
+                {SIZE_MB} MB · v{VERSION}
               </Text>
               <Text size={200} block className={styles.heroCaption}>
                 No account. No telemetry. No cloud bill.
               </Text>
             </div>
 
-            <Card appearance="outline" className={styles.heroShotCard}>
+            <Card appearance="filled" className={styles.heroShotCard}>
               <Image
                 src="./assets/screens/home.webp"
                 alt="The openFoundry home screen with the project endpoint, API key and recent work."
@@ -739,13 +886,13 @@ export function App() {
           </div>
         </section>
 
-        <section className={styles.section} id="features">
+        <section className={mergeClasses(styles.section, styles.sectionAlt)} id="features">
           <div className={styles.container}>
             <div className={styles.sectionHead}>
               <Text
                 as="h2"
-                size={700}
-                weight="semibold"
+                size={900}
+                weight="medium"
                 block
                 className={styles.sectionTitle}
               >
@@ -758,37 +905,32 @@ export function App() {
             </div>
 
             <div className={styles.grid3}>
-              {FEATURES.map((feature) => (
-                <Card
-                  key={feature.key}
-                  appearance="outline"
-                  className={styles.card}
-                >
-                  <div className={styles.iconTile}>
-                    {FEATURE_ICONS[feature.key]}
-                  </div>
-                  <Text as="h3" size={500} weight="semibold">
-                    {feature.title}
-                  </Text>
-                  <Text size={300} className={styles.muted}>
-                    {feature.body}
-                  </Text>
-                </Card>
+              {FEATURES.map((feature, index) => (
+                <Reveal key={feature.key} kind="slide" delay={index * 70}>
+                  <Card appearance="filled" className={styles.card}>
+                    <div className={styles.iconTile}>
+                      {FEATURE_ICONS[feature.key]}
+                    </div>
+                    <Text as="h3" size={600} weight="semibold">
+                      {feature.title}
+                    </Text>
+                    <Text size={400} className={styles.muted}>
+                      {feature.body}
+                    </Text>
+                  </Card>
+                </Reveal>
               ))}
             </div>
           </div>
         </section>
 
-        <section
-          className={mergeClasses(styles.section, styles.sectionAlt)}
-          id="screenshots"
-        >
+        <section className={styles.section} id="screenshots">
           <div className={styles.container}>
             <div className={styles.sectionHead}>
               <Text
                 as="h2"
-                size={700}
-                weight="semibold"
+                size={900}
+                weight="medium"
                 block
                 className={styles.sectionTitle}
               >
@@ -800,7 +942,7 @@ export function App() {
               </Text>
             </div>
 
-            <Card appearance="outline" className={styles.carouselCard}>
+            <Reveal kind="slide">
               <Carousel
                 circular
                 defaultActiveIndex={0}
@@ -808,9 +950,13 @@ export function App() {
               >
                 <CarouselViewport>
                   <CarouselSlider>
-                    {SLIDES.map((image) => (
+                    {SLIDES.map((image, index) => (
                       <CarouselCard key={image.src}>
-                        <SlideImage src={image.src} alt={image.alt} />
+                        <SlideImage
+                          src={image.src}
+                          alt={image.alt}
+                          active={index === slide}
+                        />
                       </CarouselCard>
                     ))}
                   </CarouselSlider>
@@ -820,7 +966,7 @@ export function App() {
                   <div>
                     <Text
                       as="h3"
-                      size={500}
+                      size={600}
                       weight="semibold"
                       block
                       className={styles.carouselTitle}
@@ -837,8 +983,18 @@ export function App() {
                       {slide + 1} of {SLIDES.length}
                     </Text>
                     <CarouselNavContainer
-                      next={{ "aria-label": "Next screenshot" }}
-                      prev={{ "aria-label": "Previous screenshot" }}
+                      next={{
+                        "aria-label": "Next screenshot",
+                        appearance: "secondary",
+                        shape: "circular",
+                        size: "large",
+                      }}
+                      prev={{
+                        "aria-label": "Previous screenshot",
+                        appearance: "secondary",
+                        shape: "circular",
+                        size: "large",
+                      }}
                     >
                       <CarouselNav>
                         {(index) => (
@@ -854,7 +1010,7 @@ export function App() {
                   </div>
                 </div>
               </Carousel>
-            </Card>
+            </Reveal>
 
             <div aria-live="polite" className={styles.helper}>
               {`Screenshot ${slide + 1} of ${SLIDES.length}: ${
@@ -864,13 +1020,13 @@ export function App() {
           </div>
         </section>
 
-        <section className={styles.section} id="deployments">
+        <section className={mergeClasses(styles.section, styles.sectionAlt)} id="deployments">
           <div className={styles.container}>
             <div className={styles.sectionHead}>
               <Text
                 as="h2"
-                size={700}
-                weight="semibold"
+                size={900}
+                weight="medium"
                 block
                 className={styles.sectionTitle}
               >
@@ -884,17 +1040,19 @@ export function App() {
 
             <div className={styles.grid3}>
               {DEPLOYMENT_MODES.map((mode, index) => (
-                <Card key={mode.title} appearance="outline" className={styles.card}>
-                  <Badge appearance="tint" color="brand" className={styles.badge}>
-                    {`0${index + 1}`}
-                  </Badge>
-                  <Text as="h3" size={500} weight="semibold">
-                    {mode.title}
-                  </Text>
-                  <Text size={300} className={styles.muted}>
-                    {mode.body}
-                  </Text>
-                </Card>
+                <Reveal key={mode.title} kind="slide" delay={index * 70}>
+                  <Card appearance="filled" className={styles.card}>
+                    <Text aria-hidden="true" className={styles.index}>
+                      {`0${index + 1}`}
+                    </Text>
+                    <Text as="h3" size={600} weight="semibold">
+                      {mode.title}
+                    </Text>
+                    <Text size={400} className={styles.muted}>
+                      {mode.body}
+                    </Text>
+                  </Card>
+                </Reveal>
               ))}
             </div>
 
@@ -905,7 +1063,7 @@ export function App() {
                 className={styles.deployShot}
                 loading="lazy"
               />
-              <Text size={200} block className={styles.heroCaption}>
+              <Text size={200} block className={styles.caption}>
                 The same table is in the repository, with all 17 labels and what
                 each one does on one computer.
               </Text>
@@ -919,17 +1077,14 @@ export function App() {
           </div>
         </section>
 
-        <section
-          className={mergeClasses(styles.section, styles.sectionAlt)}
-          id="run"
-        >
+        <section className={styles.section} id="run">
           <div className={styles.container}>
             <div className={styles.runGrid}>
               <div>
                 <Text
                   as="h2"
-                  size={700}
-                  weight="semibold"
+                  size={900}
+                  weight="medium"
                   block
                   className={styles.sectionTitle}
                 >
@@ -981,6 +1136,7 @@ export function App() {
                     as="a"
                     href={REPO_FILES.sourceZip}
                     appearance="secondary"
+                    className={styles.button}
                     icon={<ArrowDownload20Regular />}
                   >
                     Download the source
@@ -990,13 +1146,13 @@ export function App() {
                   </Button>
                 </div>
 
-                <Text size={200} block className={styles.heroCaption}>
+                <Text size={200} block className={styles.caption}>
                   The web version runs on macOS, Windows and Linux. The desktop
                   build adds a native window and a bundled Node runtime.
                 </Text>
               </div>
 
-              <Card appearance="outline" className={styles.codeCard}>
+              <Card appearance="filled" className={styles.codeCard}>
                 <div className={styles.codeHead}>
                   <Text size={300} weight="semibold">
                     Terminal
@@ -1023,13 +1179,13 @@ export function App() {
           </div>
         </section>
 
-        <section className={styles.section} id="install">
+        <section className={mergeClasses(styles.section, styles.sectionAlt)} id="install">
           <div className={styles.container}>
             <div className={styles.sectionHead}>
               <Text
                 as="h2"
-                size={700}
-                weight="semibold"
+                size={900}
+                weight="medium"
                 block
                 className={styles.sectionTitle}
               >
@@ -1057,6 +1213,7 @@ export function App() {
                         as="a"
                         href={DOWNLOAD_URL}
                         appearance="primary"
+                        className={styles.button}
                         icon={<ArrowDownload20Regular />}
                         onClick={startDownload}
                       >
@@ -1108,11 +1265,11 @@ export function App() {
                 </div>
               </div>
 
-              <Card appearance="outline" className={styles.card}>
+              <Card appearance="filled" className={styles.card}>
                 <div className={styles.iconTile}>
                   <DesktopMac20Regular />
                 </div>
-                <Text as="h3" size={500} weight="semibold">
+                <Text as="h3" size={600} weight="semibold">
                   Download details
                 </Text>
 
@@ -1158,23 +1315,25 @@ export function App() {
                 </div>
 
                 <div className={styles.checksum}>
-                  <Text size={200} weight="semibold">
-                    SHA-256
-                  </Text>
+                  <div className={styles.checksumHead}>
+                    <Text size={200} weight="semibold">
+                      SHA-256
+                    </Text>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={
+                        copied === "sha" ? (
+                          <Checkmark20Regular />
+                        ) : (
+                          <Copy20Regular />
+                        )
+                      }
+                      onClick={() => copy(SHA256, "sha")}
+                      aria-label="Copy SHA-256 checksum"
+                    />
+                  </div>
                   <code className={styles.checksumCode}>{SHA256}</code>
-                  <Button
-                    appearance="subtle"
-                    size="small"
-                    icon={
-                      copied === "sha" ? (
-                        <Checkmark20Regular />
-                      ) : (
-                        <Copy20Regular />
-                      )
-                    }
-                    onClick={() => copy(SHA256, "sha")}
-                    aria-label="Copy SHA-256 checksum"
-                  />
                 </div>
 
                 <Text size={200} className={styles.muted}>
@@ -1186,16 +1345,13 @@ export function App() {
           </div>
         </section>
 
-        <section
-          className={mergeClasses(styles.section, styles.sectionAlt)}
-          id="faq"
-        >
+        <section className={styles.section} id="faq">
           <div className={styles.container}>
             <div className={styles.sectionHead}>
               <Text
                 as="h2"
-                size={700}
-                weight="semibold"
+                size={900}
+                weight="medium"
                 block
                 className={styles.sectionTitle}
               >
@@ -1226,9 +1382,9 @@ export function App() {
 
         <section className={styles.section}>
           <div className={styles.container}>
-            <Card appearance="filled-alternative" className={styles.cta}>
+            <Card appearance="filled" className={styles.cta}>
               <div>
-                <Text as="h2" size={600} weight="semibold" block>
+                <Text as="h2" size={900} weight="medium" block>
                   Try it on your machine
                 </Text>
                 <Text size={300} block className={styles.muted}>
@@ -1241,6 +1397,7 @@ export function App() {
                   href={DOWNLOAD_URL}
                   appearance="primary"
                   size="large"
+                  className={styles.button}
                   icon={<ArrowDownload20Regular />}
                   onClick={startDownload}
                 >
@@ -1251,6 +1408,7 @@ export function App() {
                   href={REPO}
                   appearance="secondary"
                   size="large"
+                  className={styles.button}
                   icon={<GithubMark />}
                 >
                   View on GitHub

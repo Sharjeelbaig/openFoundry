@@ -22,9 +22,71 @@ p {
   box-sizing: border-box;
 }
 
+@keyframes of-fade-in-base {
+  0% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes of-slide-in-bottom {
+  0% {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes of-scale-in-bottom {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: center bottom;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+    transform-origin: center bottom;
+  }
+}
+
+html[data-js="true"] [data-reveal="pending"] {
+  opacity: 0;
+}
+
+html[data-js="true"] [data-reveal="shown"] {
+  animation-duration: 800ms;
+  animation-timing-function: cubic-bezier(0.48, 0.04, 0.16, 1);
+  animation-fill-mode: both;
+  animation-delay: var(--of-delay, 0ms);
+}
+
+html[data-js="true"] [data-reveal="shown"][data-reveal-kind="fade"] {
+  animation-name: of-fade-in-base;
+}
+
+html[data-js="true"] [data-reveal="shown"][data-reveal-kind="slide"] {
+  animation-name: of-slide-in-bottom;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  html[data-js="true"] [data-reveal="pending"] {
+    opacity: 1;
+  }
+
+  html[data-js="true"] [data-reveal="shown"] {
+    animation: none;
   }
 
   *,

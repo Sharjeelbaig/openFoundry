@@ -24,6 +24,8 @@ const eslintConfig = defineConfig([
     "src-tauri/**",
     "scripts/**",
     ".desktop-cache/**",
+    "landing-src/.build/**",
+    "landing/**",
   ]),
 ]);
 
