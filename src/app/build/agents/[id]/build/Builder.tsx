@@ -47,6 +47,7 @@ import type {
   KnowledgeBase,
   Trace,
 } from "@/lib/types";
+import { useOrigin } from "@/components/Origin";
 
 type BuilderTab =
   | "Playground"
@@ -75,6 +76,7 @@ interface ChatTurn {
 }
 
 export default function AgentBuilder({ agentId }: { agentId: string }) {
+  const publicOrigin = useOrigin();
   const router = useRouter();
   const { toast } = useToast();
   const { data, error, refresh } = useApi<{ agent: Agent }>(
@@ -622,8 +624,6 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
       </div>
     );
 
-  const publicOrigin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
   const yaml = [
     `name: ${name}`,
     `description: ${description || '""'}`,

@@ -17,6 +17,7 @@ import { formatDate, formatNumber, useApi, useDeployments } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { CopyButton, DottedObject, EmptyState, Spinner, StatusBadge } from "@/components/ui";
 import type { BatchJob, Deployment, DeploymentKind } from "@/lib/types";
+import { useOrigin } from "@/components/Origin";
 
 type TopTab = "Deployments" | "Models" | "Batch jobs";
 type KindTab = DeploymentKind;
@@ -176,8 +177,7 @@ export default function DeploymentsPage() {
     }
   };
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const origin = useOrigin();
 
   return (
     <div className="page models-page" style={{ paddingTop: 18, paddingBottom: 0 }}>

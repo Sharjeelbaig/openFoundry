@@ -21,6 +21,7 @@ import { formatDate, useApi, useModels } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { CopyButton, StatusBadge } from "@/components/ui";
 import type { Agent, LocalModel, Routine, Workflow } from "@/lib/types";
+import { useOrigin } from "@/components/Origin";
 
 type Tab = "Agents" | "Routines" | "Workflows";
 
@@ -128,8 +129,7 @@ export default function AgentsPage() {
     refresh();
   };
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const origin = useOrigin();
 
   return (
     <div className="page" style={{ paddingTop: 18 }}>

@@ -40,10 +40,12 @@ import {
   deploymentTypesByOption,
 } from "@/lib/deployment-types";
 import { REGIONS, ZONES } from "@/lib/regions";
+import { useOrigin } from "@/components/Origin";
 
 type Tab = "Details" | "Deployments" | "Benchmarks" | "Responsible AI" | "License";
 
 export default function ModelDetail({ modelKey }: { modelKey: string }) {
+  const origin = useOrigin();
   const router = useRouter();
   const { toast } = useToast();
   const { data, loading, refresh: refreshModels } = useModels(30000);
@@ -156,8 +158,6 @@ export default function ModelDetail({ modelKey }: { modelKey: string }) {
     );
   }
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
   const facts = [
     { label: "Publisher", value: publisherLabel(model) },
     { label: "Author", value: model.publisher },

@@ -18,6 +18,7 @@ import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import { ModelLogo } from "@/components/Logos";
 import { taskLabel } from "@/lib/model-info";
 import type { Citation, Deployment, LocalModel } from "@/lib/types";
+import { useOrigin } from "@/components/Origin";
 
 type Turn = {
   role: "user" | "assistant";
@@ -237,8 +238,7 @@ export default function Playground() {
     }
   };
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const origin = useOrigin();
 
   const endpoint = deployment
     ? `${origin}/api/v1/deployments/${deployment.name}/chat/completions`

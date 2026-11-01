@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import { OriginProvider } from "@/components/Origin";
 import { getSettings, hostName } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +26,20 @@ export default async function RootLayout({
     (await cookies()).get("openfoundry:theme")?.value === "light"
       ? "light"
       : "dark";
+  // Resolve the origin from the request itself so server-rendered endpoint
+  // samples match the address the browser actually loaded.
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") || "localhost:3000";
+  const proto = requestHeaders.get("x-forwarded-proto") || "http";
+  const origin = `${proto}://${host}`;
   return (
     <html lang="en" data-theme={theme} suppressHydrationWarning>
       <body>
-        <AppShell settings={settings} systemHost={hostName()} theme={theme}>
-          {children}
-        </AppShell>
+        <OriginProvider value={origin}>
+          <AppShell settings={settings} systemHost={hostName()} theme={theme}>
+            {children}
+          </AppShell>
+        </OriginProvider>
       </body>
     </html>
   );

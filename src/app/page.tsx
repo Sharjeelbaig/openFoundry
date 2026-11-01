@@ -30,6 +30,7 @@ import {
 import { CopyButton, StatusBadge } from "@/components/ui";
 import { publisherLabel } from "@/lib/model-info";
 import type { Agent, Deployment, LocalSettings, LocalModel } from "@/lib/types";
+import { useOrigin } from "@/components/Origin";
 
 type Filter = "All" | "Agents" | "Models";
 
@@ -76,8 +77,7 @@ export default function HomePage() {
   const userName = settings?.userName || "Local User";
   const projectKey = settings?.apiKey || "";
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const origin = useOrigin();
 
   const credentials = [
     {
