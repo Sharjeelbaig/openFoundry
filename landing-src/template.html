@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>openFoundry: a local AI workbench for your computer</title>
+    <meta
+      name="description"
+      content="openFoundry is a free desktop app for running local AI models, building prompt agents and searching your own documents. No account, no telemetry, no cloud bill."
+    />
+    <meta name="theme-color" content="#B25121" />
+    <meta name="robots" content="index, follow" />
+    <link rel="icon" href="./assets/openfoundry-icon.svg" type="image/svg+xml" />
+    <link
+      rel="preload"
+      as="image"
+      href="./assets/screens/home.webp"
+      fetchpriority="high"
+    />
+    <link rel="stylesheet" href="./assets/app.css" />
+    {{STYLES}}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="openFoundry" />
+    <meta
+      property="og:title"
+      content="openFoundry: a local AI workbench for your computer"
+    />
+    <meta
+      property="og:description"
+      content="Run models, build prompt agents and search your own documents. Your data stays on your machine."
+    />
+    <meta property="og:url" content="{{SITE_URL}}" />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/Sharjeelbaig/openFoundry/main/landing/assets/og.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="openFoundry: a local AI workbench for your computer"
+    />
+    <meta
+      name="twitter:description"
+      content="Run models, build prompt agents and search your own documents. Your data stays on your machine."
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "openFoundry",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS 13.5",
+        "softwareVersion": "{{VERSION}}",
+        "downloadUrl": "{{DOWNLOAD_URL}}",
+        "fileSize": "{{SIZE_BYTES}}",
+        "license": "https://www.apache.org/licenses/LICENSE-2.0",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "url": "{{SITE_URL}}"
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">{{HTML}}</div>
+    <script type="module" src="./assets/app.js"></script>
+  </body>
+</html>

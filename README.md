@@ -2,6 +2,8 @@
 
 **A local AI workbench for your own computer.**
 
+[Website](https://openfoundry.pages.dev) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/latest) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
+
 openFoundry is a free, independent desktop app for discovering models, chatting with
 them, and building prompt agents. Workspace data stays on your machine and the app talks
 directly to the model runtimes you configure.

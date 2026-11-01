@@ -12,6 +12,8 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "landing:build": "node landing-src/build.mjs",
+    "landing:serve": "node scripts/serve-site.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -21,11 +23,13 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@fluentui/react-components": "^9.75.0",
     "@tailwindcss/turbopack": "^4",
     "@tauri-apps/cli": "^2.12.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.25.12",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",

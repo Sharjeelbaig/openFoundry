@@ -41,6 +41,10 @@
     "resources": [
       "next-server",
       "resources"
-    ]
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.5",
+      "signingIdentity": "-"
+    }
   }
 }

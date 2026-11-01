@@ -37,3 +37,7 @@ data/
 src-tauri/binaries/
 src-tauri/resources/
 src-tauri/next-server/
+
+# Landing page build scratch output
+landing-src/.build/
+landing-src/screens/*.png
