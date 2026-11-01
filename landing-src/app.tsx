@@ -876,11 +876,14 @@ export function App() {
             </div>
 
             <Card appearance="filled" className={styles.heroShotCard}>
-              <Image
-                src="./assets/screens/home.webp"
-                alt="The openFoundry home screen with the project endpoint, API key and recent work."
+              <video
+                src="./assets/gemma-tour-compressed.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
                 className={styles.heroShot}
-                loading="eager"
               />
             </Card>
           </div>

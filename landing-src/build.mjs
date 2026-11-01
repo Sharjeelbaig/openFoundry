@@ -92,6 +92,7 @@ await fs.copyFile(
   path.join(out, "assets", "openfoundry-icon.svg")
 );
 await fs.copyFile(path.join(here, "og.png"), path.join(out, "assets", "og.png"));
+await fs.copyFile(path.join(here, "gemma-tour-compressed.mp4"), path.join(out, "assets", "gemma-tour-compressed.mp4"));
 
 const screenFiles = (await fs.readdir(path.join(here, "screens"))).filter((file) =>
   file.endsWith(".webp")
