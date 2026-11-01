@@ -38,6 +38,96 @@ Not implemented yet:
   [issue #1](https://github.com/Sharjeelbaig/openFoundry/issues/1)).
 - Automatic installation of provider runtimes.
 
+## Screenshots
+
+### Home
+
+![The openFoundry home screen](docs/screenshots/home.png)
+
+The home screen is the starting point for a project. It shows the project endpoint and
+API key, shortcuts into the playground and the model catalog, and the agents and
+deployments you used most recently. Each recent item links to its endpoint.
+
+### Agent builder and playground
+
+![The agent builder with the chat playground](docs/screenshots/agent-builder.png)
+
+The agent builder defines an agent and tests it on one screen. The left column holds the
+model, voice mode, instructions, tools, knowledge bases, memory and guardrail. The right
+column is the playground: use the Chat tab to talk to the agent, or the YAML tab to
+inspect the configuration. Save writes a new version. Publish marks the agent as running
+and keeps the earlier versions in the history list.
+
+### Agent discovery
+
+![Agent templates and saved agents](docs/screenshots/agent-discover.png)
+
+Discover > Agents lists templates for common jobs, including outdoor gear advice,
+support triage, policy questions, code review, meeting notes and research. Search filters
+by name and the category menu narrows the list further. Each template has example prompts
+and shows which tools it uses. "Use template" creates a real agent on this computer. The
+lower half lists the agents you already have, with version, status, tools, model and an
+Open button.
+
+### Agent deployment
+
+![Deployment details for a model](docs/screenshots/agent-deployment.png)
+
+Opening a deployment shows its model card. The card contains the live endpoint and key,
+the model identifier, the serving mode, the routing scope, the rate limit, and the number
+of requests and tokens the deployment has served. From here you can test the deployment,
+copy a working code sample, stop it or delete it.
+
+### Foundry IQ knowledge
+
+![Knowledge bases in Foundry IQ](docs/screenshots/foundry-iq.png)
+
+Foundry IQ is the knowledge layer. A knowledge base stores uploaded documents, splits
+them into chunks and builds a local vector index with an embedding model. Agents can
+attach one or more bases and cite the source chunks in their answers. The card shows the
+document and chunk counts, the embedding model and the index status.
+
+### Deployment types
+
+![Deployment types and their local behaviour](docs/screenshots/deployment-types.png)
+
+Foundry puts three separate ideas into one deployment type label. openFoundry keeps them
+apart, so the parts that can work on a single computer really work:
+
+- **Serving mode** is how a request is served. Standard and Developer meter tokens per
+  minute and return `429` when the limit is reached. Provisioned reserves concurrency
+  slots and queues extra requests. Batch accepts asynchronous jobs only. Instant answers
+  immediately from the local runtime, with no queue.
+- **Scope** is where a request is routed. Global can use any online runtime node, Data
+  Zone uses nodes tagged for a zone, Region pins one node, and Device is this computer.
+  Routing is real. The data residency guarantee is the only part that stays simulated,
+  because there is no cloud region.
+- **Section** is the Build > Models tab that lists the deployment: Serverless, Managed
+  compute or Adapter.
+
+Billing is always $0 on this computer. Token counts are real. Any cloud equivalent cost
+is shown as an estimate, never as a bill.
+
+| Deployment type | Serving mode | Scope | What it does here |
+| --- | --- | --- | --- |
+| Global Standard | Standard | Global | Metered by tokens. Routes to any online runtime node. |
+| Data Zone Standard | Standard | Data Zone | Metered by tokens. Routes only to nodes tagged for a data zone. |
+| Standard | Standard | Region | Metered by tokens. Pinned to one region and one node. |
+| Global Batch | Batch | Global | Accepts asynchronous jobs only. No interactive chat. |
+| Data Zone Batch | Batch | Data Zone | Asynchronous jobs routed to nodes in one data zone. |
+| Developer | Developer | Global | Reserved for evaluation, with a lower rate limit. |
+| Low Priority | Standard | Region | Metered capacity in one region that can be preempted. |
+| Global Low Priority | Standard | Global | Metered capacity across nodes that can be preempted. |
+| Provisioned Throughput Classic | Provisioned | Region | Not available. Legacy label; use Regional or Global Provisioned Throughput. |
+| Regional Provisioned Throughput | Provisioned | Region | Reserves concurrency slots in one region. Extra requests queue. |
+| Global Provisioned Throughput | Provisioned | Global | Reserves concurrency slots across any online node. |
+| Data Zone Provisioned Throughput | Provisioned | Data Zone | Reserves concurrency slots on nodes in one data zone. |
+| Global Managed Compute | Dedicated | Global | Keeps a dedicated model instance resident for one workload. |
+| VM Managed Compute | Dedicated | Region | Not available. Needs an Azure VM; register a runtime node to approximate it. |
+| Dedicated | Dedicated | Region | Keeps dedicated capacity resident in one region. |
+| Arc | Dedicated | Region | Not available. Needs an Azure Arc machine; register a runtime node to approximate it. |
+| Local Provisioned Throughput | Instant | Device | Runs on this computer and stays ready. This is the default. |
+
 ## Run the web workspace
 
 Requirements: Node.js 20.9+.
@@ -92,9 +182,9 @@ redistribute them.
 
 ## Architecture
 
-- **Next.js 16 + React 19 + TypeScript** — workspace UI and local API routes.
-- **Tauri 2 + Rust** — desktop shell, free-port selection, sidecar lifecycle.
-- **Bundled Node.js + Next standalone server** — production desktop runtime. On macOS the
+- **Next.js 16 + React 19 + TypeScript**: workspace UI and local API routes.
+- **Tauri 2 + Rust**: desktop shell, free-port selection, sidecar lifecycle.
+- **Bundled Node.js + Next standalone server**: production desktop runtime. On macOS the
   runtime is wrapped in a hidden `LSUIElement` helper app so it never appears as a second
   Dock icon or foreground application.
 - JSON workspace store under the OS app-data directory in desktop builds, or `data/` in
