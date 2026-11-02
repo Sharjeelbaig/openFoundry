@@ -140,6 +140,8 @@ export default function Sidebar() {
                     pathname.startsWith("/build/models")) ||
                   (item.href === "/build/knowledge/search" &&
                     pathname.startsWith("/build/knowledge")) ||
+                  (item.href === "/discover/tools" &&
+                    pathname.startsWith("/discover/tools")) ||
                   (item.href === "/operate" && pathname === "/operate") ||
                   pathname === item.href;
                 return (
