@@ -1,13 +1,13 @@
 {
   "name": "openfoundry",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
     "dev": "next dev --webpack",
     "dev:web": "next dev --webpack -p 3001",
     "dev:turbo": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "audit:catalog": "node scripts/audit-tool-catalog.mjs",
     "lint": "eslint",

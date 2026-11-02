@@ -119,7 +119,7 @@ async function prepareNode() {
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>0.2.0</string>
   <key>CFBundleVersion</key>
   <string>1</string>
   <key>LSBackgroundOnly</key>
@@ -153,6 +153,14 @@ async function copyServer() {
   await fs.rm(serverDir, { recursive: true, force: true });
   await fs.mkdir(serverDir, { recursive: true });
   await fs.cp(standalone, serverDir, { recursive: true });
+  // Next 16's standalone tracer omits a few `next/dist/lib` modules that its
+  // router requires at runtime (for example lib/metadata/get-metadata-route).
+  // Copy the runtime lib directory so the packaged server starts reliably.
+  await fs.cp(
+    path.join(root, "node_modules", "next", "dist", "lib"),
+    path.join(serverDir, "node_modules", "next", "dist", "lib"),
+    { recursive: true, force: true }
+  );
   await fs.cp(
     path.join(root, ".next", "static"),
     path.join(serverDir, ".next", "static"),
