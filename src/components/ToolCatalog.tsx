@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Add20Regular,
   ArrowSync20Regular,
+  ChevronDown20Regular,
   Dismiss20Regular,
-  PlugConnected20Regular,
   Document20Regular,
+  PlugConnected20Regular,
   Search20Regular,
   Server20Regular,
   Sparkle20Regular,
@@ -16,7 +17,6 @@ import {
   Wrench20Regular,
 } from "@fluentui/react-icons";
 import { useApi } from "@/lib/client";
-import { useToast } from "@/components/Toast";
 import { Spinner } from "@/components/ui";
 import type {
   Agent,
@@ -28,44 +28,70 @@ import type {
   ToolSetupOperation,
 } from "@/lib/types";
 
-type Sort = "Featured" | "Name" | "Type";
-type Availability = "all" | "local" | "alternative";
+type Sort = "Featured" | "Newest" | "Recently updated";
 
-const TYPE_ORDER: Record<ToolCatalogType, number> = {
-  Skills: 0,
-  "Remote MCP": 1,
-  "Local MCP": 2,
-  Custom: 3,
+const PAGE_SIZE = 50;
+
+const TYPE_PARAM: Record<ToolCatalogType, string> = {
+  Custom: "connector",
+  "Remote MCP": "remotes",
+  "Local MCP": "local",
+  Skills: "skill",
 };
 
-function typeIcon(type: ToolCatalogType) {
+const PARAM_TYPE: Record<string, ToolCatalogType> = {
+  connector: "Custom",
+  custom: "Custom",
+  remotes: "Remote MCP",
+  remote: "Remote MCP",
+  local: "Local MCP",
+  skill: "Skills",
+  skills: "Skills",
+};
+
+export function typeIcon(type: ToolCatalogType) {
   if (type === "Skills") return <Document20Regular />;
   if (type === "Remote MCP") return <PlugConnected20Regular />;
   if (type === "Local MCP") return <Server20Regular />;
   return <Wrench20Regular />;
 }
 
-function authLabel(value: string): string {
+export function authLabel(value: string): string {
   const key = value.toLowerCase();
   if (key.includes("oauth")) return "OAuth 2.0";
   if (key.includes("apikey") || key.includes("key-based")) return "Key-based";
   if (key.includes("managedidentity")) return "Managed identity";
+  if (key.includes("agentonbehalfofuser")) return "Agent on behalf of user";
+  if (key.includes("userentratoken")) return "User Entra token";
   if (key.includes("agent")) return "Agent identity";
-  if (key.includes("entra")) return "Microsoft Entra";
   if (key.includes("unauthenticated") || key === "none") return "None";
   return value;
 }
 
-function authLabels(auth: string[]): string[] {
+export function authLabels(auth: string[]): string[] {
   const labels = auth.map(authLabel);
   return [...new Set(labels.length ? labels : ["None"])];
 }
 
-function providerOf(entry: ToolCatalogEntry): string {
+export function providerOf(entry: ToolCatalogEntry): string {
   return entry.company || "Other publishers";
 }
 
-function availabilityLabel(entry: ToolCatalogEntry): string {
+function providerBucket(entry: ToolCatalogEntry): string | null {
+  const company = providerOf(entry);
+  if (company === "Microsoft") return "Microsoft";
+  if (company === "Independent" || company === "Other publishers") return null;
+  return "Third-party";
+}
+
+export function registryOf(entry: ToolCatalogEntry): string {
+  if (entry.type === "Skills") return "Local skill catalog";
+  if (entry.type === "Remote MCP" || entry.type === "Local MCP")
+    return "Public MCP registry";
+  return "Connector catalog";
+}
+
+export function availabilityLabel(entry: ToolCatalogEntry): string {
   if (entry.availability === "local-skill") return "Local skill";
   if (entry.availability === "mcp") return "Remote MCP";
   if (entry.availability === "mcp-local") return "Local MCP";
@@ -90,7 +116,21 @@ function matchesQuery(entry: ToolCatalogEntry, query: string): boolean {
   return haystack.includes(query);
 }
 
-interface HttpDraft {
+function countBy<T>(items: T[], key: (item: T) => string | null): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    const value = key(item);
+    if (!value) continue;
+    map.set(value, (map.get(value) || 0) + 1);
+  }
+  return map;
+}
+
+function dateValue(entry: ToolCatalogEntry): number {
+  return entry.releaseDate ? Date.parse(entry.releaseDate) || 0 : 0;
+}
+
+export interface HttpDraft {
   name: string;
   description: string;
   method: string;
@@ -158,291 +198,250 @@ function setupUrl(
       values[key] ? encodeURIComponent(values[key]) : `{${key}}`
     );
   if (base && path) return `${base}${path.startsWith("/") ? path : `/${path}`}`;
-  if (base) return base;
-  return entry.remoteUrl || entry.docs[0]?.url || "";
+  return base || path;
 }
 
 export default function ToolCatalog() {
   const router = useRouter();
-  const { toast } = useToast();
   const { data, loading, error } = useApi<{
     tools: ToolCatalogEntry[];
     total: number;
   }>("/api/tools/catalog");
-  const { data: agentData, refresh: refreshAgents } = useApi<{ agents: Agent[] }>(
-    "/api/agents"
-  );
-  const { data: mcpData, refresh: refreshMcp } = useApi<{ servers: McpServer[] }>(
-    "/api/mcp",
-    15000
-  );
 
   const tools = useMemo(() => data?.tools ?? [], [data?.tools]);
-  const agents = agentData?.agents ?? [];
-  const servers = mcpData?.servers ?? [];
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("Featured");
-  const [availability, setAvailability] = useState<Availability>("all");
   const [selectedTypes, setSelectedTypes] = useState<ToolCatalogType[]>([]);
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedRegistries, setSelectedRegistries] = useState<string[]>([]);
   const [selectedAuth, setSelectedAuth] = useState<string[]>([]);
-  const [limit, setLimit] = useState(48);
-  const [selected, setSelected] = useState<ToolCatalogEntry | null>(null);
-  const [agentId, setAgentId] = useState("");
-  const [busy, setBusy] = useState("");
-  const [setup, setSetup] = useState<ToolSetup | null>(null);
-  const [setupLoading, setSetupLoading] = useState(false);
-  const [setupError, setSetupError] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [hydrated, setHydrated] = useState(false);
+  const sentinel = useRef<HTMLDivElement | null>(null);
+
+  // The reference keeps catalog state in the URL (type=remotes, etc.). Read it
+  // once on mount, then mirror every change with replaceState so a reload or a
+  // shared link restores the same filtered view.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rawTypes = (params.get("type") || "").split(",").filter(Boolean);
+    const nextTypes = rawTypes
+      .map((value) => PARAM_TYPE[value.toLowerCase()])
+      .filter((value): value is ToolCatalogType => Boolean(value));
+    setQuery(params.get("q") || "");
+    const rawSort = params.get("sort");
+    setSort(
+      rawSort === "newest"
+        ? "Newest"
+        : rawSort === "updated"
+        ? "Recently updated"
+        : "Featured"
+    );
+    setSelectedTypes([...new Set(nextTypes)]);
+    setSelectedProviders(
+      (params.get("provider") || "").split(",").filter(Boolean)
+    );
+    setSelectedCategories(
+      (params.get("category") || "").split(",").filter(Boolean)
+    );
+    setSelectedRegistries(
+      (params.get("registry") || "").split(",").filter(Boolean)
+    );
+    setSelectedAuth((params.get("auth") || "").split(",").filter(Boolean));
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (!selected) {
-      setSetup(null);
-      setSetupError("");
-      return;
-    }
-    let cancelled = false;
-    setSetup(null);
-    setSetupError("");
-    setSetupLoading(true);
-    fetch(`/api/tools/catalog/${encodeURIComponent(selected.id)}`, {
-      cache: "no-store",
-    })
-      .then(async (res) => {
-        const json = (await res.json()) as {
-          setup?: ToolSetup;
-          error?: string;
-        };
-        if (!res.ok) throw new Error(json.error || "Could not load tool setup.");
-        if (!cancelled) setSetup(json.setup || null);
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setSetupError(err instanceof Error ? err.message : "Could not load setup.");
-      })
-      .finally(() => {
-        if (!cancelled) setSetupLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selected]);
+    if (!hydrated) return;
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (sort === "Newest") params.set("sort", "newest");
+    if (sort === "Recently updated") params.set("sort", "updated");
+    if (selectedTypes.length)
+      params.set("type", selectedTypes.map((type) => TYPE_PARAM[type]).join(","));
+    if (selectedProviders.length)
+      params.set("provider", selectedProviders.join(","));
+    if (selectedCategories.length)
+      params.set("category", selectedCategories.join(","));
+    if (selectedRegistries.length)
+      params.set("registry", selectedRegistries.join(","));
+    if (selectedAuth.length) params.set("auth", selectedAuth.join(","));
+    const search = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${search ? `?${search}` : ""}`
+    );
+  }, [
+    hydrated,
+    query,
+    sort,
+    selectedTypes,
+    selectedProviders,
+    selectedCategories,
+    selectedRegistries,
+    selectedAuth,
+  ]);
 
   useEffect(() => {
-    setLimit(48);
-  }, [query, sort, availability, selectedTypes, selectedProviders, selectedCategories, selectedAuth]);
+    setLimit(PAGE_SIZE);
+  }, [
+    query,
+    sort,
+    selectedTypes,
+    selectedProviders,
+    selectedCategories,
+    selectedRegistries,
+    selectedAuth,
+  ]);
 
-  useEffect(() => {
-    if (!selected && agents[0]) setAgentId(agents[0].id);
-  }, [agents, selected]);
+  const typeCounts = useMemo(() => countBy(tools, (entry) => entry.type), [tools]);
 
-  const typeCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const entry of tools) map.set(entry.type, (map.get(entry.type) || 0) + 1);
-    return map;
-  }, [tools]);
-
-  const companyCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const entry of tools) {
-      const company = providerOf(entry);
-      map.set(company, (map.get(company) || 0) + 1);
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [tools]);
-
-  const companyOptions = useMemo(() => {
-    const named = companyCounts
-      .filter(
-        ([company]) =>
-          company !== "Independent" && company !== "Other publishers"
-      )
-      .slice(0, 20);
-    const tail = companyCounts
-      .filter(
-        ([company]) =>
-          company === "Independent" || company === "Other publishers"
-      )
-      .sort(([a], [b]) => (a === "Independent" ? -1 : b === "Independent" ? 1 : 0));
-    return [...named, ...tail];
-  }, [companyCounts]);
+  const providerCounts = useMemo(
+    () => countBy(tools, (entry) => providerBucket(entry)),
+    [tools]
+  );
 
   const categoryCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const entry of tools) {
-      if (!entry.category) continue;
-      map.set(entry.category, (map.get(entry.category) || 0) + 1);
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+    const map = countBy(
+      tools.filter((entry) => Boolean(entry.category)),
+      (entry) => entry.category || null
+    );
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [tools]);
+
+  const registryCounts = useMemo(
+    () => countBy(tools, (entry) => registryOf(entry)),
+    [tools]
+  );
 
   const authCounts = useMemo(() => {
     const map = new Map<string, number>();
     for (const entry of tools) {
-      for (const label of authLabels(entry.auth)) {
+      for (const label of authLabels(entry.auth))
         map.set(label, (map.get(label) || 0) + 1);
-      }
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [tools]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const result = tools.filter((entry) => {
+    return tools.filter((entry) => {
       if (!matchesQuery(entry, needle)) return false;
       if (selectedTypes.length && !selectedTypes.includes(entry.type)) return false;
-      if (
-        selectedProviders.length &&
-        !selectedProviders.includes(providerOf(entry))
-      )
-        return false;
+      if (selectedProviders.length) {
+        const bucket = providerBucket(entry);
+        if (!bucket || !selectedProviders.includes(bucket)) return false;
+      }
       if (
         selectedCategories.length &&
         (!entry.category || !selectedCategories.includes(entry.category))
+      )
+        return false;
+      if (
+        selectedRegistries.length &&
+        !selectedRegistries.includes(registryOf(entry))
       )
         return false;
       if (selectedAuth.length) {
         const labels = authLabels(entry.auth);
         if (!labels.some((label) => selectedAuth.includes(label))) return false;
       }
-      if (availability === "local" && entry.availability === "http") return false;
-      if (availability === "alternative" && entry.availability !== "http")
-        return false;
       return true;
     });
-    if (sort === "Name")
-      return [...result].sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === "Type")
-      return [...result].sort(
-        (a, b) =>
-          TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || a.name.localeCompare(b.name)
-      );
-    return result;
   }, [
     tools,
     query,
     selectedTypes,
     selectedProviders,
     selectedCategories,
+    selectedRegistries,
     selectedAuth,
-    availability,
-    sort,
   ]);
 
-  const shown = filtered.slice(0, limit);
+  const sorted = useMemo(() => {
+    if (sort === "Newest") {
+      return [...filtered].sort(
+        (a, b) => dateValue(b) - dateValue(a) || a.name.localeCompare(b.name)
+      );
+    }
+    if (sort === "Recently updated") {
+      return [...filtered].sort(
+        (a, b) => dateValue(b) - dateValue(a) || a.name.localeCompare(b.name)
+      );
+    }
+    return filtered;
+  }, [filtered, sort]);
 
-  const toggle = <T,>(
-    value: T,
-    list: T[],
-    setList: (next: T[]) => void
-  ) => {
-    setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
+  const shown = sorted.slice(0, limit);
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || limit >= sorted.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting))
+          setLimit((value) => Math.min(value + PAGE_SIZE, sorted.length));
+      },
+      { rootMargin: "240px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [limit, sorted.length]);
+
+  const toggle = <T,>(value: T, list: T[], setList: (next: T[]) => void) => {
+    setList(
+      list.includes(value)
+        ? list.filter((item) => item !== value)
+        : [...list, value]
+    );
   };
 
   const clearFilters = () => {
     setQuery("");
     setSort("Featured");
-    setAvailability("all");
     setSelectedTypes([]);
     setSelectedProviders([]);
     setSelectedCategories([]);
+    setSelectedRegistries([]);
     setSelectedAuth([]);
   };
 
-  const activeFilterCount =
-    selectedTypes.length +
-    selectedProviders.length +
-    selectedCategories.length +
-    selectedAuth.length +
-    (availability !== "all" ? 1 : 0);
-
-  const addSkill = async (entry: ToolCatalogEntry) => {
-    const agent = agents.find((item) => item.id === agentId);
-    if (!agent) {
-      toast("Create an agent first.", "error");
-      return;
-    }
-    const id = `skill:${entry.id}`;
-    if (agent.tools.includes(id)) {
-      toast(`${entry.name} is already on ${agent.name}.`, "info");
-      return;
-    }
-    setBusy("skill");
-    try {
-      const res = await fetch(`/api/agents/${encodeURIComponent(agent.id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tools: [...agent.tools, id] }),
-      });
-      if (!res.ok) throw new Error("Could not attach the skill.");
-      toast(`${entry.name} attached to ${agent.name}`, "success");
-      refreshAgents();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Attach failed.", "error");
-    } finally {
-      setBusy("");
-    }
+  const toggleSection = (key: string) => {
+    setCollapsed((current) => ({ ...current, [key]: !current[key] }));
   };
 
-  const connectMcp = async (
-    entry: ToolCatalogEntry,
-    headers: Record<string, string> = {}
-  ) => {
-    if (!entry.remoteUrl) {
-      toast(
-        "This catalog entry does not publish a remote endpoint. Use the local MCP setup in Build → Tools.",
-        "error"
-      );
-      return;
-    }
-    const existing = servers.find(
-      (server) =>
-        server.name === entry.name ||
-        (server.transport === "http" && server.url === entry.remoteUrl)
-    );
-    if (existing && Object.keys(headers).length === 0) {
-      toast(
-        `${entry.name} is already registered. Add credentials here and connect again, or edit it in Build → Tools.`,
-        "info"
-      );
-      return;
-    }
-    setBusy("mcp");
-    try {
-      const res = await fetch(
-        existing ? `/api/mcp/${encodeURIComponent(existing.id)}` : "/api/mcp",
-        {
-          method: existing ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: entry.name,
-            transport: "http",
-            url: entry.remoteUrl,
-            headers,
-          }),
-        }
-      );
-      const json = (await res.json()) as { server?: McpServer; error?: string };
-      if (!res.ok) throw new Error(json.error || "Could not register the MCP server.");
-      refreshMcp();
-      if (json.server?.status === "Error") {
-        toast(
-          `Server saved, but the connection failed: ${json.server.error || "check the endpoint."}`,
-          "error"
-        );
-      } else {
-        toast(
-          `${entry.name} connected with ${json.server?.tools.length || 0} tools.`,
-          "success"
-        );
-      }
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "MCP connection failed.", "error");
-    } finally {
-      setBusy("");
-    }
-  };
+  const chips: { key: string; label: string; clear: () => void }[] = [
+    ...selectedTypes.map((type) => ({
+      key: `type:${type}`,
+      label: `Type: ${type}`,
+      clear: () => toggle(type, selectedTypes, setSelectedTypes),
+    })),
+    ...selectedProviders.map((provider) => ({
+      key: `provider:${provider}`,
+      label: `Provider: ${provider}`,
+      clear: () => toggle(provider, selectedProviders, setSelectedProviders),
+    })),
+    ...selectedCategories.map((category) => ({
+      key: `category:${category}`,
+      label: `Category: ${category}`,
+      clear: () => toggle(category, selectedCategories, setSelectedCategories),
+    })),
+    ...selectedRegistries.map((registry) => ({
+      key: `registry:${registry}`,
+      label: `Registry: ${registry}`,
+      clear: () => toggle(registry, selectedRegistries, setSelectedRegistries),
+    })),
+    ...selectedAuth.map((auth) => ({
+      key: `auth:${auth}`,
+      label: `Auth: ${auth}`,
+      clear: () => toggle(auth, selectedAuth, setSelectedAuth),
+    })),
+  ];
 
   if (loading && tools.length === 0) {
     return (
@@ -461,33 +460,27 @@ export default function ToolCatalog() {
   }
 
   return (
-    <div>
-      <div className="page-header" style={{ marginBottom: 6 }}>
-        <div>
-          <h1 className="page-title">Tools ({tools.length.toLocaleString()})</h1>
-          <p className="page-subtitle">
-            Every tool in the local catalog. Nothing is provisioned in a cloud
-            subscription: MCP servers run from this machine, skills become agent
-            instructions, and custom connectors get a local HTTP alternative.
-          </p>
-          <p className="muted text-12" style={{ marginTop: 4 }}>
-            {tools.length.toLocaleString()} unique tools from the reference
-            catalog&apos;s 1,683 entries; registry duplicates are collapsed.
-          </p>
-          <p className="muted text-12" style={{ marginTop: 2 }}>
-            Tool names and links belong to their publishers. openFoundry is an
-            independent local index; no affiliation or endorsement is implied.
-          </p>
-        </div>
-        <div className="page-header-actions">
-          <Link href="/build/tools" className="btn btn-secondary">
-            <Server20Regular /> Manage connections
-          </Link>
-        </div>
+    <div className="page discover-tools-page">
+      <div className="discover-tools-head">
+        <h1 className="discover-tools-title">
+          Tools <span>({filtered.length.toLocaleString()})</span>
+        </h1>
+        <p className="discover-tools-desc">
+          When you connect a third-party tool, data you send may leave this
+          computer and is processed under that provider&apos;s terms.{" "}
+          <Link href="/docs">Learn more</Link>
+        </p>
       </div>
 
-      <div className="catalog-toolbar">
-        <div className="search-input">
+      <div className="discover-tools-toolbar">
+        <button
+          className="btn btn-secondary discover-filter-toggle"
+          onClick={() => setFiltersOpen((value) => !value)}
+          aria-expanded={filtersOpen}
+        >
+          {filtersOpen ? "Hide filters" : "Filters"}
+        </button>
+        <div className="search-input discover-search">
           <Search20Regular />
           <input
             className="input"
@@ -497,163 +490,172 @@ export default function ToolCatalog() {
             aria-label="Search tools"
           />
         </div>
-        <select
-          className="select"
-          style={{ width: 190 }}
-          value={sort}
-          onChange={(event) => setSort(event.target.value as Sort)}
-          aria-label="Sort tools"
-        >
-          <option value="Featured">Sort by: Featured</option>
-          <option value="Name">Name (A-Z)</option>
-          <option value="Type">Type</option>
-        </select>
-        <span className="grow" />
-        <span className="muted text-12">
-          Showing {Math.min(limit, filtered.length).toLocaleString()} of{" "}
-          {filtered.length.toLocaleString()}
-        </span>
+        <div className="discover-sort">
+          <span className="discover-sort-label">Sort by</span>
+          <span className="discover-sort-field">
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as Sort)}
+              aria-label="Sort tools"
+            >
+              <option value="Featured">Featured</option>
+              <option value="Newest">Newest</option>
+              <option value="Recently updated">Recently updated</option>
+            </select>
+            <ChevronDown20Regular />
+          </span>
+        </div>
       </div>
 
-      <div className="catalog-layout">
-        <aside className="filters">
-          <div className="row between" style={{ marginBottom: 8 }}>
-            <strong className="text-13">Filters</strong>
-            {activeFilterCount > 0 && (
-              <button className="link text-12" onClick={clearFilters}>
-                Clear all
-              </button>
-            )}
-          </div>
-
-          <FilterGroup title="Availability">
-            {[
-              ["all", "All tools"],
-              ["local", "Real local action"],
-              ["alternative", "Local alternative"],
-            ].map(([value, label]) => (
-              <label className="filter-option" key={value}>
-                <input
-                  type="radio"
-                  name="availability"
-                  checked={availability === value}
-                  onChange={() => setAvailability(value as Availability)}
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup title="Type">
+      <div className="discover-tools-layout">
+        <aside
+          className={`discover-filters${filtersOpen ? " open" : ""}`}
+          aria-label="Filters"
+        >
+          <FilterSection
+            title="Type"
+            count={selectedTypes.length}
+            collapsed={Boolean(collapsed.type)}
+            onToggle={() => toggleSection("type")}
+          >
             {(["Custom", "Remote MCP", "Local MCP", "Skills"] as ToolCatalogType[]).map(
               (type) => (
-                <label className="filter-option" key={type}>
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.includes(type)}
-                    onChange={() =>
-                      toggle(type, selectedTypes, setSelectedTypes)
-                    }
-                  />
-                  <span>{type}</span>
-                  <span className="muted" style={{ marginLeft: "auto" }}>
-                    {typeCounts.get(type) || 0}
-                  </span>
-                </label>
+                <FilterOption
+                  key={type}
+                  label={type}
+                  count={typeCounts.get(type) || 0}
+                  checked={selectedTypes.includes(type)}
+                  onChange={() => toggle(type, selectedTypes, setSelectedTypes)}
+                />
               )
             )}
-          </FilterGroup>
+          </FilterSection>
 
-          <FilterGroup title="Company">
-            {companyOptions.map(([company, count]) => (
-              <label className="filter-option" key={company}>
-                <input
-                  type="checkbox"
-                  checked={selectedProviders.includes(company)}
-                  onChange={() =>
-                    toggle(company, selectedProviders, setSelectedProviders)
-                  }
-                />
-                <span className="truncate" title={company}>
-                  {company}
-                </span>
-                <span className="muted" style={{ marginLeft: "auto" }}>
-                  {count}
-                </span>
-              </label>
+          <FilterSection
+            title="Provider"
+            count={selectedProviders.length}
+            collapsed={Boolean(collapsed.provider)}
+            onToggle={() => toggleSection("provider")}
+          >
+            {(["Microsoft", "Third-party"] as const).map((provider) => (
+              <FilterOption
+                key={provider}
+                label={provider}
+                count={providerCounts.get(provider) || 0}
+                checked={selectedProviders.includes(provider)}
+                onChange={() =>
+                  toggle(provider, selectedProviders, setSelectedProviders)
+                }
+              />
             ))}
-          </FilterGroup>
+          </FilterSection>
 
-          <FilterGroup title="Category">
+          <FilterSection
+            title="Category"
+            count={selectedCategories.length}
+            collapsed={Boolean(collapsed.category)}
+            onToggle={() => toggleSection("category")}
+          >
             {categoryCounts.map(([category, count]) => (
-              <label className="filter-option" key={category}>
-                <input
-                  type="checkbox"
-                  checked={selectedCategories.includes(category)}
-                  onChange={() =>
-                    toggle(category, selectedCategories, setSelectedCategories)
-                  }
-                />
-                <span className="truncate" title={category}>
-                  {category}
-                </span>
-                <span className="muted" style={{ marginLeft: "auto" }}>
-                  {count}
-                </span>
-              </label>
+              <FilterOption
+                key={category}
+                label={category}
+                count={count}
+                checked={selectedCategories.includes(category)}
+                onChange={() =>
+                  toggle(category, selectedCategories, setSelectedCategories)
+                }
+              />
             ))}
-          </FilterGroup>
+          </FilterSection>
 
-          <FilterGroup title="Supported auth">
-            {authCounts.map(([label, count]) => (
-              <label className="filter-option" key={label}>
-                <input
-                  type="checkbox"
-                  checked={selectedAuth.includes(label)}
-                  onChange={() => toggle(label, selectedAuth, setSelectedAuth)}
-                />
-                <span>{label}</span>
-                <span className="muted" style={{ marginLeft: "auto" }}>
-                  {count}
-                </span>
-              </label>
+          <FilterSection
+            title="Registry"
+            count={selectedRegistries.length}
+            collapsed={Boolean(collapsed.registry)}
+            onToggle={() => toggleSection("registry")}
+          >
+            {(
+              [
+                "Connector catalog",
+                "Public MCP registry",
+                "Local skill catalog",
+              ] as const
+            ).map((registry) => (
+              <FilterOption
+                key={registry}
+                label={registry}
+                count={registryCounts.get(registry) || 0}
+                checked={selectedRegistries.includes(registry)}
+                onChange={() =>
+                  toggle(registry, selectedRegistries, setSelectedRegistries)
+                }
+              />
             ))}
-          </FilterGroup>
+          </FilterSection>
+
+          <FilterSection
+            title="Supported auth"
+            count={selectedAuth.length}
+            collapsed={Boolean(collapsed.auth)}
+            onToggle={() => toggleSection("auth")}
+          >
+            {authCounts.map(([label, count]) => (
+              <FilterOption
+                key={label}
+                label={label}
+                count={count}
+                checked={selectedAuth.includes(label)}
+                onChange={() => toggle(label, selectedAuth, setSelectedAuth)}
+              />
+            ))}
+          </FilterSection>
         </aside>
 
-        <div>
-          <div className="tool-catalog-grid">
+        <div className="discover-results">
+          <span className="visually-hidden">
+            Showing {shown.length.toLocaleString()} of{" "}
+            {filtered.length.toLocaleString()} items
+          </span>
+
+          {chips.length > 0 && (
+            <div className="chip-row discover-chips">
+              {chips.map((chip) => (
+                <button
+                  className="filter-chip"
+                  key={chip.key}
+                  onClick={chip.clear}
+                  aria-label={`Remove ${chip.label} filter`}
+                >
+                  {chip.label}
+                  <Dismiss20Regular />
+                </button>
+              ))}
+              <button className="btn btn-sm btn-secondary" onClick={clearFilters}>
+                Clear filters
+              </button>
+            </div>
+          )}
+
+          <div className="discover-grid">
             {shown.map((entry) => (
               <button
-                className="tool-catalog-card"
+                className="discover-tool-card"
                 key={entry.id}
-                onClick={() => {
-                  if (entry.type === "Skills") {
-                    router.push(`/discover/tools/${entry.slug}`);
-                  } else {
-                    setSelected(entry);
-                  }
-                }}
+                onClick={() =>
+                  router.push(`/discover/tools/${encodeURIComponent(entry.slug)}`)
+                }
+                aria-label={`${entry.name}. ${entry.summary}`}
               >
-                <div className="tool-catalog-card-head">
-                  <span className="tool-catalog-card-icon">
-                    {entry.icon ? (
-                      <img
-                        src={entry.icon}
-                        alt=""
-                        loading="lazy"
-                        onError={(event) => {
-                          event.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : null}
-                    <span className="tool-catalog-glyph">{typeIcon(entry.type)}</span>
-                  </span>
-                  <span className="tool-catalog-title">{entry.name}</span>
-                </div>
-                <span className="tool-catalog-desc">{entry.summary}</span>
-                <span className="tool-catalog-tags">
-                  <span className="badge gray">{entry.type}</span>
+                <span className="discover-tool-icon">{typeIcon(entry.type)}</span>
+                <span className="discover-tool-body">
+                  <span className="discover-tool-name">{entry.name}</span>
+                  <span className="discover-tool-summary">{entry.summary}</span>
+                  {entry.preview && (
+                    <span className="discover-tool-badges">
+                      <span className="discover-tool-badge">Preview</span>
+                    </span>
+                  )}
                 </span>
               </button>
             ))}
@@ -669,75 +671,79 @@ export default function ToolCatalog() {
             </div>
           )}
 
-          {limit < filtered.length && (
-            <div className="row" style={{ justifyContent: "center", marginTop: 20 }}>
+          <div className="discover-load">
+            {limit < sorted.length && (
               <button
                 className="btn btn-secondary"
-                onClick={() => setLimit((value) => value + 48)}
+                onClick={() =>
+                  setLimit((value) => Math.min(value + PAGE_SIZE, sorted.length))
+                }
               >
                 Load more
               </button>
-            </div>
-          )}
+            )}
+          </div>
+          <div ref={sentinel} className="discover-sentinel" aria-hidden="true" />
         </div>
       </div>
-
-      {selected && (
-        <ToolDetail
-          entry={selected}
-          setup={setup}
-          setupLoading={setupLoading}
-          setupError={setupError}
-          existingServer={
-            selected
-              ? servers.find(
-                  (server) =>
-                    server.name === selected.name ||
-                    (server.transport === "http" &&
-                      server.url === selected.remoteUrl)
-                )
-              : undefined
-          }
-          agents={agents}
-          agentId={agentId}
-          setAgentId={setAgentId}
-          busy={busy}
-          onClose={() => setSelected(null)}
-          onAddSkill={() => void addSkill(selected)}
-          onConnectMcp={(headers) => void connectMcp(selected, headers)}
-          onCreateHttpDraft={(draft) => {
-            try {
-              window.sessionStorage.setItem(
-                "openfoundry:http-draft",
-                JSON.stringify(draft)
-              );
-            } catch {
-              // The navigation still opens the builder without the draft.
-            }
-            window.location.assign("/build/tools");
-          }}
-        />
-      )}
     </div>
   );
 }
 
-function FilterGroup({
+function FilterSection({
   title,
+  count,
+  collapsed,
+  onToggle,
   children,
 }: {
   title: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
   return (
-    <div className="filter-group">
-      <div className="filter-head">{title}</div>
-      <div className="filter-body">{children}</div>
-    </div>
+    <section className="discover-filter-section">
+      <button
+        className={`discover-filter-head${collapsed ? " collapsed" : ""}`}
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+      >
+        <ChevronDown20Regular className="discover-chevron" />
+        <span>
+          {title}
+          {count > 0 ? ` (${count})` : ""}
+        </span>
+      </button>
+      {!collapsed && (
+        <div className="discover-filter-body">{children}</div>
+      )}
+    </section>
   );
 }
 
-function ToolDetail({
+function FilterOption({
+  label,
+  count,
+  checked,
+  onChange,
+}: {
+  label: string;
+  count: number;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="discover-filter-option">
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      <span className="discover-filter-label">{label}</span>
+      <span className="discover-filter-count">{count.toLocaleString()}</span>
+    </label>
+  );
+}
+
+export function ToolDetail({
   entry,
   setup,
   setupLoading,
@@ -770,6 +776,14 @@ function ToolDetail({
   const alreadyAttached = agents
     .find((agent) => agent.id === agentId)
     ?.tools.includes(skillId);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const [authId, setAuthId] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
@@ -941,15 +955,15 @@ function ToolDetail({
   };
 
   return (
-    <>
-      <div className="drawer-backdrop" onClick={onClose} />
-      <aside
-        className="drawer"
+    <div className="dialog-backdrop" onClick={onClose}>
+      <div
+        className="dialog wide connect-dialog"
         role="dialog"
         aria-modal="true"
         aria-label={`${entry.name} details`}
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="drawer-head">
+        <div className="dialog-head">
           <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
             <span className="tool-catalog-icon large">
               {entry.icon ? (
@@ -964,7 +978,7 @@ function ToolDetail({
               <span className="tool-catalog-glyph">{typeIcon(entry.type)}</span>
             </span>
             <div>
-              <h2 className="drawer-title">{entry.name}</h2>
+              <h2 className="dialog-title">{entry.name}</h2>
               <div className="muted text-12">
                 {entry.type} · {providerOf(entry)}
                 {entry.preview ? " · Preview" : ""}
@@ -975,7 +989,7 @@ function ToolDetail({
             <Dismiss20Regular />
           </button>
         </div>
-        <div className="drawer-body">
+        <div className="dialog-body">
           <p className="text-14" style={{ lineHeight: "22px" }}>
             {entry.summary}
           </p>
@@ -1063,10 +1077,10 @@ function ToolDetail({
             <div className="banner">
               <Wrench20Regular />
               <span>
-                This is a hosted connector in the reference catalog. The local
-                alternative is a generic HTTP tool: point it at the provider&apos;s
-                native REST endpoint with your own credentials. No Azure connector
-                is provisioned.
+                This catalog entry is a hosted connector in the source catalog.
+                The local alternative is a generic HTTP tool: point it at the
+                provider&apos;s native REST endpoint with your own credentials. No
+                cloud connector is provisioned.
               </span>
             </div>
           )}
@@ -1395,8 +1409,8 @@ function ToolDetail({
                   <span>
                     Published runtime:{" "}
                     <span className="mono">{setup.runtimeUrls.join(", ")}</span>. This
-                    is the hosted Azure connector gateway, not the provider API. It is
-                    listed for reference only and is not called locally.
+                    is the vendor-hosted connector gateway, not the provider API. It
+                    is listed for reference only and is not called locally.
                   </span>
                 </div>
               )}
@@ -1460,7 +1474,7 @@ function ToolDetail({
             </div>
           )}
         </div>
-        <div className="drawer-footer">
+        <div className="dialog-footer">
           {entry.availability === "local-skill" ? (
             <>
               <select
@@ -1538,7 +1552,7 @@ function ToolDetail({
             Close
           </button>
         </div>
-      </aside>
-    </>
+      </div>
+    </div>
   );
 }

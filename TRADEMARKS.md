@@ -12,5 +12,10 @@ Third-party model marks are fetched at runtime from Simple Icons when available 
 used nominatively to identify model provenance. No third-party logos are bundled in this
 repository. Publishers without an available mark receive a neutral first-letter tile.
 
+Tool catalog entries use publisher and product names only to identify the tool being
+configured. No vendor icons are bundled or displayed in the catalog; every entry uses a
+neutral Fluent glyph. openFoundry is an independent index and does not claim partner,
+reseller or endorsement status.
+
 If you are a rights holder and want an attribution changed or a mark removed, open an
 issue in this repository.
