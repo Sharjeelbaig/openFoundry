@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getAgents,
   getHttpTools,
+  getToolboxes,
   nowIso,
   saveAgents,
   saveHttpTools,
+  saveToolboxes,
 } from "@/lib/store";
 import { HttpTool } from "@/lib/types";
 
@@ -100,5 +102,21 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     }
   }
   if (changed) await saveAgents(agents);
-  return NextResponse.json({ ok: true, detached: changed });
+  const toolboxes = await getToolboxes();
+  let toolboxesChanged = false;
+  for (const toolbox of toolboxes) {
+    const next = toolbox.toolIds.filter((tool) => tool !== prefix);
+    if (next.length !== toolbox.toolIds.length) {
+      toolbox.toolIds = next;
+      toolbox.updatedAt = nowIso();
+      toolbox.version = (toolbox.version || 1) + 1;
+      toolboxesChanged = true;
+    }
+  }
+  if (toolboxesChanged) await saveToolboxes(toolboxes);
+  return NextResponse.json({
+    ok: true,
+    detached: changed,
+    toolboxesUpdated: toolboxesChanged,
+  });
 }

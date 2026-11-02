@@ -284,15 +284,30 @@ export interface OAuthTokenRecord {
   updatedAt: string;
 }
 
+export interface LocalSkill {
+  id: string;
+  name: string;
+  description: string;
+  instructions: string;
+  source: "created" | "uploaded";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Toolbox {
   id: string;
   name: string;
   description: string;
-  /** Tool ids: built-in ids, mcp:<server>:<tool>, http:<id>, skill:<id>. */
+  /**
+   * Tool ids: built-in ids, mcp:<server>:<tool>, http:<id>,
+   * skill:<catalog-id>, skill:local:<id> and toolbox:<id>.
+   */
   toolIds: string[];
   /** When true, only the most relevant tools are passed per request. */
   toolSearch: boolean;
   guardrailId?: string;
+  /** Incremented every time the toolbox definition is saved. */
+  version: number;
   createdAt: string;
   updatedAt: string;
 }

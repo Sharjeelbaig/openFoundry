@@ -47,6 +47,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       body.toolSearch !== undefined ? Boolean(body.toolSearch) : current.toolSearch,
     guardrailId:
       body.guardrailId !== undefined ? body.guardrailId || undefined : current.guardrailId,
+    version: (current.version || 1) + 1,
     updatedAt: nowIso(),
   };
   toolboxes[index] = updated;

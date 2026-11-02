@@ -11,7 +11,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ toolboxes: await getToolboxes() });
+  const toolboxes = (await getToolboxes()).map((item) => ({
+    ...item,
+    version: item.version || 1,
+  }));
+  return NextResponse.json({ toolboxes });
 }
 
 export async function POST(req: NextRequest) {
@@ -42,6 +46,7 @@ export async function POST(req: NextRequest) {
       : [],
     toolSearch: Boolean(body.toolSearch),
     guardrailId: body.guardrailId || undefined,
+    version: 1,
     createdAt: nowIso(),
     updatedAt: nowIso(),
   };

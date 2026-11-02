@@ -46,6 +46,7 @@ import type {
   Citation,
   Guardrail,
   KnowledgeBase,
+  LocalSkill,
   McpServer,
   ToolCatalogEntry,
   Toolbox,
@@ -108,6 +109,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const { data: skillData } = useApi<{ tools: ToolCatalogEntry[] }>(
     "/api/tools/catalog?type=Skills"
   );
+  const { data: localSkillData } = useApi<{ skills: LocalSkill[] }>(
+    "/api/skills"
+  );
   const tracesApi = useApi<{ traces: Trace[] }>(
     `/api/traces?agentId=${encodeURIComponent(agentId)}`,
     4000
@@ -122,6 +126,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const mcpServers = mcpData?.servers ?? [];
   const toolboxes = toolboxData?.toolboxes ?? [];
   const skills = skillData?.tools ?? [];
+  const localSkills = localSkillData?.skills ?? [];
   const traces = tracesApi.data?.traces ?? [];
 
   const mcpToolEntries = useMemo(
@@ -146,6 +151,16 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
         description: skill.summary.slice(0, 180),
       })),
     [skills]
+  );
+
+  const localSkillEntries = useMemo(
+    () =>
+      localSkills.map((skill) => ({
+        id: `skill:local:${skill.id}`,
+        label: `${skill.name} · local skill`,
+        description: skill.description || "Local skill",
+      })),
+    [localSkills]
   );
 
   const toolboxEntries = useMemo(
@@ -1117,7 +1132,9 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                     {tools
                       .filter((id) => id.startsWith("skill:"))
                       .map((id) => {
-                        const entry = skillEntries.find((item) => item.id === id);
+                        const entry =
+                          skillEntries.find((item) => item.id === id) ||
+                          localSkillEntries.find((item) => item.id === id);
                         return (
                           <div className="tool-row" key={id}>
                             <Sparkle20Regular />
@@ -1220,6 +1237,11 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                               desc: entry.description,
                             })),
                             ...skillEntries.map((entry) => ({
+                              id: entry.id,
+                              label: entry.label,
+                              desc: entry.description,
+                            })),
+                            ...localSkillEntries.map((entry) => ({
                               id: entry.id,
                               label: entry.label,
                               desc: entry.description,
@@ -1778,6 +1800,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                                 mcpToolEntries.find((entry) => entry.id === id)
                                   ?.label ||
                                 skillEntries.find((entry) => entry.id === id)?.label ||
+                                localSkillEntries.find((entry) => entry.id === id)?.label ||
                                 toolboxEntries.find((entry) => entry.id === id)?.label ||
                                 id
                             )

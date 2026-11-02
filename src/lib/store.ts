@@ -13,6 +13,7 @@ import {
   HttpTool,
   KnowledgeBase,
   LocalSettings,
+  LocalSkill,
   McpServer,
   MemoryItem,
   MemoryStore,
@@ -160,6 +161,14 @@ export async function getToolboxes(): Promise<Toolbox[]> {
 
 export async function saveToolboxes(items: Toolbox[]): Promise<void> {
   await writeJson("toolboxes.json", items);
+}
+
+export async function getLocalSkills(): Promise<LocalSkill[]> {
+  return readJson<LocalSkill[]>("local-skills.json", []);
+}
+
+export async function saveLocalSkills(items: LocalSkill[]): Promise<void> {
+  await writeJson("local-skills.json", items);
 }
 
 export async function getOAuthPending(): Promise<OAuthPending[]> {

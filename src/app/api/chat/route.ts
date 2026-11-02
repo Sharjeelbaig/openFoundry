@@ -7,6 +7,8 @@ import {
   getBlocklists,
   getDeployments,
   getGuardrails,
+  getLocalSkills,
+  getToolboxes,
   newId,
 } from "@/lib/store";
 import {
@@ -130,6 +132,17 @@ export async function POST(req: NextRequest) {
                 provider = agent.provider;
               }
             }
+          }
+          // A toolbox guardrail applies to the tools it exposes. Use it when
+          // the agent itself does not have a guardrail assigned.
+          if (!guardrailId && tools.some((id) => id.startsWith("toolbox:"))) {
+            const boxes = await getToolboxes();
+            const attached = boxes.find(
+              (box) =>
+                box.guardrailId &&
+                tools.includes(`toolbox:${box.id}`)
+            );
+            if (attached?.guardrailId) guardrailId = attached.guardrailId;
           }
           if (!model) throw new Error("No model selected");
           if (!body.messages?.length) throw new Error("No messages supplied");
@@ -354,7 +367,21 @@ export async function POST(req: NextRequest) {
             .map(parseSkillId)
             .filter((id): id is string => Boolean(id));
           const skillIds = [...directSkillIds, ...toolboxResolution.skillIds];
+          const localSkills = skillIds.some((id) => id.startsWith("local:"))
+            ? await getLocalSkills()
+            : [];
           for (const skillId of skillIds.slice(0, 4)) {
+            if (skillId.startsWith("local:")) {
+              const local = localSkills.find(
+                (skill) => skill.id === skillId.slice("local:".length)
+              );
+              if (local) {
+                systemParts.push(
+                  `Local skill: ${local.name}\n\n${local.instructions}`
+                );
+              }
+              continue;
+            }
             const entry = findCatalogEntry(skillId);
             if (entry) systemParts.push(skillInstructions(entry));
           }
