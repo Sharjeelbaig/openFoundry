@@ -19,6 +19,7 @@ import {
 } from "@/lib/guardrails";
 import { getMemoryStore, recall, rememberTurn, renderMemory } from "@/lib/memory";
 import { nodeForDeployment } from "@/lib/nodes";
+import { ensureModelReady } from "@/lib/providers";
 import {
   acquireSlot,
   admit,
@@ -430,6 +431,11 @@ export async function POST(req: NextRequest) {
           }
 
           const node = deployment ? await nodeForDeployment(deployment) : null;
+
+          // Foundry Local needs an explicit load step before inference. Loading
+          // here keeps the first message from failing when the model is already
+          // downloaded, and produces an actionable error when it is not.
+          await ensureModelReady(provider, model);
 
           send({
             type: "meta",

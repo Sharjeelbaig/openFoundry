@@ -24,6 +24,39 @@ export const OLLAMA_URL =
 const FOUNDRY_EMBEDDING_MODEL = "qwen3-embedding-0.6b-generic-gpu:1";
 
 /** Runtime endpoints can be changed in Manage → Project details. */
+function isLoopbackUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Foundry Local chooses its port when the daemon starts. The value written to
+ * settings during onboarding goes stale after a restart, so ask the CLI for the
+ * live endpoint whenever the configured URL is loopback.
+ */
+async function discoverFoundryUrl(): Promise<string | null> {
+  return cached("foundry-url", 10000, async () => {
+    try {
+      const { stdout } = await execFileAsync(
+        "foundry",
+        ["server", "status", "-o", "json"],
+        { timeout: 3000, maxBuffer: 512 * 1024 }
+      );
+      const parsed = JSON.parse(stdout) as { webUrls?: string[] };
+      const url = parsed.webUrls?.find(
+        (item) => typeof item === "string" && /^https?:\/\//.test(item)
+      );
+      return url ? url.replace(/\/+$/, "") : null;
+    } catch {
+      return null;
+    }
+  });
+}
+
 export async function getRuntimeUrls(): Promise<{
   foundry: string;
   ollama: string;
@@ -32,8 +65,13 @@ export async function getRuntimeUrls(): Promise<{
   huggingface: string;
 }> {
   const settings = await readJson<Partial<LocalSettings>>("settings.json", {});
+  const configuredFoundry = settings.foundryUrl || FOUNDRY_URL;
+  const discoveredFoundry =
+    !process.env.FOUNDRY_LOCAL_URL && isLoopbackUrl(configuredFoundry)
+      ? await discoverFoundryUrl()
+      : null;
   return {
-    foundry: (settings.foundryUrl || FOUNDRY_URL).replace(/\/+$/, ""),
+    foundry: (discoveredFoundry || configuredFoundry).replace(/\/+$/, ""),
     ollama: (settings.ollamaUrl || OLLAMA_URL).replace(/\/+$/, ""),
     lmstudio: (settings.lmStudioUrl || "http://127.0.0.1:1234").replace(/\/+$/, ""),
     llamacpp: (settings.llamaCppUrl || "http://127.0.0.1:8080").replace(/\/+$/, ""),
@@ -556,9 +594,23 @@ export async function findModel(
   );
 }
 
+async function probeOpenAi(base: string): Promise<boolean> {
+  try {
+    await fetchJson(`${base}/v1/models`, {}, 1800);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getProviders(): Promise<ProviderStatus[]> {
   const models = await discoverModels();
   const urls = await getRuntimeUrls();
+  const foundryOnline = await cached(
+    `foundry-online:${urls.foundry}`,
+    4000,
+    () => probeOpenAi(urls.foundry)
+  );
   const foundry = models.filter((m) => m.provider === "foundry");
   const ollama = models.filter((m) => m.provider === "ollama");
   const lmstudio = models.filter((m) => m.provider === "lmstudio");
@@ -568,12 +620,11 @@ export async function getProviders(): Promise<ProviderStatus[]> {
     {
       id: "foundry",
       label: "Foundry Local",
-      online: foundry.length > 0,
+      online: foundryOnline,
       url: urls.foundry,
-      detail:
-        foundry.length > 0
-          ? `OpenAI-compatible endpoint at ${urls.foundry}`
-          : "Start it with `foundry server start`",
+      detail: foundryOnline
+        ? `OpenAI-compatible endpoint at ${urls.foundry}`
+        : `Not reachable at ${urls.foundry}. Start it with \`foundry server start\`.`,
       modelCount: foundry.length,
       cachedCount: foundry.filter((m) => m.cached).length,
     },
@@ -638,6 +689,63 @@ export async function loadFoundryModel(modelId: string): Promise<void> {
     maxBuffer: 4 * 1024 * 1024,
   });
   cacheStore.delete("models");
+}
+
+/**
+ * Foundry Local serves a model only after it has been loaded. Loading is cheap
+ * for an already-downloaded model and removes the most common first-chat error,
+ * so do it lazily when a request names a cached but unloaded Foundry model.
+ */
+export async function ensureModelReady(
+  provider: ProviderId,
+  model: string
+): Promise<void> {
+  if (provider !== "foundry") return;
+  const models = await discoverModels();
+  const entry = models.find(
+    (item) =>
+      item.provider === "foundry" &&
+      (item.id === model || item.key === `foundry:${model}`)
+  );
+  if (entry) {
+    if (entry.loaded) return;
+    if (!entry.cached) {
+      throw new Error(
+        `The model "${model}" is not downloaded. Open Models → Deploy, download it, then try again.`
+      );
+    }
+    try {
+      await loadFoundryModel(entry.id);
+    } catch (error) {
+      throw new Error(
+        `Foundry Local could not load ${entry.displayName}: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`
+      );
+    }
+    return;
+  }
+  // The selected variant may not be the one picked by bestFoundryVariants.
+  const catalog = await foundryCatalog();
+  const meta =
+    catalog.get(model) ||
+    [...catalog.values()].find((item) => item.alias === model);
+  if (!meta) return;
+  if (meta.loaded) return;
+  if (!meta.cached) {
+    throw new Error(
+      `The model "${model}" is not downloaded. Open Models → Deploy, download it, then try again.`
+    );
+  }
+  try {
+    await loadFoundryModel(meta.id);
+  } catch (error) {
+    throw new Error(
+      `Foundry Local could not load ${model}: ${
+        error instanceof Error ? error.message : "unknown error"
+      }`
+    );
+  }
 }
 
 export async function pullOllamaModel(modelId: string): Promise<void> {

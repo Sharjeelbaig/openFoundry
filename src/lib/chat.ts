@@ -42,6 +42,29 @@ function friendlyError(status: number, body: string, provider: ProviderId): stri
   return `The local model runtime returned ${status}. ${body.slice(0, 300)}`;
 }
 
+function providerName(provider: ProviderId): string {
+  if (provider === "foundry") return "Foundry Local";
+  if (provider === "ollama") return "Ollama";
+  if (provider === "lmstudio") return "LM Studio";
+  if (provider === "llamacpp") return "llama.cpp";
+  return "The local runtime";
+}
+
+function unreachable(provider: ProviderId, base: string): Error {
+  return new Error(
+    `${providerName(provider)} is not reachable at ${base}. Start the local runtime or select another provider and model.`
+  );
+}
+
+function rethrowNetworkError(
+  error: unknown,
+  provider: ProviderId,
+  base: string
+): never {
+  if (error instanceof Error && error.name === "AbortError") throw error;
+  throw unreachable(provider, base);
+}
+
 interface OpenAiStreamOptions {
   base: string;
   provider: ProviderId;
@@ -93,12 +116,17 @@ async function* streamOpenAiChat({
     payload.tool_choice = toolChoice ?? "auto";
   }
 
-  const res = await fetch(`${base}/v1/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (error) {
+    rethrowNetworkError(error, provider, base);
+  }
   if (!res.ok || !res.body) {
     const body = await res.text().catch(() => "");
     throw new Error(friendlyError(res.status, body, provider));
@@ -213,22 +241,27 @@ export async function* streamCompletion({
       });
       return;
     }
-    const res = await fetch(`${ollamaBase}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages,
-        stream: true,
-        keep_alive: "10m",
-        options: {
-          temperature,
-          top_p: topP,
-          num_predict: maxTokens,
-        },
-      }),
-      signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${ollamaBase}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages,
+          stream: true,
+          keep_alive: "10m",
+          options: {
+            temperature,
+            top_p: topP,
+            num_predict: maxTokens,
+          },
+        }),
+        signal,
+      });
+    } catch (error) {
+      rethrowNetworkError(error, provider, ollamaBase);
+    }
     if (!res.ok || !res.body) {
       const body = await res.text().catch(() => "");
       throw new Error(friendlyError(res.status, body, provider));
