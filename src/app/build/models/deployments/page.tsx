@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -771,13 +772,13 @@ print(response.choices[0].message.content)`}</pre>
               </label>
               <label className="field">
                 <span className="field-label">Deployment</span>
-                <select className="select" value={batchDeployment} onChange={(e) => setBatchDeployment(e.target.value)}>
+                <Select className="select" value={batchDeployment} onChange={(e) => setBatchDeployment(e.target.value)}>
                   {deployments.map((deployment) => (
                     <option key={deployment.id} value={deployment.id}>
                       {deployment.name} · {deployment.modelName}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <label className="field">
                 <span className="field-label">Prompts</span>

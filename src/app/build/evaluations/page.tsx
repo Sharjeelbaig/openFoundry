@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useMemo, useState } from "react";
 import {
@@ -240,7 +241,7 @@ export default function EvaluationsPage() {
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </div>
-                <select
+                <Select
                   className="select"
                   style={{ width: 160 }}
                   value={frequency}
@@ -250,7 +251,7 @@ export default function EvaluationsPage() {
                   <option>All</option>
                   <option>On demand</option>
                   <option>Recurring</option>
-                </select>
+                </Select>
                 <span className="spacer" />
                 <button className="btn btn-primary" onClick={() => openCreate("evaluation")}>
                   Create
@@ -560,7 +561,7 @@ export default function EvaluationsPage() {
               <div className="form-grid">
                 <label className="field">
                   <span className="field-label">Target type</span>
-                  <select
+                  <Select
                     className="select"
                     value={targetKind}
                     onChange={(event) => {
@@ -575,11 +576,11 @@ export default function EvaluationsPage() {
                   >
                     <option value="agent">Agent</option>
                     <option value="deployment">Deployment</option>
-                  </select>
+                  </Select>
                 </label>
                 <label className="field">
                   <span className="field-label">Target</span>
-                  <select
+                  <Select
                     className="select"
                     value={targetId}
                     onChange={(event) => setTargetId(event.target.value)}
@@ -590,7 +591,7 @@ export default function EvaluationsPage() {
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               </div>
               <label className="field">

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useMemo, useState } from "react";
 import {
@@ -538,7 +539,7 @@ function TestConnectionDialog({
           {target.kind === "mcp" && tools.length > 0 && (
             <label className="field">
               <span className="field-label">Tool</span>
-              <select
+              <Select
                 className="select"
                 value={toolName}
                 onChange={(event) => setToolName(event.target.value)}
@@ -548,7 +549,7 @@ function TestConnectionDialog({
                     {tool}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
           {target.kind === "mcp" && tools.length === 0 && (

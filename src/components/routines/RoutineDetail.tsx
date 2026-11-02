@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -271,7 +272,7 @@ export default function RoutineDetail({ id }: { id: string }) {
       )}
 
       <div className="routine-run-filters">
-        <select
+        <Select
           className="select toolbar-select"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
@@ -282,7 +283,7 @@ export default function RoutineDetail({ id }: { id: string }) {
           <option value="running">Running</option>
           <option value="completed">Completed</option>
           <option value="failed">Failed</option>
-        </select>
+        </Select>
         <span className="spacer" />
         <div className="routine-range">
           {range === "custom" && (

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -296,7 +297,7 @@ ollama create my-tuned-model -f Modelfile`}</pre>
                 </label>
                 <label className="field">
                   <span className="field-label">Source</span>
-                  <select
+                  <Select
                     className="select"
                     value={source}
                     onChange={(event) => setSource(event.target.value as Source)}
@@ -304,7 +305,7 @@ ollama create my-tuned-model -f Modelfile`}</pre>
                     <option value="traces">Recorded traces</option>
                     <option value="agents">Agent instructions</option>
                     <option value="custom">Custom JSONL</option>
-                  </select>
+                  </Select>
                 </label>
               </div>
 
@@ -312,7 +313,7 @@ ollama create my-tuned-model -f Modelfile`}</pre>
                 <div className="form-grid">
                   <label className="field">
                     <span className="field-label">Agent</span>
-                    <select
+                    <Select
                       className="select"
                       value={agentId}
                       onChange={(event) => setAgentId(event.target.value)}
@@ -323,7 +324,7 @@ ollama create my-tuned-model -f Modelfile`}</pre>
                           {agent.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                   <label className="field">
                     <span className="field-label">Minimum response length</span>

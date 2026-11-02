@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useEffect, useState } from "react";
 import {
@@ -160,7 +161,7 @@ export default function McpServerDialog({
           </label>
           <label className="field">
             <span className="field-label">Transport</span>
-            <select
+            <Select
               className="select"
               value={transport}
               onChange={(event) =>
@@ -170,7 +171,7 @@ export default function McpServerDialog({
             >
               <option value="http">Streamable HTTP</option>
               <option value="stdio">Local stdio process</option>
-            </select>
+            </Select>
           </label>
           {transport === "http" ? (
             <>

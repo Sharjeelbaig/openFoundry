@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -245,7 +246,7 @@ export default function GatewayPage() {
           <h3 className="mb-12">Routing</h3>
           <label className="field">
             <span className="field-label">Default deployment</span>
-            <select
+            <Select
               className="select"
               value={defaultDeploymentId}
               onChange={(event) => {
@@ -259,7 +260,7 @@ export default function GatewayPage() {
                   {deployment.name} · {deployment.modelName} · {deployment.status}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="field-hint">
               Requests without a matching route fall back to this deployment.
             </span>
@@ -484,7 +485,7 @@ export default function GatewayPage() {
               </label>
               <label className="field">
                 <span className="field-label">Deployment</span>
-                <select
+                <Select
                   className="select"
                   value={routeDeployment}
                   onChange={(event) => setRouteDeployment(event.target.value)}
@@ -494,7 +495,7 @@ export default function GatewayPage() {
                       {deployment.name} · {deployment.modelName}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
             <div className="dialog-footer">

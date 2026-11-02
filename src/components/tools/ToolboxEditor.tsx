@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -529,7 +530,7 @@ export default function ToolboxEditor({ toolboxId }: { toolboxId?: string }) {
               Create a new guardrail
             </Link>
           </p>
-          <select
+          <Select
             className="select"
             value={guardrailId}
             onChange={(event) => setGuardrailId(event.target.value)}
@@ -541,7 +542,7 @@ export default function ToolboxEditor({ toolboxId }: { toolboxId?: string }) {
                 {guardrail.name}
               </option>
             ))}
-          </select>
+          </Select>
         </section>
 
         {editing && (
@@ -575,7 +576,7 @@ export default function ToolboxEditor({ toolboxId }: { toolboxId?: string }) {
                 <div className="code-sample-head">
                   <label className="field" style={{ width: 220 }}>
                     <span className="field-label">Example</span>
-                    <select
+                    <Select
                       className="select"
                       value={language}
                       onChange={(event) => setLanguage(event.target.value)}
@@ -583,7 +584,7 @@ export default function ToolboxEditor({ toolboxId }: { toolboxId?: string }) {
                       <option value="cURL">cURL</option>
                       <option value="TypeScript">TypeScript</option>
                       <option value="Python">Python</option>
-                    </select>
+                    </Select>
                   </label>
                   <button
                     className="btn btn-secondary"

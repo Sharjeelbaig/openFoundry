@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useMemo, useState } from "react";
 import {
@@ -170,7 +171,7 @@ export default function WorkflowPreview({
           <div className="workflow-question">
             <strong>{run.pending.question}</strong>
             {run.pending.inputType === "choice" ? (
-              <select
+              <Select
                 className="select"
                 value={answer}
                 onChange={(event) => setAnswer(event.target.value)}
@@ -181,7 +182,7 @@ export default function WorkflowPreview({
                     {choice}
                   </option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <input
                 className="input"

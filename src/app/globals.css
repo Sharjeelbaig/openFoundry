@@ -3521,6 +3521,289 @@ svg {
   flex: 1;
 }
 
+/* deployment-type picker (custom dropdown, portalled) ---------------------- */
+.deployment-type-select {
+  position: relative;
+}
+.deployment-type-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 32px;
+  padding: 5px 10px 5px 12px;
+  background: var(--surface-input);
+  border: 1px solid var(--stroke-3);
+  border-radius: var(--radius);
+  color: var(--fg-1);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 100ms ease;
+}
+.deployment-type-trigger:hover,
+.deployment-type-trigger[aria-expanded="true"] {
+  border-color: var(--stroke-1);
+}
+.deployment-type-trigger:focus-visible {
+  outline: none;
+  border-color: var(--brand-stroke);
+  box-shadow: 0 0 0 1px var(--brand-stroke);
+}
+.deployment-type-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.deployment-type-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deployment-type-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--fg-3);
+  background: var(--bg-2);
+}
+.deployment-type-badge.layer-local {
+  color: var(--success-strong);
+}
+.deployment-type-badge.layer-simulate {
+  color: var(--brand-stroke);
+}
+.deployment-type-badge.layer-export {
+  color: var(--fg-3);
+}
+.deployment-type-chevron {
+  justify-self: end;
+  color: var(--fg-3);
+}
+.deployment-type-popover {
+  position: fixed;
+  z-index: 200;
+  max-height: min(440px, calc(100vh - 80px));
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface-card);
+  border: 1px solid var(--stroke-3);
+  border-radius: 6px;
+  box-shadow:
+    rgba(0, 0, 0, 0.14) 0 8px 16px,
+    rgba(0, 0, 0, 0.12) 0 0 2px;
+}
+.deployment-type-group {
+  display: flex;
+  flex-direction: column;
+}
+.deployment-type-group + .deployment-type-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--stroke-3);
+}
+.deployment-type-group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 8px 4px;
+}
+.deployment-type-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+.deployment-type-group-hint {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--fg-3);
+}
+.deployment-type-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.deployment-type-option:hover {
+  background: var(--bg-hover);
+}
+.deployment-type-option.selected {
+  box-shadow: inset 0 0 0 1px var(--fg-2);
+}
+.deployment-type-option.disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.deployment-type-option.disabled:hover {
+  background: transparent;
+}
+.deployment-type-check {
+  flex: 0 0 20px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 1px;
+  color: var(--fg-1);
+}
+.deployment-type-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.deployment-type-option-label {
+  line-height: 20px;
+}
+.deployment-type-option-meta {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--fg-3);
+}
+.deployment-type-option-reason {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--fg-3);
+}
+
+/* generic custom select (replaces native <select>) ------------------------- */
+.custom-select {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 5px 10px 5px 12px;
+  background: var(--surface-input);
+  border: 1px solid var(--stroke-3);
+  border-radius: var(--radius);
+  color: var(--fg-1);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 100ms ease, background-color 100ms ease;
+}
+.custom-select-trigger.select {
+  padding-right: 10px;
+  background-image: none;
+}
+.custom-select-trigger:hover {
+  border-color: var(--stroke-1);
+}
+.custom-select-trigger[aria-expanded="true"] {
+  border-color: var(--brand-stroke);
+}
+.custom-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--brand-stroke);
+  box-shadow: 0 0 0 1px var(--brand-stroke);
+}
+.custom-select-trigger:disabled {
+  color: var(--fg-disabled);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.custom-select-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-select-chevron {
+  flex: 0 0 auto;
+  color: var(--fg-3);
+}
+.custom-select-popover {
+  position: fixed;
+  z-index: 300;
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: min(360px, calc(100vh - 80px));
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface-card);
+  border: 1px solid var(--stroke-3);
+  border-radius: 6px;
+  box-shadow:
+    rgba(0, 0, 0, 0.14) 0 8px 16px,
+    rgba(0, 0, 0, 0.12) 0 0 2px;
+}
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.custom-select-option:hover {
+  background: var(--bg-hover);
+}
+.custom-select-option.selected {
+  box-shadow: inset 0 0 0 1px var(--fg-2);
+}
+.custom-select-option.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.custom-select-option.disabled:hover {
+  background: transparent;
+}
+.custom-select-check {
+  flex: 0 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-1);
+}
+.custom-select-option-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-select-empty {
+  padding: 8px;
+  font-size: 13px;
+  color: var(--fg-3);
+}
+/* keep the compact sort control in the tool and model catalogs */
+.discover-sort-field .custom-select {
+  display: inline-flex;
+}
+.discover-sort-field .custom-select-trigger {
+  height: 32px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 4px;
+  background: var(--surface-card);
+  color: var(--fg-1);
+  font-size: 13px;
+  padding: 0 10px;
+}
+
 @media (max-width: 1180px) {
   .model-detail-layout {
     grid-template-columns: minmax(0, 1fr) 280px;
@@ -8038,7 +8321,7 @@ svg {
   padding: 0 28px 0 10px;
   cursor: pointer;
 }
-.discover-sort-field svg {
+.discover-sort-field > svg {
   position: absolute;
   right: 8px;
   width: 12px;

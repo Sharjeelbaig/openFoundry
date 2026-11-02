@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -311,7 +312,7 @@ export default function DiscoverAgentsPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select
+        <Select
           className="select"
           style={{ width: 220 }}
           value={category}
@@ -321,7 +322,7 @@ export default function DiscoverAgentsPage() {
           {categories.map((item) => (
             <option key={item}>{item}</option>
           ))}
-        </select>
+        </Select>
         <span className="grow" />
         <span className="muted text-12 row" style={{ gap: 6 }}>
           <Filter20Regular /> {filtered.length} templates
@@ -454,7 +455,7 @@ export default function DiscoverAgentsPage() {
               </label>
               <label className="field">
                 <span className="field-label">Model</span>
-                <select
+                <Select
                   className="select"
                   value={modelKey}
                   onChange={(event) => setModelKey(event.target.value)}
@@ -466,7 +467,7 @@ export default function DiscoverAgentsPage() {
                     </option>
                   ))}
                   {chatModels.length === 0 && <option value="">No chat models available</option>}
-                </select>
+                </Select>
               </label>
               {template.seed && (
                 <label className="switch-row">

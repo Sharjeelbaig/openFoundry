@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -242,7 +243,7 @@ export default function DiscoverKnowledgePage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select
+        <Select
           className="select"
           style={{ width: 200 }}
           value={category}
@@ -252,7 +253,7 @@ export default function DiscoverKnowledgePage() {
           {categories.map((item) => (
             <option key={item}>{item}</option>
           ))}
-        </select>
+        </Select>
         <span className="grow" />
         <span className="muted text-12">
           {bases.length} bases · {chunks} chunks indexed

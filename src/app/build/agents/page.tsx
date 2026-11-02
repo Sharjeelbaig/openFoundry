@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -132,7 +133,7 @@ export default function AgentsPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select
+        <Select
           className="select toolbar-select"
           value={typeFilter}
           onChange={(event) => setTypeFilter(event.target.value)}
@@ -140,8 +141,8 @@ export default function AgentsPage() {
         >
           <option value="All">Type</option>
           <option value="Prompt">Prompt</option>
-        </select>
-        <select
+        </Select>
+        <Select
           className="select toolbar-select"
           value={interactionFilter}
           onChange={(event) => setInteractionFilter(event.target.value)}
@@ -150,7 +151,7 @@ export default function AgentsPage() {
           <option value="All">Interaction type</option>
           <option value="Text">Text</option>
           <option value="Voice">Voice</option>
-        </select>
+        </Select>
         <span className="spacer" />
         <button className="btn btn-primary" onClick={() => setNewOpen(true)}>
           New agent <ChevronDown20Regular />
@@ -332,7 +333,7 @@ export default function AgentsPage() {
             </label>
             <label className="field">
               <span className="field-label">Model</span>
-              <select
+              <Select
                 className="select"
                 value={newModel}
                 onChange={(event) => setNewModel(event.target.value)}
@@ -344,7 +345,7 @@ export default function AgentsPage() {
                     {model.cached ? " · downloaded" : ""}
                   </option>
                 ))}
-              </select>
+              </Select>
               <span className="field-hint">
                 {models.length} models discovered from Foundry Local, Ollama and
                 your Hugging Face cache.

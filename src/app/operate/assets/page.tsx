@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -230,7 +231,7 @@ export default function AssetsPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select
+        <Select
           className="select"
           style={{ width: 170 }}
           value={type}
@@ -242,8 +243,8 @@ export default function AssetsPage() {
           <option value="Deployment">Deployments</option>
           <option value="Knowledge base">Knowledge bases</option>
           <option value="Tool">Tools</option>
-        </select>
-        <select
+        </Select>
+        <Select
           className="select"
           style={{ width: 150 }}
           value={status}
@@ -256,7 +257,7 @@ export default function AssetsPage() {
           <option value="Creating">Creating</option>
           <option value="Stopped">Stopped</option>
           <option value="Failed">Failed</option>
-        </select>
+        </Select>
         <span className="spacer" />
         <span className="muted text-12">
           {filtered.length} of {assets.length} assets · {traces.length} traces
@@ -412,7 +413,7 @@ export default function AssetsPage() {
             <div className="dialog-body">
               <label className="field">
                 <span className="field-label">Agent</span>
-                <select
+                <Select
                   className="select"
                   value={registerAgent}
                   onChange={(event) => setRegisterAgent(event.target.value)}
@@ -422,7 +423,7 @@ export default function AssetsPage() {
                       {agent.name} · {agent.status} · v{agent.version}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <div className="banner">
                 <Cloud20Regular />

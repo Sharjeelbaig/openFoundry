@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,7 +69,7 @@ export default function RoutinesList() {
             }}
           />
         </div>
-        <select
+        <Select
           className="select toolbar-select"
           value={status}
           onChange={(event) => {
@@ -80,8 +81,8 @@ export default function RoutinesList() {
           <option value="all">Status</option>
           <option value="active">Active</option>
           <option value="paused">Paused</option>
-        </select>
-        <select
+        </Select>
+        <Select
           className="select toolbar-select"
           value={agentId}
           onChange={(event) => {
@@ -96,7 +97,7 @@ export default function RoutinesList() {
               {agent.name}
             </option>
           ))}
-        </select>
+        </Select>
         <span className="spacer" />
         {createButton}
       </div>

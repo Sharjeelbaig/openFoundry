@@ -256,6 +256,60 @@ export const DEPLOYMENT_TYPES: DeploymentType[] = [
 
 export const LOCAL_DEPLOYMENT_TYPE = "Local Provisioned Throughput";
 
+/**
+ * The deploy UI presents deployment types in three honest layers instead of
+ * one flat list copied from Foundry:
+ *
+ *   - `local`    Runs on this computer, for free, with real token counts.
+ *   - `simulate` Runs here too, but reproduces a cloud deployment's limits so
+ *                you can test against production behaviour.
+ *   - `export`   Needs infrastructure this computer cannot provide; it exists
+ *                only as a target to hand off to a cloud.
+ */
+export type DeploymentLayer = "local" | "simulate" | "export";
+
+export interface DeploymentLayerGroup {
+  layer: DeploymentLayer;
+  title: string;
+  hint: string;
+  types: DeploymentType[];
+}
+
+const DEPLOYMENT_LAYER_COPY: Record<
+  DeploymentLayer,
+  { title: string; hint: string }
+> = {
+  local: {
+    title: "Runs on this computer",
+    hint: "Free and immediate. Real token counts, no cloud.",
+  },
+  simulate: {
+    title: "Simulate a production deployment",
+    hint: "Runs here with cloud-like limits, rate caps and queues.",
+  },
+  export: {
+    title: "Cloud-only SKUs",
+    hint: "Not runnable here — these map to a cloud target.",
+  },
+};
+
+/** Assigns every type to exactly one layer. */
+export function deploymentLayerFor(type: DeploymentType): DeploymentLayer {
+  if (type.local) return "local";
+  if (!type.available) return "export";
+  return "simulate";
+}
+
+/** Types grouped into Local, Simulate and Export, in that order. */
+export function deploymentTypesByLayer(): DeploymentLayerGroup[] {
+  const order: DeploymentLayer[] = ["local", "simulate", "export"];
+  return order.map((layer) => ({
+    layer,
+    ...DEPLOYMENT_LAYER_COPY[layer],
+    types: DEPLOYMENT_TYPES.filter((type) => deploymentLayerFor(type) === layer),
+  }));
+}
+
 const BY_LABEL = new Map(
   DEPLOYMENT_TYPES.map((type) => [type.label.toLowerCase(), type])
 );

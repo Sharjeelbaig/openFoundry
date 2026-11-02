@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -473,7 +474,7 @@ export default function SkillDetail({ entry, setup }: SkillDetailProps) {
               </label>
               <label className="field">
                 <span className="field-label">Chat model</span>
-                <select
+                <Select
                   className="select"
                   value={modelKey}
                   onChange={(event) => setModelKey(event.target.value)}
@@ -483,7 +484,7 @@ export default function SkillDetail({ entry, setup }: SkillDetailProps) {
                       {model.displayName} · {model.providerLabel}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               {models.length === 0 && (
                 <div className="banner error">

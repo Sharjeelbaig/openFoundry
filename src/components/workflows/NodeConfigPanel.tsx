@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import {
@@ -69,7 +70,7 @@ export default function NodeConfigPanel({
         {node.type === "agent" && (
           <>
             <Field label="Select an agent" hint="Agents use the local model runtime.">
-              <select
+              <Select
                 className="select"
                 value={String(node.data.agentId || "")}
                 onChange={(event) => {
@@ -86,7 +87,7 @@ export default function NodeConfigPanel({
                     {agent.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Link
               href="/build/agents"
@@ -112,7 +113,7 @@ export default function NodeConfigPanel({
               />
             </Field>
             <Field label="Conversation context">
-              <select
+              <Select
                 className="select"
                 value={String(node.data.conversationId || "System.Conversation.Id")}
                 onChange={(event) => update({ conversationId: event.target.value })}
@@ -121,7 +122,7 @@ export default function NodeConfigPanel({
                   System.Conversation.Id
                 </option>
                 <option value="">New conversation</option>
-              </select>
+              </Select>
             </Field>
             <label className="workflow-check">
               <input
@@ -206,7 +207,7 @@ export default function NodeConfigPanel({
               />
             </Field>
             <Field label="Target type">
-              <select
+              <Select
                 className="select"
                 value={String(node.data.targetType || "string")}
                 onChange={(event) => update({ targetType: event.target.value })}
@@ -215,7 +216,7 @@ export default function NodeConfigPanel({
                 <option value="number">Number</option>
                 <option value="boolean">Boolean</option>
                 <option value="json">JSON</option>
-              </select>
+              </Select>
             </Field>
             <Field label="Save as variable">
               <input
@@ -326,7 +327,7 @@ export default function NodeConfigPanel({
 
         {node.type === "goTo" && (
           <Field label="Select action">
-            <select
+            <Select
               className="select"
               value={String(node.data.targetNodeId || "")}
               onChange={(event) => update({ targetNodeId: event.target.value })}
@@ -339,7 +340,7 @@ export default function NodeConfigPanel({
                     {nodeTitle(item)} · {item.id}
                   </option>
                 ))}
-            </select>
+            </Select>
           </Field>
         )}
 
@@ -376,7 +377,7 @@ export default function NodeConfigPanel({
               />
             </Field>
             <Field label="Expected input type">
-              <select
+              <Select
                 className="select"
                 value={String(node.data.inputType || "string")}
                 onChange={(event) => update({ inputType: event.target.value })}
@@ -386,7 +387,7 @@ export default function NodeConfigPanel({
                 <option value="boolean">Boolean</option>
                 <option value="json">JSON</option>
                 <option value="choice">Choice</option>
-              </select>
+              </Select>
             </Field>
             {String(node.data.inputType) === "choice" && (
               <Field label="Choices" hint="One choice per line.">

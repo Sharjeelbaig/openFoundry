@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -244,7 +245,7 @@ export default function KnowledgeCreatePage() {
           <div className="kb-form-row">
             <label className="field">
               <span className="field-label">Chat completions model</span>
-              <select
+              <Select
                 className="select"
                 value={chatModel}
                 onChange={(event) => setChatModel(event.target.value)}
@@ -255,13 +256,13 @@ export default function KnowledgeCreatePage() {
                     {deployment.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="field">
               <span className="field-label">
                 Retrieval reasoning effort <span className="required">*</span>
               </span>
-              <select
+              <Select
                 className="select"
                 value={reasoningEffort}
                 onChange={(event) =>
@@ -273,7 +274,7 @@ export default function KnowledgeCreatePage() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
           <p className="field-hint kb-form-hint">
@@ -284,7 +285,7 @@ export default function KnowledgeCreatePage() {
             <span className="field-label">
               Output mode <span className="required">*</span>
             </span>
-            <select
+            <Select
               className="select"
               value={outputMode}
               onChange={(event) => setOutputMode(event.target.value as OutputMode)}
@@ -294,7 +295,7 @@ export default function KnowledgeCreatePage() {
                   {option.id}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <p className="field-hint kb-form-hint">
             {OUTPUT_MODES.find((option) => option.id === outputMode)?.hint}
@@ -318,7 +319,7 @@ export default function KnowledgeCreatePage() {
           {connections.length > 0 && (
             <label className="field">
               <span className="field-label">Connection</span>
-              <select
+              <Select
                 className="select"
                 value={connectionId}
                 onChange={(event) => setConnectionId(event.target.value)}
@@ -329,7 +330,7 @@ export default function KnowledgeCreatePage() {
                     {connection.name} — {connection.kind}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
 

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -335,7 +336,7 @@ export default function SolutionTemplatesPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select
+        <Select
           className="select"
           style={{ width: 220 }}
           value={category}
@@ -345,7 +346,7 @@ export default function SolutionTemplatesPage() {
           {categories.map((item) => (
             <option key={item}>{item}</option>
           ))}
-        </select>
+        </Select>
         <span className="grow" />
         <span className="muted text-12">{filtered.length} solutions</span>
       </div>
@@ -446,7 +447,7 @@ export default function SolutionTemplatesPage() {
                 </label>
                 <label className="field">
                   <span className="field-label">Model</span>
-                  <select
+                  <Select
                     className="select"
                     value={modelKey}
                     onChange={(event) => setModelKey(event.target.value)}
@@ -456,7 +457,7 @@ export default function SolutionTemplatesPage() {
                         {model.displayName} · {model.providerLabel}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               </div>
 

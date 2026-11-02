@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -227,12 +228,12 @@ export default function OperatePage() {
       </div>
 
       <div className="operate-toolbar">
-        <select className="select" style={{ width: 260 }} aria-label="Subscription">
+        <Select className="select" style={{ width: 260 }} aria-label="Subscription">
           <option>Subscription: {settings?.subscriptionName || "Local subscription"}</option>
-        </select>
-        <select className="select" style={{ width: 300 }} aria-label="Project">
+        </Select>
+        <Select className="select" style={{ width: 300 }} aria-label="Project">
           <option>Project: {settings?.projectName || "local-project"}</option>
-        </select>
+        </Select>
         <span className="grow" />
         <span className="text-12 muted">
           {new Date(nowMs - windowMs).toLocaleDateString()} –{" "}
@@ -493,7 +494,7 @@ export default function OperatePage() {
             <div className="dialog-body">
               <label className="field">
                 <span className="field-label">Agent</span>
-                <select
+                <Select
                   className="select"
                   value={registerId}
                   onChange={(event) => setRegisterId(event.target.value)}
@@ -503,7 +504,7 @@ export default function OperatePage() {
                       {agent.name} · {agent.status}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <div className="banner">
                 <Shield20Regular />

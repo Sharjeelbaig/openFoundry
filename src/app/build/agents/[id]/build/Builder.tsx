@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1369,7 +1370,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                     </p>
                     {memoryStores.length > 0 ? (
                       <>
-                        <select
+                        <Select
                           className="select"
                           value={memoryStoreId}
                           aria-label="Memory store"
@@ -1384,7 +1385,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                               {store.name}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                         <p className="text-12 muted">
                           The store extracts durable facts from each turn and recalls the most
                           relevant ones into the system prompt.
@@ -1433,7 +1434,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                         Risks without controls: {guardrailRiskLine(selectedGuardrail, false)}
                       </span>
                     </div>
-                    <select
+                    <Select
                       className="select"
                       value={guardrailId}
                       aria-label="Guardrail"
@@ -1445,7 +1446,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                           {resource.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     {!guardrailId && (
                       <p className="text-12 muted">
                         This agent has not been assigned a guardrail. It is inheriting its
@@ -1453,7 +1454,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                       </p>
                     )}
                     {!guardrailId && (
-                      <select
+                      <Select
                         className="select"
                         value={guardrail}
                         aria-label="Guardrail mode"
@@ -1462,7 +1463,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                         <option value="Default">Default</option>
                         <option value="Strict">Strict</option>
                         <option value="Off">Off</option>
-                      </select>
+                      </Select>
                     )}
                   </div>
                 )}
@@ -1710,11 +1711,11 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                   </label>
                   <label className="field">
                     <span className="field-label">Guardrail</span>
-                    <select className="select" value={guardrail} onChange={(e) => setGuardrail(e.target.value as Agent["guardrail"])}>
+                    <Select className="select" value={guardrail} onChange={(e) => setGuardrail(e.target.value as Agent["guardrail"])}>
                       <option value="Default">Default</option>
                       <option value="Strict">Strict</option>
                       <option value="Off">Off</option>
-                    </select>
+                    </Select>
                   </label>
                 </div>
                 <div className="row">

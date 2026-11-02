@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -479,7 +480,7 @@ export default function ProjectDetailsPage() {
                               <span className="badge gray">{user.accessType}</span>
                             </td>
                             <td>
-                              <select
+                              <Select
                                 className="select"
                                 value={user.role}
                                 disabled={
@@ -501,7 +502,7 @@ export default function ProjectDetailsPage() {
                                 <option value="Owner">Owner</option>
                                 <option value="Contributor">Contributor</option>
                                 <option value="Reader">Reader</option>
-                              </select>
+                              </Select>
                             </td>
                             <td className="mono text-12">
                               <span className="row" style={{ gap: 6 }}>
@@ -951,7 +952,7 @@ export default function ProjectDetailsPage() {
               </label>
               <label className="field">
                 <span className="field-label">Role</span>
-                <select
+                <Select
                   className="select"
                   value={newUser.role}
                   onChange={(event) =>
@@ -964,7 +965,7 @@ export default function ProjectDetailsPage() {
                   <option value="Owner">Owner</option>
                   <option value="Contributor">Contributor</option>
                   <option value="Reader">Reader</option>
-                </select>
+                </Select>
               </label>
             </div>
             <div className="dialog-footer">

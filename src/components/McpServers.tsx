@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useMemo, useState } from "react";
 import {
@@ -532,7 +533,7 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
               </label>
               <label className="field">
                 <span className="field-label">Transport</span>
-                <select
+                <Select
                   className="select"
                   value={transport}
                   onChange={(event) =>
@@ -542,7 +543,7 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
                 >
                   <option value="stdio">Local stdio process</option>
                   <option value="http">Streamable HTTP</option>
-                </select>
+                </Select>
               </label>
 
               {transport === "stdio" ? (
@@ -708,7 +709,7 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
             <div className="dialog-body">
               <label className="field">
                 <span className="field-label">Agent</span>
-                <select
+                <Select
                   className="select"
                   value={agentId}
                   onChange={(event) => setAgentId(event.target.value)}
@@ -721,7 +722,7 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
                         : ""}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <div className="banner">
                 <Server20Regular />

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,11 +35,8 @@ import {
   taskLabel,
 } from "@/lib/model-info";
 import type { DataZone, Deployment, LocalModel, Trace } from "@/lib/types";
-import {
-  LOCAL_DEPLOYMENT_TYPE,
-  deploymentTypeFor,
-  deploymentTypesByOption,
-} from "@/lib/deployment-types";
+import { LOCAL_DEPLOYMENT_TYPE, deploymentTypeFor } from "@/lib/deployment-types";
+import DeploymentTypeSelect from "@/components/DeploymentTypeSelect";
 import { REGIONS, ZONES } from "@/lib/regions";
 import { useOrigin } from "@/components/Origin";
 
@@ -931,27 +929,16 @@ function DeployDrawer({
             />
           </label>
 
-          <label className="field">
+          <div className="field">
             <span className="field-label">Deployment type</span>
-            <select className="select" value={type} onChange={(event) => setType(event.target.value)}>
-              {deploymentTypesByOption().map((group) => (
-                <optgroup key={group.option} label={group.option}>
-                  {group.types.map((item) => (
-                    <option key={item.label} value={item.label} disabled={!item.available}>
-                      {item.label}
-                      {!item.available ? " — not available on this computer" : ""}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <DeploymentTypeSelect value={type} onChange={setType} />
             <span className="field-hint">{deploymentType.description}</span>
-          </label>
+          </div>
 
           {scope === "Region" && (
             <label className="field">
               <span className="field-label">Region</span>
-              <select
+              <Select
                 className="select"
                 value={region}
                 onChange={(event) => setRegion(event.target.value)}
@@ -961,7 +948,7 @@ function DeployDrawer({
                     {item}
                   </option>
                 ))}
-              </select>
+              </Select>
               <span className="field-hint">
                 Pinned to an isolated local runtime for this region.
               </span>
@@ -971,7 +958,7 @@ function DeployDrawer({
           {scope === "Data Zone" && (
             <label className="field">
               <span className="field-label">Data zone</span>
-              <select
+              <Select
                 className="select"
                 value={zone}
                 onChange={(event) => setZone(event.target.value as DataZone)}
@@ -981,7 +968,7 @@ function DeployDrawer({
                     {item}
                   </option>
                 ))}
-              </select>
+              </Select>
               <span className="field-hint">
                 Requests route only to local runtimes tagged for this data zone.
               </span>
@@ -991,7 +978,7 @@ function DeployDrawer({
           <div className="field">
             <span className="field-label">Model version settings</span>
             <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-              <select
+              <Select
                 className="select"
                 value={modelVersion}
                 onChange={(event) => setModelVersion(event.target.value)}
@@ -1001,8 +988,8 @@ function DeployDrawer({
                 {model.version && model.version !== "latest" && (
                   <option value={model.version}>{model.version}</option>
                 )}
-              </select>
-              <select
+              </Select>
+              <Select
                 className="select"
                 value={autoUpdate ? "on" : "off"}
                 onChange={(event) => setAutoUpdate(event.target.value === "on")}
@@ -1010,7 +997,7 @@ function DeployDrawer({
               >
                 <option value="on">Auto-update enabled</option>
                 <option value="off">Auto-update disabled</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -1070,7 +1057,7 @@ function DeployDrawer({
 
           <label className="field">
             <span className="field-label">Guardrails</span>
-            <select
+            <Select
               className="select"
               value={guardrails}
               onChange={(event) =>
@@ -1080,7 +1067,7 @@ function DeployDrawer({
               <option value="Default">Default</option>
               <option value="Strict">Strict</option>
               <option value="Off">Off</option>
-            </select>
+            </Select>
           </label>
 
           <label className="field">

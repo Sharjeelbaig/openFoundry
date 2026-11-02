@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -326,7 +327,7 @@ export default function Catalog() {
                 onChange={(event) => setQuery(event.target.value)}
               />
             </div>
-            <select
+            <Select
               className="select"
               style={{ width: 260 }}
               value={sort}
@@ -337,7 +338,7 @@ export default function Catalog() {
               <option>Name A–Z</option>
               <option>Context window</option>
               <option>Downloaded first</option>
-            </select>
+            </Select>
           </div>
 
           {foundryCatalogCount > 0 && !foundryOnline && (

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -382,7 +383,7 @@ export default function DiscoverOverview() {
             <div className="dialog-body">
               <label className="field">
                 <span className="field-label">Agent</span>
-                <select
+                <Select
                   className="select"
                   value={agentId}
                   onChange={(event) => setAgentId(event.target.value)}
@@ -393,7 +394,7 @@ export default function DiscoverOverview() {
                       {agent.tools.includes(toolFor.id) ? " · already enabled" : ""}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <p className="muted text-12">
                 You can remove the tool later in the agent builder&apos;s Tools

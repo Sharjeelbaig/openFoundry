@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -493,7 +494,7 @@ export default function ToolCatalog() {
         <div className="discover-sort">
           <span className="discover-sort-label">Sort by</span>
           <span className="discover-sort-field">
-            <select
+            <Select
               value={sort}
               onChange={(event) => setSort(event.target.value as Sort)}
               aria-label="Sort tools"
@@ -501,8 +502,7 @@ export default function ToolCatalog() {
               <option value="Featured">Featured</option>
               <option value="Newest">Newest</option>
               <option value="Recently updated">Recently updated</option>
-            </select>
-            <ChevronDown20Regular />
+            </Select>
           </span>
         </div>
       </div>
@@ -1097,7 +1097,7 @@ export function ToolDetail({
               <div className="row between mb-8">
                 <strong className="text-13">Connection setup</strong>
                 {setup.authMethods.length > 1 && (
-                  <select
+                  <Select
                     className="select"
                     style={{ width: 230 }}
                     value={authMethod?.id || ""}
@@ -1109,7 +1109,7 @@ export function ToolDetail({
                         {method.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
               </div>
 
@@ -1132,7 +1132,7 @@ export function ToolDetail({
                         {field.required && <span className="required"> *</span>}
                       </span>
                       {field.type === "select" ? (
-                        <select
+                        <Select
                           className="select"
                           value={values[field.name] || ""}
                           onChange={(event) =>
@@ -1148,7 +1148,7 @@ export function ToolDetail({
                               {option}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       ) : (
                         <input
                           className="input mono"
@@ -1357,7 +1357,7 @@ export function ToolDetail({
                       {setup.operations.length > 0 && (
                         <label className="field">
                           <span className="field-label">Start from an operation</span>
-                          <select
+                          <Select
                             className="select"
                             value={operationId}
                             onChange={(event) => setOperationId(event.target.value)}
@@ -1367,7 +1367,7 @@ export function ToolDetail({
                                 {item.method} {item.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                           {operation && (
                             <span className="field-hint mono">
                               {operation.method} {operation.path}
@@ -1477,7 +1477,7 @@ export function ToolDetail({
         <div className="dialog-footer">
           {entry.availability === "local-skill" ? (
             <>
-              <select
+              <Select
                 className="select"
                 style={{ width: 190 }}
                 value={agentId}
@@ -1489,7 +1489,7 @@ export function ToolDetail({
                     {agent.name}
                   </option>
                 ))}
-              </select>
+              </Select>
               <button
                 className="btn btn-primary"
                 onClick={onAddSkill}

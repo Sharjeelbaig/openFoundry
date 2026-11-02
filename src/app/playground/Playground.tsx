@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -281,7 +282,7 @@ export default function Playground() {
         <aside className="playground-config">
           <div>
             <div className="field-label mb-8">Deployment</div>
-            <select
+            <Select
               className="select"
               value={deploymentId}
               onChange={(event) => setDeploymentId(event.target.value)}
@@ -292,7 +293,7 @@ export default function Playground() {
                   {item.name} · {item.modelName}
                 </option>
               ))}
-            </select>
+            </Select>
             {deployment && (
               <div className="row mt-8" style={{ gap: 8 }}>
                 <StatusBadge status={deployment.status} />
@@ -322,7 +323,7 @@ export default function Playground() {
                 </div>
               </div>
             ) : (
-              <select
+              <Select
                 className="select"
                 value={modelKey}
                 onChange={(event) => setModelKey(event.target.value)}
@@ -338,7 +339,7 @@ export default function Playground() {
                     {item.cached ? "" : " (download)"}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
             {activeModel && (
               <p className="field-hint">

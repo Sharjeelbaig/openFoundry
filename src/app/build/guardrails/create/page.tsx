@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -228,12 +229,12 @@ export default function GuardrailCreatePage() {
                             {control.id === "egress-rules" ? (
                               <span className="row" style={{ gap: 8 }}>
                                 <button className="btn btn-sm btn-outline">Add rules</button>
-                                <select className="select" value={actionFor(control)} disabled>
+                                <Select className="select" value={actionFor(control)} disabled>
                                   <option>Deny</option>
-                                </select>
+                                </Select>
                               </span>
                             ) : (
-                              <select
+                              <Select
                                 className="select"
                                 value={actionFor(control)}
                                 onChange={(event) =>
@@ -248,7 +249,7 @@ export default function GuardrailCreatePage() {
                                 <option>Block</option>
                                 <option>On</option>
                                 <option>Off</option>
-                              </select>
+                              </Select>
                             )}
                           </div>
                         ))}
@@ -344,7 +345,7 @@ export default function GuardrailCreatePage() {
               </Field>
               <label className="field">
                 <span className="field-label">Streaming mode</span>
-                <select
+                <Select
                   className="select"
                   value={streamingMode}
                   onChange={(event) =>
@@ -353,7 +354,7 @@ export default function GuardrailCreatePage() {
                 >
                   <option value="Default">Default</option>
                   <option value="Off">Off</option>
-                </select>
+                </Select>
               </label>
               <div className="guardrail-review-block">
                 <div className="guardrail-review-title">Models</div>

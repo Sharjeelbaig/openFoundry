@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -422,7 +423,7 @@ export default function SkillsPanel() {
             <div className="dialog-body">
               <label className="field">
                 <span className="field-label">Agent</span>
-                <select
+                <Select
                   className="select"
                   value={agentId}
                   onChange={(event) => setAgentId(event.target.value)}
@@ -436,7 +437,7 @@ export default function SkillsPanel() {
                     </option>
                   ))}
                   {agents.length === 0 && <option value="">No agents</option>}
-                </select>
+                </Select>
               </label>
             </div>
             <div className="dialog-footer">

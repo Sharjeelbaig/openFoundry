@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -119,12 +120,12 @@ export default function QuotaPage() {
       </div>
 
       <div className="quota-toolbar">
-        <select className="select" style={{ width: 240 }} aria-label="Subscription">
+        <Select className="select" style={{ width: 240 }} aria-label="Subscription">
           <option>Subscription: {settings?.subscriptionName || "Local subscription"}</option>
-        </select>
-        <select className="select" style={{ width: 240 }} aria-label="Project">
+        </Select>
+        <Select className="select" style={{ width: 240 }} aria-label="Project">
           <option>Project: {settings?.projectName || "local-project"}</option>
-        </select>
+        </Select>
         <span className="grow" />
         <span className="muted text-12">
           Quota is enforced by the hardware on this computer, not by a cloud service.

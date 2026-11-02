@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useEffect, useState } from "react";
 import {
@@ -166,7 +167,7 @@ export default function HttpToolDialog({
           <div className="row" style={{ gap: 10 }}>
             <label className="field" style={{ width: 130 }}>
               <span className="field-label">Method</span>
-              <select
+              <Select
                 className="select"
                 value={method}
                 onChange={(event) =>
@@ -176,7 +177,7 @@ export default function HttpToolDialog({
                 {["GET", "POST", "PUT", "PATCH", "DELETE"].map((item) => (
                   <option key={item}>{item}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="field" style={{ flex: 1 }}>
               <span className="field-label">URL</span>

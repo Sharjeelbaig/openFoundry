@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/components/Select";
 
 import { useEffect, useMemo, useState } from "react";
 import { Dismiss20Regular } from "@fluentui/react-icons";
@@ -285,7 +286,7 @@ export default function RoutineDialog({
               <span className="field-label">
                 Agent <span className="required">*</span>
               </span>
-              <select
+              <Select
                 className="select"
                 value={agentId}
                 onChange={(event) => setAgentId(event.target.value)}
@@ -296,11 +297,11 @@ export default function RoutineDialog({
                     {agent.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="field">
               <span className="field-label">Authorization</span>
-              <select
+              <Select
                 className="select"
                 value={identity}
                 onChange={(event) =>
@@ -310,7 +311,7 @@ export default function RoutineDialog({
               >
                 <option value="agent">Agent identity</option>
                 <option value="creator">Creator identity</option>
-              </select>
+              </Select>
               <span className="field-hint">
                 Locally both options invoke the agent with this workspace&apos;s
                 credentials. The choice is stored for parity with the reference.
@@ -336,7 +337,7 @@ export default function RoutineDialog({
               <span className="field-label">
                 Trigger <span className="required">*</span>
               </span>
-              <select
+              <Select
                 className="select"
                 value={triggerType}
                 onChange={(event) =>
@@ -348,7 +349,7 @@ export default function RoutineDialog({
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             {triggerType === "schedule" && (
@@ -356,7 +357,7 @@ export default function RoutineDialog({
                 <div className="form-grid three">
                   <label className="field">
                     <span className="field-label">Frequency</span>
-                    <select
+                    <Select
                       className="select"
                       value={preset}
                       onChange={(event) =>
@@ -368,12 +369,12 @@ export default function RoutineDialog({
                           {option}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                   {preset === "Weekly" && (
                     <label className="field">
                       <span className="field-label">Day</span>
-                      <select
+                      <Select
                         className="select"
                         value={weekday}
                         onChange={(event) => setWeekday(Number(event.target.value))}
@@ -383,7 +384,7 @@ export default function RoutineDialog({
                             {day}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </label>
                   )}
                   {preset !== "Custom" ? (
@@ -505,7 +506,7 @@ export default function RoutineDialog({
                 </label>
                 <label className="field">
                   <span className="field-label">Issue event</span>
-                  <select
+                  <Select
                     className="select"
                     value={issueEvent}
                     onChange={(event) =>
@@ -514,7 +515,7 @@ export default function RoutineDialog({
                   >
                     <option value="opened">Opened</option>
                     <option value="closed">Closed</option>
-                  </select>
+                  </Select>
                 </label>
                 <label className="field">
                   <span className="field-label">GitHub token (optional)</span>
