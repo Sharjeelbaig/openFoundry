@@ -41,6 +41,19 @@ publisher's terms before connecting a tool.
 The catalog is factual metadata, not a mirror of the reference database. A provenance
 and risk review is in `docs/legal-review.md`.
 
+## Routines and workflows
+
+Routines and workflows are openFoundry's own local implementation. Their data
+model, scheduler, graph interpreter, expression parser, node components,
+templates and copy are original. No vendor workflow YAML, icons, screenshots,
+CSS or JavaScript are bundled. The reference product's workflow lifecycle does
+not control openFoundry's features.
+
+Microsoft Entra dispatch identity and Microsoft Teams event triggers are not
+emulated. The product explains those cloud requirements and offers local agent
+identity, a local webhook trigger and a real GitHub issue poller instead.
+See `docs/routines-workflows.md`.
+
 ## Software dependencies
 
 - Tauri — MIT / Apache-2.0
@@ -48,5 +61,8 @@ and risk review is in `docs/legal-review.md`.
 - React — MIT
 - Node.js — MIT and third-party licenses included with the runtime
 - Fluent UI React Icons — MIT
+- React Flow (@xyflow/react) — MIT
+- cron-parser — MIT
+- yaml — ISC
 - Simple Icons — CC0 1.0 for the icon data
 - Other dependencies are listed in `package-lock.json` and `src-tauri/Cargo.lock`.

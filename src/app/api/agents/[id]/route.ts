@@ -105,23 +105,47 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   await saveAgents(next);
 
-  const [routines, workflows] = await Promise.all([
+  const [routines, workflows, routineRuns] = await Promise.all([
     readJson<Routine[]>("routines.json", []),
     readJson<Workflow[]>("workflows.json", []),
+    readJson<{ routineId: string }[]>("routine-runs.json", []),
   ]);
-  const nextRoutines = routines.filter((routine) => routine.agentId !== id);
-  if (nextRoutines.length !== routines.length)
-    await writeJson("routines.json", nextRoutines);
+  const removedRoutineIds = new Set(
+    routines.filter((routine) => routine.agentId === id).map((routine) => routine.id)
+  );
+  if (removedRoutineIds.size) {
+    await writeJson(
+      "routines.json",
+      routines.filter((routine) => routine.agentId !== id)
+    );
+    await writeJson(
+      "routine-runs.json",
+      routineRuns.filter((run) => !removedRoutineIds.has(run.routineId))
+    );
+  }
+
   const hadWorkflowReference = workflows.some((workflow) =>
-    workflow.steps.some((step) => step.agentId === id)
+    workflow.nodes.some(
+      (node) => node.type === "agent" && node.data?.agentId === id
+    )
   );
   if (hadWorkflowReference) {
-    const nextWorkflows = workflows
-      .map((workflow) => ({
-        ...workflow,
-        steps: workflow.steps.filter((step) => step.agentId !== id),
-      }))
-      .filter((workflow) => workflow.steps.length > 0);
+    const nextWorkflows = workflows.map((workflow) => ({
+      ...workflow,
+      nodes: workflow.nodes.map((node) =>
+        node.type === "agent" && node.data?.agentId === id
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                agentId: "",
+                agentName: "",
+              },
+            }
+          : node
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
     await writeJson("workflows.json", nextWorkflows);
   }
 

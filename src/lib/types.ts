@@ -587,38 +587,199 @@ export interface Trace {
   error?: string;
 }
 
+/* ----------------------------------------------------------------- routines */
+
+export type RoutineTrigger =
+  | {
+      type: "schedule";
+      /** Five-field cron expression, evaluated in `timeZone`. */
+      cron: string;
+      /** IANA time zone such as Europe/London or America/Los_Angeles. */
+      timeZone: string;
+    }
+  | {
+      type: "timer";
+      /** ISO timestamp. The routine disables itself after firing. */
+      at: string;
+    }
+  | {
+      type: "webhook";
+      /** Secret path segment for /api/routine-events/[token]. */
+      token: string;
+    }
+  | {
+      type: "github_issue";
+      owner: string;
+      repository: string;
+      issueEvent: "opened" | "closed";
+      /** Optional personal access token for private repositories and higher limits. */
+      token?: string;
+      lastPolledAt?: string;
+      seenEventIds?: string[];
+      lastPollError?: string;
+    }
+  | {
+      /** Kept in the document shape so the UI can explain why it is cloud-only. */
+      type: "teams";
+      connectionId?: string;
+      groupId?: string;
+      channelId?: string;
+    };
+
 export interface Routine {
   id: string;
   name: string;
+  description?: string;
   agentId: string;
   prompt: string;
-  intervalMinutes: number;
+  trigger: RoutineTrigger;
+  /** Local equivalent of the reference's dispatch identity choice. */
+  identity: "agent" | "creator";
   enabled: boolean;
   createdAt: string;
+  updatedAt: string;
   lastRunAt?: string;
-  nextRunAt: string;
-  lastResult?: string;
+  nextRunAt?: string;
+  lastRunId?: string;
 }
 
-export interface WorkflowStep {
-  agentId: string;
-  prompt: string;
-}
+export type RoutineRunStatus = "queued" | "running" | "completed" | "failed";
 
-export interface WorkflowRun {
-  at: string;
-  output: string[];
+export interface RoutineRun {
+  id: string;
+  routineId: string;
+  routineName: string;
+  /** manual, schedule, timer, webhook, or github_issue. */
+  source: "manual" | RoutineTrigger["type"];
+  status: RoutineRunStatus;
+  queuedAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMs?: number;
+  input: string;
+  output?: string;
   error?: string;
+  responseId?: string;
+  traceId?: string;
+  attempts: number;
+}
+
+/* ---------------------------------------------------------------- workflows */
+
+export type WorkflowNodeType =
+  | "start"
+  | "agent"
+  | "setVariable"
+  | "resetVariable"
+  | "parseValue"
+  | "ifElse"
+  | "forEach"
+  | "goTo"
+  | "sendMessage"
+  | "askQuestion"
+  | "end"
+  | "note";
+
+export interface WorkflowNode {
+  id: string;
+  type: WorkflowNodeType;
+  position: { x: number; y: number };
+  data: Record<string, unknown>;
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
+  label?: string;
+}
+
+export interface WorkflowVersion {
+  version: number;
+  savedAt: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  variables: string[];
 }
 
 export interface Workflow {
   id: string;
   name: string;
   description: string;
-  steps: WorkflowStep[];
+  template: "blank" | "sequential" | "human-in-loop" | "group-chat" | "custom";
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  variables: string[];
+  version: number;
+  status: "draft" | "published";
   createdAt: string;
+  updatedAt: string;
   lastRunAt?: string;
-  runs: WorkflowRun[];
+  versions: WorkflowVersion[];
+}
+
+export type WorkflowRunStatus =
+  | "queued"
+  | "running"
+  | "waiting"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface WorkflowNodeRun {
+  nodeId: string;
+  type: WorkflowNodeType;
+  title: string;
+  status: "running" | "completed" | "failed" | "skipped";
+  startedAt: string;
+  endedAt?: string;
+  durationMs?: number;
+  input?: unknown;
+  output?: unknown;
+  error?: string;
+}
+
+export type WorkflowFrame =
+  | { kind: "node"; nodeId: string }
+  | {
+      kind: "forEach";
+      nodeId: string;
+      items: unknown[];
+      index: number;
+      itemVariable: string;
+      indexVariable: string;
+    };
+
+export interface WorkflowRun {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  status: WorkflowRunStatus;
+  source: "manual" | "preview";
+  queuedAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMs?: number;
+  input: string;
+  output?: string;
+  error?: string;
+  stepCount: number;
+  promptTokens: number;
+  completionTokens: number;
+  variables: Record<string, unknown>;
+  stack: WorkflowFrame[];
+  messages: { role: "user" | "assistant"; content: string; at: string }[];
+  nodeRuns: WorkflowNodeRun[];
+  pending?: {
+    nodeId: string;
+    question: string;
+    variable: string;
+    inputType: "string" | "number" | "boolean" | "json" | "choice";
+    choices?: string[];
+  };
+  traceIds: string[];
 }
 
 export interface BatchJob {

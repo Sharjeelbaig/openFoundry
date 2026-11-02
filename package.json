@@ -17,13 +17,17 @@
     "landing:build": "node landing-src/build.mjs",
     "landing:serve": "node scripts/serve-site.mjs",
     "landing:deploy": "wrangler pages deploy landing --project-name openfoundry --branch main",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.345",
+    "@xyflow/react": "^12.12.1",
+    "cron-parser": "^5.10.3",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@fluentui/react-components": "^9.75.0",
@@ -36,7 +40,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   },
   "description": "An independent local AI workbench for models, agents and knowledge."
 }

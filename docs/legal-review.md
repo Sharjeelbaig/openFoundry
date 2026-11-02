@@ -127,6 +127,32 @@ The user is responsible for complying with that provider's terms. The catalog an
 detail pages say so and link to the publisher's documentation rather than restating
 its terms.
 
+## Routines and workflows
+
+Routines and workflows are openFoundry's own implementation. The reference
+product was used only to identify capabilities and interaction patterns.
+
+- The workflow engine, expression parser, node components, templates and copy
+  are original. No vendor YAML, screenshots, icons, CSS or JavaScript are
+  bundled.
+- Template names describe generic orchestration patterns (sequential, human in
+  the loop, group chat); their graph definitions are openFoundry's own.
+- Power Fx is not reimplemented or branded. openFoundry Expressions is a
+  separate, safe parser with a documented function set.
+- Microsoft Entra dispatch identity is not emulated. The routine dialog stores a
+  local agent/creator choice and explains that both use this workspace's
+  credentials.
+- Teams message triggers are not faked. The UI states that they need a
+  Microsoft 365 connector and offers a real local webhook trigger instead.
+- GitHub issue triggers use the public GitHub REST API and the user's own token.
+  The token is stored in the local routines file and never sent to openFoundry.
+- The local scheduler runs only while openFoundry is running. This limitation is
+  stated in the product and documentation.
+
+Residual risk: workflow layout and node categories are similar to the reference
+designer. The implementation uses its own visual identity, copy and code. The
+reference's retirement date does not affect openFoundry's roadmap.
+
 ## Open items before a public commercial release
 
 1. Have counsel review the reference site's terms of use and the database-right
