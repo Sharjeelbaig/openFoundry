@@ -369,6 +369,7 @@ const useStyles = makeStyles({
     width: "100%",
     maxWidth: "900px",
     height: "auto",
+    aspectRatio: "1560 / 1880",
     display: "block",
     marginInline: "auto",
     border: "none",

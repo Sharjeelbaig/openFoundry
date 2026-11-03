@@ -507,15 +507,27 @@ function Figure({
   src,
   alt,
   caption,
+  width = 1600,
+  height = 1000,
 }: {
   s: ReturnType<typeof useStyles>;
   src: string;
   alt: string;
   caption: string;
+  width?: number;
+  height?: number;
 }) {
   return (
     <figure className={s.figure}>
-      <img className={s.img} src={src} alt={alt} loading="lazy" />
+      <img
+        className={s.img}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        width={width}
+        height={height}
+        style={{ aspectRatio: `${width} / ${height}` }}
+      />
       <figcaption className={s.caption}>{caption}</figcaption>
     </figure>
   );
@@ -616,12 +628,16 @@ const LESSONS: Lesson[] = [
             <Figure
               s={s}
               src="./assets/screens/docs-setup-wizard.webp"
+              width={1180}
+              height={790}
               alt="The first run wizard: welcome step with the terms, workspace name, and the five step rail."
               caption="The first run wizard. Terms, profile, providers, model, ready."
             />
             <Figure
               s={s}
               src="./assets/screens/docs-setup-profile.webp"
+              width={1180}
+              height={790}
               alt="The profile step with display name, initials and email fields."
               caption="The profile step. The web build also asks for the setup token on this screen."
             />
@@ -755,6 +771,8 @@ npm run dev`}</code>
             <Figure
               s={s}
               src="./assets/screens/docs-signin.webp"
+              width={860}
+              height={640}
               alt="The sign-in screen with one access code field and a continue button."
               caption="One field. Codes are not case sensitive and the dashes are optional."
             />
@@ -848,6 +866,8 @@ npm run dev`}</code>
             <Figure
               s={s}
               src="./assets/screens/docs-access-code.webp"
+              width={920}
+              height={700}
               alt="The Add user success state with the new person and a one-time access code."
               caption="The code is shown once. The person can change nothing until a role is assigned."
             />
