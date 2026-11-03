@@ -1,6 +1,6 @@
 # Local RBAC: directory, sessions and role assignment
 
-Status: design, not implemented.
+Status: implemented. What exists, and what is still open, is listed at the end.
 Supersedes the role-assignment part of `roles-ip-brainstorm.md`.
 Reference for every screen named here: `foundry-ui-reference/`.
 
@@ -217,10 +217,14 @@ Format: 16 characters from Crockford base32 (no `I`, `L`, `O`, `U`), in four gro
 
 ### Machine credential
 
-`machine.key` in the data directory, mode 0600, created by the desktop shell on first run. The
-shell opens `http://127.0.0.1:<port>/?machine=<key>`; the server accepts it **only when the TCP
-peer is loopback**, creates a session for the local principal, and 302s to `/`. The key never
-appears in a page, a log or a redirect URL.
+`machine.key` in the data directory: 32 random bytes, base64url, mode 0600. The **server**
+generates it on first start (`ensureMachineKey`), because it is the side that owns the data
+directory; the desktop shell only reads it.
+
+At launch the shell opens `http://127.0.0.1:<port>/api/auth/machine?key=<key>`. The server accepts
+it **only when the request arrives on loopback**, creates a session for the local principal (or
+claims the install on first run, using the identity from setup), and 302s to `/`. The key never
+appears in a page or a log.
 
 This is proof of deployment control: to obtain the key you must already be able to read the data
 directory as the OS user.
@@ -236,63 +240,71 @@ Open http://<host>:<port>/setup and enter this one-time token:
   K3M9-P2XA-7QRT
 ```
 
-- Same alphabet, three groups, 60 bits, 24 hours, single use, hash stored.
-- A restart invalidates the previous token and prints a new one.
+- Same alphabet, three groups, 60 bits, 24 hours, single use.
+- Stored in clear in `bootstrap.json` (mode 0600) rather than only as a hash, so a restart reprints
+  the same unclaimed token instead of invalidating the one being typed. The file is the secret;
+  hashing it would not add a boundary the data directory does not already cross.
+- A restart does not invalidate an unclaimed, unexpired token. Claiming it does.
 - Claiming it creates the Owner principal, its access code, and a root assignment.
-- `/setup` asks for the token only when the request has no session and no machine credential.
+- `/setup` asks for the token only when the request has no session and the install is unclaimed.
   The desktop never sees this step.
 
 This is the part that kills the takeover race: the first browser to reach the port cannot claim
 anything without a secret that only the operator can see.
 
+### Recovery
+
+`npm run access-code` mints a new code for the owner and prints it. It reads and writes
+`directory.json` directly, so it requires the filesystem access the server already has. Use it when
+the only owner has lost their code; it is also how a development build signs in.
+
 ## Enforcement
 
-### The wrapper
+### One table, fail closed
+
+`src/lib/directory/routes.ts` maps `(method, path)` to an action. `src/proxy.ts` checks it before
+any route handler runs.
+
+The alternative — one wrapper per exported handler — was rejected during implementation. With 64
+route files, a forgotten wrapper leaves a route open and nothing notices. A table fails closed: a
+route that is not listed is denied, and the test suite walks `src/app/api` and fails if any real
+route is unmapped. Forgetting to update the table breaks the build, not the security.
+
+Proxy runs on the Node runtime and reads `directory.json` directly. It costs one small file read
+per request; the app already reads `settings.json` several times per page.
 
 ```ts
-// src/lib/guard.ts
-export function withAction(action: string, handler: AuthedHandler): RouteHandler {
-  return async (req, ctx) => {
-    const subject = await currentSubject();
-    if (!subject) return unauthorized();
-    const decision = can(subject, action, scopeOf(req));
-    if (!decision.allowed) {
-      await appendAudit({ actorId: subject.principalId, action: "auth.denied", ... });
-      return forbidden(action);
-    }
-    return handler(req, ctx, subject);
-  };
+const route = resolveApiRoute(request.method, pathname);
+if (route.visibility === "public") return NextResponse.next();
+if (route.visibility === "unmapped") return jsonError(403, "unmapped_route", ...);
+if (!session) return jsonError(401, "no_session", ...);
+if (!can(directory, session.principalId, route.action, scope).allowed) {
+  return jsonError(403, "insufficient_permissions", ...);
 }
 ```
-
-One line per exported method, so the guard is visible in every diff and grep-able:
-
-```ts
-export const GET = withAction("models.read", async () => { ... });
-export const POST = withAction("models.deploy", async (req) => { ... });
-```
-
-Not middleware: Next middleware cannot read `directory.json`, and a route wrapper keeps the
-action name next to the code it protects.
 
 ### Which routes
 
 | Group | Guard |
 | --- | --- |
-| `/api/v1/*`, `/api/projects/*/openai/*` | unchanged: project API key. The key maps to a service principal in a later phase. |
-| `/api/auth/*` | unauthenticated by design, rate limited |
-| `/api/system` | `system.read` |
-| everything else under `/api` | `withAction` with the action from the catalogue |
+| `/api/v1/*`, `/api/projects/*/openai/*`, `/api/gateway/v1/*` | unchanged: API key. The key maps to a service principal in a later phase. |
+| `/api/auth/*`, `/api/oauth/callback`, `/api/routine-events/*` | unauthenticated by design; each authenticates itself |
+| everything else under `/api` | the action in `routes.ts` |
 
 The completion criterion is mechanical: a Reader session must receive 403 from every mutating
-route in `src/app/api`. The test suite walks the route list and asserts it.
+route in `src/app/api`. `tests/directory/routes.test.ts` walks the route files and asserts every
+exported method resolves to a rule.
 
 ### Pages
 
 Pages are server components and can call `can()` directly. Rules:
 
 - Hide a control you cannot use (`Add user`, `Add role assignment`, `Delete`).
-- Never render a disabled control that can never become enabled.
+- A disabled control is acceptable only when the reason is permanent and visible: a Reader sees
+  `Add role assignment` disabled with a tooltip, exactly as the portal disables `Add user` at a
+  scope where it cannot add. The `Conditions` tab follows the same rule: it stays in the tab strip,
+  disabled, because it is part of the flow learners will meet and will be filled in when custom
+  conditions exist.
 - Always enforce at the API as well. Hiding is not security; it is honesty.
 
 `layout.tsx` resolves the session and passes the principal to `AppShell`, so the header shows the
@@ -450,7 +462,10 @@ Routing when unauthenticated:
 
 On first boot with no `directory.json`:
 
-1. Each `settings.users` row becomes a principal (`kind: "user"`).
+1. Each `settings.users` row becomes a principal (`kind: "user"`), except the seeded row that
+   matches `settings.userEmail` with role `Owner`. That row is this computer's own identity, not a
+   person somebody added: it is claimed by the machine credential (desktop) or the setup token
+   (server), so a fresh install is never "already claimed" by a placeholder.
 2. Each becomes an assignment at `/` with its existing role (`Owner`, `Contributor`, `Reader`).
    Roles with no actions (`Reader` here) get the real definition, so their permissions change from
    unbounded to read-only. That is the point.
@@ -488,36 +503,45 @@ Still not:
 
 ## Tests
 
-`vitest`, under `tests/directory/`.
+`tests/directory/`, 36 assertions, all green.
 
-| Test | Asserts |
+| File | Covers |
 | --- | --- |
-| `can()` truth table | every role × every action × both scopes |
-| wildcard matching | `*`, `models.*`, exact, and that `models.read` does not grant `models.write` |
-| scope | a project-scope grant does not apply to `/`, root grants apply to every project |
-| last owner | demoting or deleting the last `directory.write` holder fails |
-| access code | issue → normalise variants → sign in; wrong code fails; revoked fails; expired fails |
-| single use | one code, one principal; revoking kills sessions |
-| bootstrap | token single use, expiry, restart invalidates, claim creates exactly one Owner |
-| machine | loopback only, sets a session, non-loopback rejected |
-| rate limit | 11th attempt in a minute is refused |
-| route sweep | every mutating route returns 403 without a session |
-| migration | `settings.users` → principals + assignments, one Owner preserved |
+| `can.test.ts` | truth table for all four roles; wildcards `*`, `*.read`, `models.*`; read does not imply write; project vs root scope; prefix collisions (`/projects/abc` vs `/projects/abcd`); role union; disabled principal; `summaryFor` picks the highest role; `describeAccess` for each built-in role |
+| `codes.test.ts` | code shape, Crockford alphabet, normalisation of every confusing character, salting, verify right/wrong |
+| `routes.test.ts` | every real route file resolves to a rule; unknown paths and unknown methods are denied; read and write methods map differently; API-key surfaces are public on purpose |
+| `store.test.ts` | migration skips the seeded local identity; mutex under 20 concurrent writers; bootstrap token single use, reprinted across restarts, and a directory with no owner is recognised |
 
-## Build order
+Not covered yet, and this is a real gap: an HTTP-level test that signs in and asserts 403 per
+route (the table test proves the mapping, not the wiring), and a test for the last-owner rule at
+the API boundary. Both need a running server, so they belong in a separate smoke suite.
 
-1. **Directory core.** Types, store with mutex, role definitions, `can()`, audit, migration, tests.
-   No UI change; nothing is claimed.
-2. **Sessions.** Sign-in, sign-out, bootstrap token, machine credential, `/signin`, setup step.
-3. **Guard everywhere.** `withAction` on every route in the table, route sweep test, page-level
-   hiding. At the end of this step the product is enforceable.
-4. **Users page parity.** Four columns, text role, `Add people` dialog with the code success state,
-   computed `My permission`, scope links.
-5. **Access control page.** Assignments grid, Roles tab, Access codes tab, then the wizard
-   (`Role → Members → Review + assign`).
-6. **Docs.** Update `README.md`, `docs/designs/roles-ip-brainstorm.md`, and the drift table in
-   `foundry-ui-reference/README.md`.
+## What exists
 
-Definition of done: a Reader session can read the app and cannot change anything; a second person
-can be invited, receives a code, signs in, and sees a different role; every one of those steps is
-in `audit.jsonl`; and the Users page has the same four columns as `01-users-project.png`.
+- `src/lib/directory/` — types, roles, `can()`, codes, sessions, audit, rate limit, route table,
+  bootstrap and machine credentials, migration, store with a write mutex.
+- `src/proxy.ts` — session and action gate for every page and every mapped API route.
+- `/signin`, the setup claim step, sign-out in the profile menu, the real `My permission` line.
+- `/manage/access` — role assignments grouped by role, Roles, Access codes.
+- `/manage/access/assign` — `Role → Members → Conditions (disabled) → Review + assign`.
+- The Users page: four columns, no row actions, `Add people` dialog, access code on invite.
+- `npm run access-code` — owner recovery from the shell.
+- The desktop shell reads `machine.key` and signs in through `/api/auth/machine`.
+
+## Still open
+
+- `/api/v1/*`, `/api/projects/*/openai/*` and `/api/gateway/v1/*` still accept an API key with no
+  principal. Phase 3 maps that key to a service principal with `models.invoke`.
+- No groups. A role is assigned to one person at a time.
+- No conditions and no deny assignments; the tab is present and disabled.
+- Scope has two levels and one project, so the Scope column mostly shows the direct/inherited
+  distinction. It is kept because it is the column Foundry shows and because a second project
+  makes it meaningful without a migration.
+- No CSRF tokens: `SameSite=Lax`, JSON bodies and no state-changing `GET` are the mitigation.
+- Session records are not encrypted at rest; the data directory's permissions are the control.
+
+## Done when
+
+A Reader session can read the app and cannot change anything; a second person can be invited,
+receives a code, signs in, and sees a different role; every one of those steps is in
+`audit.jsonl`; and the Users page has the same four columns as `01-users-project.png`.

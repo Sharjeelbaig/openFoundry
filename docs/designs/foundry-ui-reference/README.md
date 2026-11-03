@@ -221,13 +221,20 @@ own design system. Keep the structure and substitute Foundry's tokens: 14/20 bod
 
 ## Drift between Foundry and openFoundry today
 
+The Users page now matches. The remaining differences are the ones this product cannot avoid, and
+they are listed so they do not get "fixed" by accident.
+
 | Element | Foundry | openFoundry |
 | --- | --- | --- |
-| Table columns | Name, Access type, Role, Scope | Name, Access type, Role, Scope, Added, Remove |
-| Role cell | text | dropdown |
-| Access type | text + `View only` badge | single badge |
-| Scope cell | purple link + external icon | monospace text + copy button |
-| Footer | `1-3 of 3` + Prev/Next | `N project users` + a sentence |
-| Search | placeholder `Search`, 320 x 32 | `Search users`, up to 360 |
-| Add user | `Add people` combobox, no role | Name, Email, Role |
-| Button style | pill, brand fill when enabled | mixed |
+| Table columns | Name, Access type, Role, Scope | same |
+| Role cell | text | text |
+| Access type | text + `View only` badge for inherited rows | same |
+| Scope cell | purple link + external icon, opens the portal | same, opens `/manage/access` |
+| Footer | `1-3 of 3` + Prev/Next | same |
+| Search | placeholder `Search`, 320 x 32 | same |
+| Add user | `Add people` combobox, no role | same, plus a Name field when inviting an unknown email, and the access code on success |
+| Button style | pill, brand fill when enabled | same |
+| Behind `Scope` | Azure portal IAM | `/manage/access`, same structure |
+
+The Access control page is the local stand-in for a product Foundry delegates to Azure. Its spec
+is the "Azure IAM" section above; the design is `docs/designs/local-rbac.md`.
