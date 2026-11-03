@@ -337,5 +337,47 @@ heading, no new tab, no new page under Manage.
   type scale and controls. It is the analogue of `login.microsoftonline.com`, which is also
   outside the Foundry portal.
 
+### Revision: new screens are allowed, invented layouts are not
+
+The original rule above ("no new page") is too strict. The real rule is about provenance,
+not count:
+
+1. **If Foundry has the surface, copy Foundry.** Same title, same field order, same button
+   placement, same labels. Capture it from the live portal, not from memory.
+2. **If Foundry has no such surface**, reuse the closest Foundry pattern rather than invent a
+   new one. Credentials reuse the **Keys and endpoints** blade; confirmations reuse the
+   standard dialog; pickers reuse the existing role dropdown.
+3. **Never invent a layout for something Foundry already renders.** That is the drift.
+
+Every new screen therefore needs a reference: a screenshot plus the DOM of the Foundry page
+it mirrors. That reference is captured from the signed-in portal over CDP and stored beside
+the design doc.
+
+Source of truth is the live portal, not documentation screenshots, which lag the product.
+
+## What the live portal actually does
+
+Captured 4 Nov 2026 from the signed-in tenant. Full measurement, screenshots and tokens:
+`docs/designs/foundry-ui-reference/`.
+
+Three findings change the plan:
+
+1. **The Add user dialog has no role picker.** It has one field, `Add people`, a combobox. The
+   banner says Reader and Foundry User are assigned automatically and that fine-grained control
+   happens in the Azure portal. So role assignment is not part of adding a person — it is a
+   separate surface. openFoundry's current dialog (Name / Email / Role) is the drift.
+2. **The Users table has four columns, not six**: Name, Access type, Role, Scope. No `Added`, no
+   `Remove`. Role is plain text, not a dropdown. Scope is a purple link, not monospace.
+3. **`My permission` is computed in Foundry too** — a green dot and `Owner · Full access`. So
+   computing it locally is parity, not a new idea.
+
+Consequence: mirroring Foundry means the role control has to move out of both the table and the
+Add user dialog. That needs one new surface, and Foundry has a known pattern for it: the
+"Choose a connection" sheet — a full-height sheet of grouped, two-column option cards with a
+single `Continue` in the footer. A role/scope chooser built that way is Foundry-shaped without
+inventing anything.
+
+
+
 
 
