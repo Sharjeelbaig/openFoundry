@@ -377,6 +377,21 @@ Add user dialog. That needs one new surface, and Foundry has a known pattern for
 single `Continue` in the footer. A role/scope chooser built that way is Foundry-shaped without
 inventing anything.
 
+### Decision: the IAM wizard, not the sheet
+
+Answered by the owner: "I want it the foundry style." Foundry does not assign roles inside
+Foundry — the `Scope` link hands off to the Azure portal, whose role assignment flow is a
+full-page, four-tab wizard: `Role → Members → Conditions → Review + assign`. Reproduced here as a
+local page rather than a sheet, because that is the flow learners will meet in the real product.
+
+Captured from the portal and measured: `foundry-ui-reference/` screens `11`–`16`.
+
+The sheet idea above is superseded. It stays in this note as the record of why the surface exists.
+
+The full design — directory store, `can()` guard, access codes, bootstrap token, page specs,
+migration and build order — is `docs/designs/local-rbac.md`.
+
+
 
 
 

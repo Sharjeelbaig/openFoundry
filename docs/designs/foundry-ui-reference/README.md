@@ -22,6 +22,17 @@ Captured from the live portal on 4 November 2026, signed in as the tenant owner.
 | `08-quota.png` | Quota → Token per minute |
 | `09-ai-gateway.png` | AI Gateway → empty state |
 | `10-choose-connection.png` | Add connection → "Choose a connection" sheet |
+| `11-iam-role-assignments.png` | Azure IAM → Role assignments, grouped by role |
+| `12-iam-step1-role.png` | Add role assignment → step 1, Role |
+| `13-iam-step2-members.png` | Add role assignment → step 2, Members |
+| `14-iam-select-members.png` | Members → "Select members" context pane |
+| `15-iam-members-added.png` | Members step with a member attached |
+| `16-iam-review-assign.png` | Add role assignment → step 4, Review + assign |
+
+Screens `01`–`10` are Microsoft Foundry. Screens `11`–`16` are the Azure portal, which Foundry
+hands role assignment to. The portal screens were captured in the account's dark theme: **copy the
+structure and wording, not the colours.** The light palette for a local port lives in
+`01-users-project.png`.
 
 ## Measured tokens
 
@@ -125,6 +136,76 @@ Name carries the avatar and two lines; the other three are equal thirds.
 - Grouped by section headings (`Other resource types`, `Azure AI`, `Data`, `Agent Knowledge Tools`).
 - Card: icon 32, title 14 weight 600, subtitle 12 `#616161`, radius 8, 1px border, 32px inner padding.
 - Footer: a single primary `Continue`, disabled until a card is selected.
+
+### Azure IAM: Role assignments
+
+This is the surface Foundry's `Scope` link opens, and the one that actually edits roles.
+
+- Breadcrumb `Home > <resource>`, page title `<resource name> | Access control (IAM)`.
+- Commands above the tabs: `Add`, `Download role assignments`, `Edit columns`, `Refresh`, `Delete`.
+- Tabs: `Check access`, `Role assignments`, `Roles`, `Deny assignments`.
+- Filters above the grid, in this order: search `Search by name or email`, then `Type: All`,
+  `Role: All`, `Scope: All scopes`, `Group by: Role`.
+- Sub-tabs: `All (3)`, `Job function roles (2)`, `Privileged administrator roles (1)` — the counts
+  are part of the label.
+- Grid columns: checkbox, `Name`, `Type`, `Role`, `Scope`, `Condition`. Sortable headers.
+- Rows are **grouped by role** with a collapsible header `Owner (1)`, `Foundry User (2)`.
+  The Name cell is avatar + display name + object ID on a second line.
+- `Scope` is a link rendered twice-over: an icon (key/globe) then the scope text, with
+  `(Inherited)` appended when the assignment comes from a parent scope.
+- Footer: `Showing 1 - 3 of 3 results.` plus paging.
+
+### Azure IAM: Add role assignment
+
+A full-page wizard, not a dialog. Four tabs across the top, all with a red `*`:
+`Role · Members · Conditions · Review + assign`. A hidden `×` closes the whole flow.
+
+Step 1, `Role`:
+
+- Explanatory line: "A role definition is a collection of permissions. You can use the built-in
+  roles or you can create your own custom roles."
+- A `Copilot can help pick a role` affordance.
+- Sub-tabs `Job function roles` and `Privileged administrator roles`, with a one-line description
+  of the current sub-tab beneath them.
+- Filters on one line: `Type : All`, `Category : All`.
+- Grid columns: `Name`, `Description`, `Type` (`BuiltInRole`), `Category`, `Details` (`View`).
+- Footer, bottom-left: `Review + assign` (primary, **disabled**), `Previous` (enabled outline,
+  though it is the first step), `Next` (disabled until a role is selected).
+
+Step 2, `Members`:
+
+- Read-only panel `Selected role` showing the role name from step 1.
+- `Assign access to` radio pair: `User, group, or service principal` (default) and `Managed identity`.
+- `Members` row with a `+ Select members` link, then a grid `Name / Object ID / Type` that reads
+  `No members selected` until the pane returns one.
+- `Description` textarea, placeholder `Optional`, about 100px tall.
+
+The `Select members` context pane:
+
+- Opens from the right edge, full content height, roughly half the window wide, with its own
+  header `Select members`, search field `Search by name or email address`, and a result list of
+  avatar + name + email. Selected entries are removed from the result list and appear under
+  `Selected members:` on the right half of the pane.
+- Footer: `Select` (primary) and `Close`.
+- Empty state copy: "No members selected. Search for and add one or more members you want to
+  assign to the role for this resource." plus a `Learn more about RBAC` link.
+
+Step 3, `Conditions`:
+
+- Disabled (grey tab, not clickable) for roles that do not support conditions — `Reader` is one.
+  So the wizard is four steps in name, three in practice.
+
+Step 4, `Review + assign`:
+
+- Read-only summary, one row per input, label column then value:
+  `Role` → role name; `Scope` → the full resource ID; `Members` → a small Name/Object ID/Type grid;
+  `Description` → `No description` when empty.
+- Footer: `Review + assign` (primary, now enabled), `Previous`, `Next` (disabled).
+
+Layout of the wizard, in portal units (13px base, 28px left margin, 150px label column,
+24px-tall radius-2 buttons, 65px fixed footer bar). **Do not copy these** — they are the portal's
+own design system. Keep the structure and substitute Foundry's tokens: 14/20 body, 12/16 labels,
+32px pill buttons, radius 8 cards, `#553695` primary.
 
 ## What this changes in the design
 
