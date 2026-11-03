@@ -478,15 +478,15 @@ export default function UsersTab() {
                   {error && <p className="text-12" style={{ color: "var(--danger)" }}>{error}</p>}
                 </div>
                 <div className="dialog-footer">
-                  <button className="btn btn-secondary" onClick={close}>
-                    Cancel
-                  </button>
                   <button
                     className="btn btn-primary"
                     onClick={submit}
                     disabled={busy || (!pick && !inviteEmail)}
                   >
                     {busy ? <Spinner /> : null} Add user
+                  </button>
+                  <button className="btn btn-secondary" onClick={close}>
+                    Cancel
                   </button>
                 </div>
               </>
