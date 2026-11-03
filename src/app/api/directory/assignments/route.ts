@@ -67,7 +67,13 @@ export async function GET() {
       access: summary.access,
       email: session?.principal.email ?? "",
       canManage: session
+        ? can(directory, session.principal.id, "directory.write", bounds.project).allowed
+        : false,
+      canManageRoot: session
         ? can(directory, session.principal.id, "directory.write", ROOT_SCOPE).allowed
+        : false,
+      canEditSettings: session
+        ? can(directory, session.principal.id, "settings.write", ROOT_SCOPE).allowed
         : false,
     },
     scopeLabels: { root: settings.resourceName, project: settings.projectName },
@@ -86,11 +92,28 @@ export async function POST(req: NextRequest) {
   const role = body.roleId ? roleById(body.roleId) : undefined;
   if (!role) return NextResponse.json({ error: "Unknown role." }, { status: 400 });
   const scope = body.scope === bounds.root ? bounds.root : bounds.project;
+  const session = await currentSession();
+  if (scope === bounds.root) {
+    const directory = await getDirectory();
+    if (
+      !session ||
+      !can(directory, session.principal.id, "directory.write", ROOT_SCOPE).allowed
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Only an owner of this install can assign access for the whole install.",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  const actorId = session?.principal.id ?? "system";
   const principalIds = [...new Set(body.principalIds ?? [])].filter(Boolean);
   if (principalIds.length === 0) {
     return NextResponse.json({ error: "Select at least one member." }, { status: 400 });
   }
-  const actorId = (await currentSession())?.principal.id ?? "system";
 
   const created = await mutateDirectory((directory) => {
     const rows: AssignmentRow[] = [];
@@ -146,7 +169,23 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
-  const actorId = (await currentSession())?.principal.id ?? "system";
+  const session = await currentSession();
+  const existing = await getDirectory();
+  const target = existing.assignments.find((item) => item.id === id);
+  if (!target) {
+    return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
+  }
+  if (
+    !session ||
+    !can(existing, session.principal.id, "directory.write", target.scope).allowed
+  ) {
+    return NextResponse.json(
+      { error: "You cannot change an assignment at this scope." },
+      { status: 403 }
+    );
+  }
+
+  const actorId = session.principal.id;
   const result = await mutateDirectory((directory) => {
     const target = directory.assignments.find((item) => item.id === id);
     if (!target) return { ok: false as const, reason: "missing" };

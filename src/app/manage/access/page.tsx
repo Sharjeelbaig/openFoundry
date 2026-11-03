@@ -73,7 +73,7 @@ export default function AccessControlPage() {
 
   const rows = useMemo(() => data?.assignments ?? [], [data?.assignments]);
   const people = useMemo(() => peopleData?.principals ?? [], [peopleData?.principals]);
-  const canManage = data?.me.canManage ?? false;
+  const canManage = data?.me?.canManage ?? false;
   const scopeText = (scope: string) =>
     scope === (data?.scopes.root ?? "/")
       ? data?.scopeLabels.root ?? "Install"
@@ -197,7 +197,7 @@ export default function AccessControlPage() {
 
       <div className="page-toolbar" style={{ paddingTop: 0 }}>
         <span className="muted text-12">
-          {data?.me.roleName} · {data?.me.access}
+          {data?.me?.roleName} · {data?.me?.access}
         </span>
         <span className="spacer" />
         <button

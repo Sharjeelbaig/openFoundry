@@ -67,7 +67,7 @@ export default function UsersTab() {
   const [copied, setCopied] = useState(false);
 
   const rows = useMemo(() => data?.assignments ?? [], [data?.assignments]);
-  const canManage = data?.me.canManage ?? false;
+  const canManage = data?.me?.canManage ?? false;
   const scopeLabel = (scope: string) =>
     scope === (data?.scopes.root ?? "/")
       ? data?.scopeLabels.root || "This install"

@@ -273,6 +273,11 @@ route is unmapped. Forgetting to update the table breaks the build, not the secu
 Proxy runs on the Node runtime and reads `directory.json` directly. It costs one small file read
 per request; the app already reads `settings.json` several times per page.
 
+Every action is checked at the project scope, except `settings.write`, which belongs to the
+install. Changing a root-scope assignment needs root `directory.write`, so the assignment routes
+check the target assignment's own scope in addition to the proxy check. That is what keeps a
+project Owner able to manage their project without letting them grant access to every project.
+
 ```ts
 const route = resolveApiRoute(request.method, pathname);
 if (route.visibility === "public") return NextResponse.next();

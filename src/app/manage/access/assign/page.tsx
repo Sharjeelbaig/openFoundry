@@ -279,9 +279,9 @@ export default function AssignRolePage() {
             <div className="iam-field">
               <span className="iam-label">Scope</span>
               <span className="mono text-12">
-                {(payload?.scopeLabels.root ?? "Install") +
+                {(payload?.scopeLabels?.root ?? "Install") +
                   "/projects/" +
-                  (payload?.scopeLabels.project ?? "project")}
+                  (payload?.scopeLabels?.project ?? "project")}
               </span>
             </div>
             <div className="iam-field">

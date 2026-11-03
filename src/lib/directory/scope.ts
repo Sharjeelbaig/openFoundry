@@ -3,13 +3,12 @@ import { getSettings } from "../store";
 import { projectScope, ROOT_SCOPE } from "./can";
 
 /**
- * Installation-level things are checked at the root; everything else belongs
- * to the project. This is the only place that decision is made.
+ * Everything is checked at the project, except writing the install's own
+ * settings. Root-scope access control is checked inside the routes that can
+ * actually change it, because the same route serves both scopes.
  */
 export async function scopeForAction(action: string): Promise<string> {
-  if (action.startsWith("directory.") || action.startsWith("settings.")) {
-    return ROOT_SCOPE;
-  }
   const settings = await getSettings();
+  if (action === "settings.write") return ROOT_SCOPE;
   return projectScope(settings.projectId);
 }

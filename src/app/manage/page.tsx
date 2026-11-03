@@ -100,7 +100,7 @@ export default function ProjectDetailsPage() {
 
   const [tab, setTab] = useState<Tab>("Users");
   const { data: permissionData } = useApi<{
-    me: { roleName: string; access: string };
+    me: { roleName: string; access: string; canEditSettings?: boolean };
   }>("/api/directory/assignments", 30000);
   const [showKey, setShowKey] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -121,8 +121,9 @@ export default function ProjectDetailsPage() {
 
   const projectName = settings?.projectName || "local-project";
   const endpoint = `${origin}/api/v1`;
-  const permissionRole = permissionData?.me.roleName ?? "No role";
-  const permissionAccess = permissionData?.me.access ?? "No access";
+  const permissionRole = permissionData?.me?.roleName ?? "No role";
+  const permissionAccess = permissionData?.me?.access ?? "No access";
+  const canEditSettings = permissionData?.me?.canEditSettings ?? false;
 
   const toggle = (key: string) =>
     setCollapsed((current) => ({ ...current, [key]: !current[key] }));
@@ -214,15 +215,17 @@ export default function ProjectDetailsPage() {
           </button>
           {menuOpen && (
             <div className="menu-popover" style={{ right: 0, top: 36, minWidth: 240 }}>
-              <button
-                className="menu-item"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setEditOpen(true);
-                }}
-              >
-                <Edit20Regular /> Edit project details
-              </button>
+              {canEditSettings && (
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setEditOpen(true);
+                  }}
+                >
+                  <Edit20Regular /> Edit project details
+                </button>
+              )}
               <Link href="/manage/resources" className="menu-item">
                 <Server20Regular /> Resource details
               </Link>

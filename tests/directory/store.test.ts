@@ -78,6 +78,17 @@ describe("directory store", () => {
   });
 });
 
+describe("scope per action", () => {
+  it("keeps project actions at the project and settings writes at the install", async () => {
+    vi.resetModules();
+    const { scopeForAction } = await import("@/lib/directory/scope");
+    const { ROOT_SCOPE, projectScope } = await import("@/lib/directory/can");
+    expect(await scopeForAction("settings.write")).toBe(ROOT_SCOPE);
+    expect(await scopeForAction("settings.read")).toBe(projectScope("proj-test"));
+    expect(await scopeForAction("directory.write")).toBe(projectScope("proj-test"));
+  });
+});
+
 describe("bootstrap token", () => {
   it("is single use", async () => {
     vi.resetModules();
