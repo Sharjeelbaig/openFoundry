@@ -10,7 +10,7 @@ export const NAV = [
   { label: "Features", href: "#features" },
   { label: "Screenshots", href: "#screenshots" },
   { label: "Deployments", href: "#deployments" },
-  { label: "Docs", href: "#docs" },
+  { label: "Docs", href: "./docs/" },
   { label: "Run locally", href: "#run" },
   { label: "Install", href: "#install" },
   { label: "FAQ", href: "#faq" },

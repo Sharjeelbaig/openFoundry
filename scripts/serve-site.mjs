@@ -20,7 +20,12 @@ const types = {
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://localhost:${port}`);
   const pathname = decodeURIComponent(url.pathname);
-  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+  const relative =
+    pathname === "/"
+      ? "index.html"
+      : pathname.endsWith("/")
+        ? `${pathname.replace(/^\/+/, "")}index.html`
+        : pathname.replace(/^\/+/, "");
   const file = path.join(root, relative);
 
   if (!file.startsWith(root)) {

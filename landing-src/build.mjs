@@ -26,6 +26,7 @@ const downloadUrl = `https://github.com/Sharjeelbaig/openFoundry/releases/downlo
 await fs.rm(out, { recursive: true, force: true });
 await fs.rm(tmp, { recursive: true, force: true });
 await fs.mkdir(path.join(out, "assets", "screens"), { recursive: true });
+await fs.mkdir(path.join(out, "docs"), { recursive: true });
 await fs.mkdir(tmp, { recursive: true });
 
 const common = {
@@ -86,6 +87,49 @@ if (/href="#"|TODO|lorem ipsum|coming soon/i.test(page)) {
   throw new Error("Placeholder marker found in the page");
 }
 
+await build({
+  ...common,
+  entryPoints: [path.join(here, "docs-client.tsx")],
+  outfile: path.join(out, "assets", "docs.js"),
+  format: "esm",
+  platform: "browser",
+  target: ["chrome100", "firefox100", "safari15"],
+  minify: true,
+  legalComments: "eof",
+});
+
+await build({
+  ...common,
+  entryPoints: [path.join(here, "docs-ssr.tsx")],
+  outfile: path.join(tmp, "docs-ssr.mjs"),
+  format: "esm",
+  platform: "node",
+  target: "node20",
+  packages: "external",
+});
+
+const docsModuleUrl =
+  pathToFileURL(path.join(tmp, "docs-ssr.mjs")).href + `?v=${Date.now()}`;
+const { renderDocs } = await import(docsModuleUrl);
+const docs = renderDocs();
+const docsTemplate = await fs.readFile(
+  path.join(here, "docs-template.html"),
+  "utf8"
+);
+let docsPage = docsTemplate;
+for (const [token, value] of Object.entries({ ...replacements, "{{HTML}}": docs.html, "{{STYLES}}": docs.styles })) {
+  docsPage = docsPage.split(token).join(value);
+}
+const missingDocs = docsPage.match(/\{\{[A-Z_]+\}\}/g);
+if (missingDocs) {
+  throw new Error(
+    `Unreplaced docs template tokens: ${[...new Set(missingDocs)].join(", ")}`
+  );
+}
+if (/[—–]/.test(docsPage)) {
+  throw new Error("The docs page copy contains an em or en dash");
+}
+await fs.writeFile(path.join(out, "docs", "index.html"), docsPage);
 await fs.writeFile(path.join(out, "index.html"), page);
 await fs.copyFile(
   path.join(repo, "public", "brand", "openfoundry-icon.svg"),
@@ -110,9 +154,16 @@ const refs = [...page.matchAll(/(?:src|href)="\.\/assets\/([^"]+)"/g)].map(
 for (const ref of new Set(refs)) {
   await fs.access(path.join(out, "assets", ref));
 }
+const docsRefs = [
+  ...docsPage.matchAll(/(?:src|href)="\.\.\/assets\/([^"]+)"/g),
+].map((match) => match[1]);
+for (const ref of new Set(docsRefs)) {
+  await fs.access(path.join(out, "assets", ref));
+}
 
 const size = (await fs.stat(path.join(out, "index.html"))).size;
 const jsSize = (await fs.stat(path.join(out, "assets", "app.js"))).size;
+const docsSize = (await fs.stat(path.join(out, "docs", "index.html"))).size;
 console.log(
-  `Built landing/index.html (${size} bytes), app.js (${jsSize} bytes), ${screenFiles.length} screenshots`
+  `Built landing/index.html (${size} bytes), docs/index.html (${docsSize} bytes), app.js (${jsSize} bytes), ${screenFiles.length} screenshots`
 );
