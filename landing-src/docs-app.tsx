@@ -524,7 +524,7 @@ export function DocsApp() {
       <div className={s.root}>
         <header className={s.topbar}>
           <div className={s.topbarInner}>
-            <a className={s.brand} href="../">
+            <a className={s.brand} href="./">
               <img
                 className={s.brandMark}
                 src="../assets/openfoundry-icon.svg"
@@ -695,11 +695,11 @@ export function DocsApp() {
             <div className={s.reading} id="article-top">
               <nav className={s.crumbs} aria-label="Breadcrumb">
                 <a className={s.crumbLink} href="../">
-                  Learn
+                  openFoundry
                 </a>
                 <span>&gt;</span>
                 <a className={s.crumbLink} href="./">
-                  openFoundry
+                  Docs
                 </a>
                 <span>&gt;</span>
                 <span>{lesson.nav}</span>
