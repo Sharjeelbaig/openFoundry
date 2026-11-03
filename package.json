@@ -10,6 +10,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "audit:catalog": "node scripts/audit-tool-catalog.mjs",
+    "access-code": "node scripts/access-code.mjs",
     "lint": "eslint",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",

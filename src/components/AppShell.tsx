@@ -15,11 +15,21 @@ export default function AppShell({
   settings,
   systemHost,
   theme,
+  user,
+  needsClaim,
 }: {
   children: React.ReactNode;
   settings: LocalSettings;
   systemHost: string;
   theme: "dark" | "light";
+  needsClaim: boolean;
+  user: {
+    name: string;
+    initials: string;
+    email: string;
+    roleName: string;
+    access: string;
+  } | null;
 }) {
   const pathname = usePathname();
   const showFooter = pathname === "/" || pathname.startsWith("/discover");
@@ -32,11 +42,19 @@ export default function AppShell({
     pathname.startsWith("/manage") ||
     pathname.startsWith("/playground");
 
+  if (pathname === "/signin") {
+    return <>{children}</>;
+  }
+
   if (!settings.onboarded || pathname === "/setup") {
     return (
       <ToastProvider>
         <DownloadProvider>
-          <SetupWizard initial={settings} systemHost={systemHost} />
+          <SetupWizard
+            initial={settings}
+            systemHost={systemHost}
+            needsClaim={needsClaim}
+          />
         </DownloadProvider>
       </ToastProvider>
     );
@@ -48,8 +66,11 @@ export default function AppShell({
         <div className="app-shell">
           <Header
             projectName={settings.projectName}
-            userName={settings.userName}
-            userInitials={settings.userInitials}
+            userName={user?.name ?? settings.userName}
+            userInitials={user?.initials ?? settings.userInitials}
+            userEmail={user?.email}
+            roleName={user?.roleName}
+            access={user?.access}
             initialTheme={theme}
           />
           <div className="app-body">

@@ -34,11 +34,17 @@ export default function Header({
   projectName,
   userName,
   userInitials,
+  userEmail,
+  roleName,
+  access,
   initialTheme,
 }: {
   projectName: string;
   userName: string;
   userInitials: string;
+  userEmail?: string;
+  roleName?: string;
+  access?: string;
   initialTheme: "dark" | "light";
 }) {
   const pathname = usePathname();
@@ -302,7 +308,10 @@ export default function Header({
                 <span className="user-avatar">{userInitials}</span>
                 <span>
                   <span style={{ display: "block", fontWeight: 600 }}>{userName}</span>
-                  <span className="muted text-12">Local owner · this Mac</span>
+                  <span className="muted text-12">
+                    {userEmail || "Signed in"}
+                    {roleName ? ` · ${roleName}` : ""}
+                  </span>
                 </span>
               </div>
               <div className="divider" />
@@ -315,9 +324,10 @@ export default function Header({
               <div className="divider" />
               <button
                 className="menu-item"
-                onClick={() => {
+                onClick={async () => {
                   setMenu(null);
-                  toast("This is a local session — there is nothing to sign out of.");
+                  await fetch("/api/auth/sign-out", { method: "POST" });
+                  window.location.href = "/signin";
                 }}
               >
                 <SignOut20Regular /> Sign out

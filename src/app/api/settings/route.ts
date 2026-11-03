@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSettings, saveSettings } from "@/lib/store";
+import { currentSession } from "@/lib/directory/server";
+import { getDirectory, mutateDirectory } from "@/lib/directory/store";
 import { invalidateModelCache } from "@/lib/providers";
 import { LocalSettings } from "@/lib/types";
 
@@ -134,7 +136,43 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  // The signed-in person is a directory principal. Validate the profile
+  // fields before saving, so settings and the directory cannot disagree.
+  const session = await currentSession();
+  const profileEmail = next.userEmail.trim().toLowerCase();
+  if (session && (body.userName !== undefined || body.userEmail !== undefined)) {
+    if (!EMAIL.test(profileEmail)) {
+      return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    }
+    const directory = await getDirectory();
+    const clash = directory.principals.some(
+      (principal) =>
+        principal.id !== session.principal.id &&
+        principal.email.toLowerCase() === profileEmail &&
+        !principal.disabledAt
+    );
+    if (clash) {
+      return NextResponse.json(
+        { error: "Another person in this install already uses that email." },
+        { status: 409 }
+      );
+    }
+  }
+
   await saveSettings(next);
   invalidateModelCache();
+
+  if (session && (body.userName !== undefined || body.userEmail !== undefined)) {
+    await mutateDirectory((directory) => {
+      const principal = directory.principals.find(
+        (item) => item.id === session.principal.id
+      );
+      if (!principal) return;
+      principal.name = next.userName.trim() || principal.name;
+      principal.email = profileEmail;
+      principal.initials = next.userInitials || principal.initials;
+    });
+  }
+
   return NextResponse.json({ settings: next });
 }

@@ -1,33 +1,27 @@
 "use client";
-import Select from "@/components/Select";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Add20Regular,
   ArrowLeft20Regular,
   ChevronDown20Regular,
-  Delete20Regular,
   Dismiss20Regular,
   Edit20Regular,
   Eye20Regular,
   EyeOff20Regular,
   Info20Regular,
   MoreHorizontal20Regular,
-  Search20Regular,
   Server20Regular,
   Shield20Regular,
 } from "@fluentui/react-icons";
 import { formatDate, formatNumber, useApi, useDeployments, useModels } from "@/lib/client";
 import { useToast } from "@/components/Toast";
+import UsersTab from "@/components/manage/UsersTab";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import type {
   Agent,
   KnowledgeBase,
   LocalSettings,
-  ProjectRole,
-  ProjectUser,
   ProviderStatus,
 } from "@/lib/types";
 
@@ -65,8 +59,6 @@ function Field({
     </div>
   );
 }
-
-const EMPTY_USER = { name: "", email: "", role: "Contributor" as ProjectRole };
 
 export default function ProjectDetailsPage() {
   const router = useRouter();
@@ -107,7 +99,9 @@ export default function ProjectDetailsPage() {
   const models = modelData?.models ?? [];
 
   const [tab, setTab] = useState<Tab>("Users");
-  const [query, setQuery] = useState("");
+  const { data: permissionData } = useApi<{
+    me: { roleName: string; access: string };
+  }>("/api/directory/assignments", 30000);
   const [showKey, setShowKey] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -116,9 +110,6 @@ export default function ProjectDetailsPage() {
   const [edit, setEdit] = useState<LocalSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
-  const [userOpen, setUserOpen] = useState(false);
-  const [newUser, setNewUser] = useState(EMPTY_USER);
-  const [userBusy, setUserBusy] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -130,14 +121,8 @@ export default function ProjectDetailsPage() {
 
   const projectName = settings?.projectName || "local-project";
   const endpoint = `${origin}/api/v1`;
-  const users = settings?.users ?? [];
-  const visibleUsers = users.filter(
-    (user) =>
-      !query ||
-      user.name.toLowerCase().includes(query.toLowerCase()) ||
-      user.email.toLowerCase().includes(query.toLowerCase()) ||
-      user.role.toLowerCase().includes(query.toLowerCase())
-  );
+  const permissionRole = permissionData?.me.roleName ?? "No role";
+  const permissionAccess = permissionData?.me.access ?? "No access";
 
   const toggle = (key: string) =>
     setCollapsed((current) => ({ ...current, [key]: !current[key] }));
@@ -196,64 +181,6 @@ export default function ProjectDetailsPage() {
       toast(error instanceof Error ? error.message : "Rotate failed", "error");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const addUser = async () => {
-    if (!newUser.name.trim() || !newUser.email.trim()) return;
-    setUserBusy(true);
-    try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error || "Could not add the user");
-      toast(`${newUser.name} added to the project`, "success");
-      setUserOpen(false);
-      setNewUser(EMPTY_USER);
-      refreshSettings();
-    } catch (error) {
-      toast(error instanceof Error ? error.message : "Add user failed", "error");
-    } finally {
-      setUserBusy(false);
-    }
-  };
-
-  const changeRole = async (user: ProjectUser, role: ProjectRole) => {
-    setUserBusy(true);
-    try {
-      const res = await fetch("/api/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: user.id, role }),
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error || "Could not change the role");
-      toast(`${user.name} is now ${role}`, "success");
-      refreshSettings();
-    } catch (error) {
-      toast(error instanceof Error ? error.message : "Update failed", "error");
-    } finally {
-      setUserBusy(false);
-    }
-  };
-
-  const removeUser = async (user: ProjectUser) => {
-    setUserBusy(true);
-    try {
-      const res = await fetch(`/api/users?id=${encodeURIComponent(user.id)}`, {
-        method: "DELETE",
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error || "Could not remove the user");
-      toast(`${user.name} removed from the project`, "success");
-      refreshSettings();
-    } catch (error) {
-      toast(error instanceof Error ? error.message : "Remove failed", "error");
-    } finally {
-      setUserBusy(false);
     }
   };
 
@@ -407,9 +334,11 @@ export default function ProjectDetailsPage() {
         {!collapsed.permission && (
           <>
             <div className="permission-line">
-              <span className="status-dot" />
-              <strong>Owner</strong>
-              <span className="muted">· Full access</span>
+              <span
+                className={`status-dot${permissionAccess === "Full access" ? "" : " muted"}`}
+              />
+              <strong>{permissionRole}</strong>
+              <span className="muted">· {permissionAccess}</span>
             </div>
             <div className="tabbar" style={{ marginTop: -2 }}>
               {(["Users", "Connected resources", "Admin-connected models"] as Tab[]).map(
@@ -426,137 +355,7 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div className="manage-tab-body">
-              {tab === "Users" && (
-                <>
-                  <div className="page-toolbar" style={{ paddingTop: 0 }}>
-                    <div className="search-input" style={{ maxWidth: 360 }}>
-                      <Search20Regular />
-                      <input
-                        className="input"
-                        placeholder="Search users"
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                      />
-                    </div>
-                    <span className="spacer" />
-                    <button className="btn btn-secondary" onClick={() => setUserOpen(true)}>
-                      <Add20Regular /> Add user
-                    </button>
-                  </div>
-                  <div className="table-card">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th style={{ width: 170 }}>Access type</th>
-                          <th style={{ width: 150 }}>Role</th>
-                          <th>Scope</th>
-                          <th style={{ width: 170 }}>Added</th>
-                          <th style={{ width: 70 }}>Remove</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {visibleUsers.map((user) => (
-                          <tr key={user.id}>
-                            <td>
-                              <span className="row" style={{ gap: 10 }}>
-                                <span className="user-avatar">
-                                  {user.name
-                                    .split(/\s+/)
-                                    .map((part) => part[0])
-                                    .join("")
-                                    .slice(0, 2)
-                                    .toUpperCase()}
-                                </span>
-                                <span>
-                                  <span className="cell-strong" style={{ display: "block" }}>
-                                    {user.name}
-                                  </span>
-                                  <span className="muted text-12">{user.email}</span>
-                                </span>
-                              </span>
-                            </td>
-                            <td>
-                              <span className="badge gray">{user.accessType}</span>
-                            </td>
-                            <td>
-                              <Select
-                                className="select"
-                                value={user.role}
-                                disabled={
-                                  userBusy ||
-                                  (user.role === "Owner" &&
-                                    users.filter((item) => item.role === "Owner").length === 1)
-                                }
-                                onChange={(event) =>
-                                  changeRole(user, event.target.value as ProjectRole)
-                                }
-                                aria-label={`Role for ${user.name}`}
-                                title={
-                                  user.role === "Owner" &&
-                                  users.filter((item) => item.role === "Owner").length === 1
-                                    ? "Add another Owner before changing this role."
-                                    : undefined
-                                }
-                              >
-                                <option value="Owner">Owner</option>
-                                <option value="Contributor">Contributor</option>
-                                <option value="Reader">Reader</option>
-                              </Select>
-                            </td>
-                            <td className="mono text-12">
-                              <span className="row" style={{ gap: 6 }}>
-                                <span className="truncate" style={{ maxWidth: 420 }}>
-                                  {settings.resourceGroup}/projects/{projectName}
-                                </span>
-                                <CopyButton
-                                  value={`${settings.resourceGroup}/projects/${projectName}`}
-                                  label="Copy scope"
-                                  className="icon-button small"
-                                />
-                              </span>
-                            </td>
-                            <td>{formatDate(user.addedAt)}</td>
-                            <td>
-                              <button
-                                className="icon-button small"
-                                aria-label={`Remove ${user.name}`}
-                                disabled={
-                                  userBusy ||
-                                  (user.role === "Owner" &&
-                                    users.filter((item) => item.role === "Owner").length === 1)
-                                }
-                                title={
-                                  user.role === "Owner" &&
-                                  users.filter((item) => item.role === "Owner").length === 1
-                                    ? "The project must keep at least one Owner."
-                                    : undefined
-                                }
-                                onClick={() => removeUser(user)}
-                              >
-                                <Delete20Regular />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                        {visibleUsers.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="muted" style={{ textAlign: "center", padding: 36 }}>
-                              No users match that search.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="table-footer">
-                    <span>{users.length} project users</span>
-                    <span className="muted">
-                      Local access records · no sign-in provider is configured
-                    </span>
-                  </div>
-                </>
-              )}
+              {tab === "Users" && <UsersTab />}
 
               {tab === "Connected resources" && (
                 <div className="table-card">
@@ -908,81 +707,6 @@ export default function ProjectDetailsPage() {
         </div>
       )}
 
-      {userOpen && (
-        <div
-          className="dialog-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setUserOpen(false);
-          }}
-        >
-          <div className="dialog" role="dialog" aria-modal="true" aria-label="Add project user">
-            <div className="dialog-head">
-              <div>
-                <h2 className="dialog-title">Add user</h2>
-                <p className="dialog-sub">
-                  Records a project collaborator. This local build has no external
-                  identity provider, so roles are informational.
-                </p>
-              </div>
-              <button className="icon-button" onClick={() => setUserOpen(false)} aria-label="Close">
-                <Dismiss20Regular />
-              </button>
-            </div>
-            <div className="dialog-body">
-              <label className="field">
-                <span className="field-label">Name</span>
-                <input
-                  className="input"
-                  autoFocus
-                  value={newUser.name}
-                  onChange={(event) =>
-                    setNewUser((current) => ({ ...current, name: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="field">
-                <span className="field-label">Email</span>
-                <input
-                  className="input"
-                  value={newUser.email}
-                  onChange={(event) =>
-                    setNewUser((current) => ({ ...current, email: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="field">
-                <span className="field-label">Role</span>
-                <Select
-                  className="select"
-                  value={newUser.role}
-                  onChange={(event) =>
-                    setNewUser((current) => ({
-                      ...current,
-                      role: event.target.value as ProjectRole,
-                    }))
-                  }
-                >
-                  <option value="Owner">Owner</option>
-                  <option value="Contributor">Contributor</option>
-                  <option value="Reader">Reader</option>
-                </Select>
-              </label>
-            </div>
-            <div className="dialog-footer">
-              <button className="btn btn-secondary" onClick={() => setUserOpen(false)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={addUser}
-                disabled={userBusy || !newUser.name.trim() || !newUser.email.trim()}
-              >
-                {userBusy ? <Spinner /> : <Add20Regular />} Add user
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

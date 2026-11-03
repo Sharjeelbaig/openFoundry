@@ -29,11 +29,36 @@ fn free_port() -> u16 {
 }
 
 #[cfg(not(debug_assertions))]
-fn navigate_when_ready(window: tauri::WebviewWindow, url: String) {
+fn machine_key(data_dir: &std::path::Path) -> Option<String> {
+    // The server writes this file while it boots. It is the shell's proof that
+    // it can read the same data directory, so no sign-in prompt is needed.
+    for _ in 0..40 {
+        if let Ok(value) = std::fs::read_to_string(data_dir.join("machine.key")) {
+            let trimmed = value.trim().to_string();
+            if !trimmed.is_empty() {
+                return Some(trimmed);
+            }
+        }
+        thread::sleep(Duration::from_millis(150));
+    }
+    None
+}
+
+#[cfg(not(debug_assertions))]
+fn navigate_when_ready(
+    window: tauri::WebviewWindow,
+    url: String,
+    data_dir: std::path::PathBuf,
+) {
     thread::spawn(move || {
         for _ in 0..240 {
             if TcpStream::connect(("127.0.0.1", url_port(&url))).is_ok() {
-                let quoted = serde_json::to_string(&url).unwrap_or_else(|_| "\"/\"".into());
+                let target = match machine_key(&data_dir) {
+                    Some(key) => format!("{url}/api/auth/machine?key={key}"),
+                    None => url,
+                };
+                let quoted =
+                    serde_json::to_string(&target).unwrap_or_else(|_| "\"/\"".into());
                 let _ = window.eval(&format!("window.location.replace({quoted});"));
                 return;
             }
@@ -124,7 +149,7 @@ pub fn run() {
                     }
                 });
 
-                navigate_when_ready(window, public_url);
+                navigate_when_ready(window, public_url, data_dir);
             }
             Ok(())
         })

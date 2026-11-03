@@ -9631,3 +9631,306 @@ svg {
   letter-spacing: 0.05em;
   padding: 5px 8px 2px;
 }
+
+/* Sign-in. There is no Microsoft page to mirror here: Foundry delegates to
+   Entra, so this stays deliberately plain. */
+.signin-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: var(--bg);
+}
+.signin-card {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  background: var(--surface-card);
+  border: 1px solid var(--stroke-4);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-16);
+}
+.signin-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.signin-brand strong {
+  display: block;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.signin-brand span {
+  display: block;
+  color: var(--fg-3);
+  font-size: 11px;
+}
+.signin-card h1 {
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.signin-lead {
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+.signin-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--stroke-3);
+  border-radius: 6px;
+  background: var(--bg-2);
+  color: var(--fg-3);
+}
+.signin-input .input {
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+  letter-spacing: 0.12em;
+  font-family: var(--mono-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+.signin-error {
+  color: var(--red-fg);
+  font-size: 12px;
+}
+.signin-submit {
+  justify-content: center;
+}
+
+/* Access control */
+.scope-link {
+  color: var(--link-fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  text-decoration: none;
+}
+.scope-link:hover {
+  text-decoration: underline;
+}
+.scope-link svg {
+  width: 12px;
+  height: 12px;
+}
+.info-banner {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--stroke-4);
+  border-radius: 6px;
+  background: var(--bg-3);
+  color: var(--fg-2);
+  font-size: 12px;
+  line-height: 17px;
+}
+.info-banner svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--fg-3);
+}
+.picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 4px;
+  max-height: 260px;
+  overflow: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--stroke-3);
+  border-radius: 8px;
+  box-shadow: var(--shadow-16);
+}
+.picker-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-1);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-item:hover {
+  background: var(--bg-hover);
+}
+.picker-empty {
+  padding: 10px;
+  color: var(--fg-3);
+  font-size: 12px;
+}
+.user-avatar.small {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+.status-dot.muted {
+  background: var(--fg-3);
+}
+
+/* Add role assignment */
+.iam-wizard {
+  padding: 18px 0 96px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 48px);
+}
+.iam-wizard-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.iam-steps {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--stroke-4);
+  margin-bottom: 18px;
+}
+.iam-step {
+  position: relative;
+  padding: 10px 2px;
+  border: 0;
+  background: none;
+  color: var(--fg-2);
+  font: inherit;
+  cursor: pointer;
+}
+.iam-step.active {
+  color: var(--fg-1);
+  font-weight: 600;
+}
+.iam-step.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--brand-stroke);
+}
+.iam-step.disabled {
+  color: var(--fg-disabled);
+  cursor: not-allowed;
+}
+.iam-required {
+  color: var(--danger);
+  margin-left: 3px;
+}
+.iam-body {
+  flex: 1;
+}
+.iam-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 900px;
+}
+.iam-field {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.iam-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg-1);
+}
+.iam-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 14px 0;
+  margin-top: 24px;
+  border-top: 1px solid var(--stroke-4);
+  background: var(--bg);
+}
+.side-pane-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.4);
+}
+.side-pane {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--stroke-3);
+}
+.side-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--stroke-4);
+}
+.side-pane-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.side-pane-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 16px 20px;
+  overflow: auto;
+}
+.side-pane-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.side-pane-selected {
+  border-left: 1px solid var(--stroke-4);
+  padding-left: 20px;
+}
+.side-pane-foot {
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--stroke-4);
+}
+.picker-item.picked {
+  background: var(--bg-hover);
+}
+@media (max-width: 720px) {
+  .side-pane-body {
+    grid-template-columns: 1fr;
+  }
+  .side-pane-selected {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--stroke-4);
+    padding-top: 12px;
+  }
+  .iam-field {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+.side-pane-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}

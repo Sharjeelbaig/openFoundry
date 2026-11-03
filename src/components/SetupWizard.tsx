@@ -19,9 +19,11 @@ const STEPS = ["Welcome", "Profile", "Providers", "Model", "Ready"] as const;
 export default function SetupWizard({
   initial,
   systemHost,
+  needsClaim = false,
 }: {
   initial: LocalSettings;
   systemHost: string;
+  needsClaim?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -32,6 +34,11 @@ export default function SetupWizard({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
   const [termsOpen, setTermsOpen] = useState(false);
+  const [claimToken, setClaimToken] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const [claimed, setClaimed] = useState(!needsClaim);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [models, setModels] = useState<LocalModel[]>([]);
   const [settings, setSettings] = useState<LocalSettings>({
@@ -108,19 +115,52 @@ export default function SetupWizard({
   }, [step]);
 
   const next = async () => {
+    let firstClaim = false;
     if (step === 1) {
       try {
+        if (!claimed) {
+          const response = await fetch("/api/auth/bootstrap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: claimToken,
+              name: settings.userName,
+              email: settings.userEmail,
+            }),
+          });
+          const payload = (await response.json().catch(() => ({}))) as {
+            accessCode?: string;
+            error?: string;
+          };
+          if (!response.ok || !payload.accessCode) {
+            throw new Error(payload.error || "Could not claim this install.");
+          }
+          setAccessCode(payload.accessCode);
+          setClaimed(true);
+          firstClaim = true;
+        }
         await savePartial({
           projectName: settings.projectName,
           userName: settings.userName,
+          userEmail: settings.userEmail,
           userInitials: settings.userInitials,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
         return;
       }
+      if (firstClaim) {
+        setError("");
+        setClaimOpen(true);
+        return;
+      }
     }
     if (step === 2 && providers.length === 0) void scan();
+    setStep(Math.min(step + 1, STEPS.length - 1));
+  };
+
+  const finishClaim = () => {
+    setClaimOpen(false);
     setStep(Math.min(step + 1, STEPS.length - 1));
   };
 
@@ -287,8 +327,8 @@ export default function SetupWizard({
               <div className="setup-kicker">Profile</div>
               <h1>Who is building?</h1>
               <p className="setup-lead">
-                This is a local display name. It never creates an account or leaves this
-                computer.
+                This name and email identify you in this install&apos;s directory. They
+                stay on this computer.
               </p>
               <div className="form-grid">
                 <label className="field">
@@ -331,7 +371,42 @@ export default function SetupWizard({
                     }
                   />
                 </label>
+                <label className="field">
+                  <span className="field-label">Email</span>
+                  <input
+                    className="input"
+                    placeholder="you@example.com"
+                    value={settings.userEmail}
+                    onChange={(event) =>
+                      setSettings((current) => ({
+                        ...current,
+                        userEmail: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
               </div>
+              {!claimed && (
+                <div className="setup-card" style={{ marginTop: 18 }}>
+                  <strong>This install has no owner yet</strong>
+                  <p className="muted text-12" style={{ margin: 0 }}>
+                    openFoundry printed a one-time token in the terminal it started
+                    from. Enter it here to claim this install. The desktop app signs
+                    itself in and never asks for this.
+                  </p>
+                  <label className="field" style={{ maxWidth: 320 }}>
+                    <span className="field-label">Setup token</span>
+                    <input
+                      className="input mono"
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="XXXX-XXXX-XXXX"
+                      value={claimToken}
+                      onChange={(event) => setClaimToken(event.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
             </section>
           )}
 
@@ -550,7 +625,11 @@ export default function SetupWizard({
                     saving ||
                     scanning ||
                     (step === 0 && !settings.termsAccepted) ||
-                    (step === 1 && !settings.userName.trim())
+                    (step === 1 && !settings.userName.trim()) ||
+                    (step === 1 &&
+                      !claimed &&
+                      (!claimToken.trim() ||
+                        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.userEmail)))
                   }
                   onClick={next}
                 >
@@ -565,6 +644,53 @@ export default function SetupWizard({
           </footer>
         </main>
       </div>
+
+      {claimOpen && (
+        <div className="dialog-backdrop">
+          <div
+            className="dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Your access code"
+          >
+            <div className="dialog-head">
+              <div>
+                <h2 className="dialog-title">Your access code</h2>
+                <p className="dialog-sub">
+                  Nobody can recover this code. Store it somewhere before you continue.
+                </p>
+              </div>
+            </div>
+            <div className="dialog-body">
+              <div className="row" style={{ gap: 8 }}>
+                <span className="mono" style={{ fontSize: 18, letterSpacing: "0.08em" }}>
+                  {accessCode}
+                </span>
+                <span className="spacer" />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(accessCode);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                >
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <p className="muted text-12" style={{ marginTop: 10 }}>
+                You will use it to sign in from another browser. On this computer you
+                stay signed in.
+              </p>
+            </div>
+            <div className="dialog-footer">
+              <button className="btn btn-primary" onClick={finishClaim}>
+                I saved it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {termsOpen && (
         <div className="dialog-backdrop" onMouseDown={(event) => {
