@@ -64,6 +64,7 @@ import {
   VERSION,
 } from "./content";
 import { theme } from "./theme";
+import DocsSection from "./docs";
 
 const YEAR = 2026;
 
@@ -1080,6 +1081,8 @@ export function App() {
           </div>
         </section>
 
+        <DocsSection />
+
         <section className={styles.section} id="run">
           <div className={styles.container}>
             <div className={styles.runGrid}>
@@ -1451,6 +1454,7 @@ export function App() {
               links={[
                 { label: "Features", href: "#features" },
                 { label: "Screenshots", href: "#screenshots" },
+                { label: "Docs", href: "#docs" },
                 { label: "Run locally", href: "#run" },
                 { label: "Install", href: "#install" },
               ]}
@@ -1461,7 +1465,7 @@ export function App() {
                 { label: "GitHub", href: REPO },
                 { label: "Releases", href: REPO_FILES.releases },
                 { label: "Issues", href: REPO_FILES.issues },
-                { label: "Documentation", href: REPO_FILES.readme },
+                { label: "Documentation", href: "#docs" },
               ]}
             />
             <FooterColumn

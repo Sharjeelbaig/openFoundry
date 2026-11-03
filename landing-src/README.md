@@ -14,6 +14,10 @@ The source is in `landing-src/`. The build compiles the Fluent UI React page,
 pre-renders it to HTML, and copies the screenshots from `landing-src/screens/`.
 The macOS download URL, size and SHA-256 come from `landing-src/release.json`.
 
+The docs section is part of the same page, not a separate site. Its lessons and
+copy live in `landing-src/docs.tsx`; screenshots go in `landing-src/screens/` and
+are copied by the build.
+
 ## Preview
 
 ```bash
