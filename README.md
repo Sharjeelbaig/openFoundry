@@ -29,6 +29,9 @@ shell. Implemented:
 - The complete openFoundry workspace: home, discover, build, operate, manage, playground,
   model detail pages, filters, deployments, agents, knowledge, services, tools and docs.
 - Workspace settings, local API key, provider URLs, terms and privacy pages.
+- Local access control: a directory of people, access codes, sessions, and
+  Owner / Contributor / Foundry User / Reader roles enforced on every request. Role assignment
+  follows the Azure IAM flow Foundry uses: `Role → Members → Review + assign`.
 - Desktop packaging: the Tauri bundle starts a bundled Next.js standalone server and Node
   runtime on a free loopback port, and stores workspace data in the OS app-data directory.
 
@@ -140,6 +143,16 @@ npm run dev
 ```
 
 The dev server uses port 3000 by default. `npm run dev:web` forces port 3001.
+
+On first run the server prints a one-time setup token and sends the browser to `/setup`. Enter it
+there to claim the install and receive your access code. After that, sign in at `/signin` with the
+code. If you lose it:
+
+```bash
+npm run access-code
+```
+
+The dev server is not a desktop build, so it uses the token, not the machine credential.
 
 ## Run the desktop app
 
