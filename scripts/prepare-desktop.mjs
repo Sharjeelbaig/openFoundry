@@ -16,6 +16,7 @@ const serverDir = path.join(tauri, "next-server");
 const resourcesDir = path.join(tauri, "resources");
 const cacheDir = path.join(root, ".desktop-cache");
 const NODE_VERSION = process.env.OPENFOUNDRY_NODE_VERSION || "v24.22.2";
+const { version } = JSON.parse(await fs.readFile(path.join(root, "package.json"), "utf8"));
 
 function hostTriple() {
   try {
@@ -119,7 +120,7 @@ async function prepareNode() {
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.2.0</string>
+  <string>${version}</string>
   <key>CFBundleVersion</key>
   <string>1</string>
   <key>LSBackgroundOnly</key>

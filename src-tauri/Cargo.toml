@@ -1,6 +1,6 @@
 [package]
 name = "openfoundry"
-version = "0.2.0"
+version = "0.3.0"
 description = "openFoundry - a local AI workbench"
 authors = ["openFoundry contributors"]
 license = "Apache-2.0"
