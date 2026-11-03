@@ -299,17 +299,26 @@ export default function ProjectDetailsPage() {
                   className="icon-button"
                   aria-label={showKey ? "Hide key" : "Show key"}
                   onClick={() => setShowKey((value) => !value)}
+                  disabled={!canEditSettings}
+                  title={
+                    canEditSettings
+                      ? undefined
+                      : "Only an owner of this install can reveal the key."
+                  }
                 >
                   {showKey ? <EyeOff20Regular /> : <Eye20Regular />}
                 </button>
-                <CopyButton
-                  value={settings.apiKey}
-                  label="Copy API key"
-                  className="icon-button"
-                />
+                {canEditSettings && (
+                  <CopyButton
+                    value={settings.apiKey}
+                    label="Copy API key"
+                    className="icon-button"
+                  />
+                )}
                 <button
                   className="btn btn-sm btn-ghost"
                   onClick={() => setRotateOpen(true)}
+                  disabled={!canEditSettings}
                 >
                   Rotate
                 </button>

@@ -17,6 +17,7 @@ import {
 } from "@/lib/store";
 import { DataZone, Deployment, DeploymentKind } from "@/lib/types";
 import { ensureNode, listNodes, ZONE_REGION } from "@/lib/nodes";
+import { may } from "@/lib/directory/redact";
 import {
   LOCAL_DEPLOYMENT_TYPE,
   deploymentTypeFor,
@@ -27,12 +28,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [deployments, providers, nodes] = await Promise.all([
+  const [deployments, providers, nodes, canInvoke] = await Promise.all([
     getDeployments(),
     getProviders(),
     listNodes(),
+    may("models.invoke"),
   ]);
-  return NextResponse.json({ deployments, providers, nodes });
+  return NextResponse.json({
+    deployments: canInvoke
+      ? deployments
+      : deployments.map((deployment) => ({ ...deployment, apiKey: "" })),
+    providers,
+    nodes,
+  });
 }
 
 export async function POST(req: NextRequest) {

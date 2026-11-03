@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { may } from "@/lib/directory/redact";
 import {
   getMcpServers,
   newId,
@@ -21,7 +22,15 @@ function cleanRecord(value: unknown): Record<string, string> | undefined {
 }
 
 export async function GET() {
-  return NextResponse.json({ servers: await getMcpServers() });
+  const [servers, canInvoke] = await Promise.all([
+    getMcpServers(),
+    may("tools.invoke"),
+  ]);
+  return NextResponse.json({
+    servers: canInvoke
+      ? servers
+      : servers.map((server) => ({ ...server, env: {}, headers: {} })),
+  });
 }
 
 export async function POST(req: NextRequest) {

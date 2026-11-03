@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSettings, saveSettings } from "@/lib/store";
 import { currentSession } from "@/lib/directory/server";
 import { getDirectory, mutateDirectory } from "@/lib/directory/store";
+import { may } from "@/lib/directory/redact";
 import { invalidateModelCache } from "@/lib/providers";
 import { LocalSettings } from "@/lib/types";
 
@@ -23,7 +24,14 @@ function validUrl(value: string): boolean {
 }
 
 export async function GET() {
-  return NextResponse.json({ settings: await getSettings() });
+  const settings = await getSettings();
+  // A Reader can see the project; it must not hand them the key that unlocks
+  // the API surface their role excludes.
+  return NextResponse.json({
+    settings: (await may("settings.write"))
+      ? settings
+      : { ...settings, apiKey: "" },
+  });
 }
 
 export async function PATCH(req: NextRequest) {

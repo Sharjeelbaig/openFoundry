@@ -300,6 +300,23 @@ The completion criterion is mechanical: a Reader session must receive 403 from e
 route in `src/app/api`. `tests/directory/routes.test.ts` walks the route files and asserts every
 exported method resolves to a rule.
 
+### Secrets
+
+Read access to a resource must not hand over the key that unlocks the action the role excludes.
+A Reader can list deployments and tools; it must not receive their API keys or auth headers, or
+the role boundary is decorative again.
+
+`src/lib/directory/redact.ts` answers "may this caller use this action", and the list endpoints
+blank the secret when the answer is no:
+
+| Endpoint | Secret | Kept only for |
+| --- | --- | --- |
+| `GET /api/settings` | `apiKey` | `settings.write` (install owner) |
+| `GET /api/deployments` | each `apiKey` | `models.invoke` |
+| `GET /api/agents` | each `apiKey` | `agents.invoke` |
+| `GET /api/mcp` | `env`, `headers` | `tools.invoke` |
+| `GET /api/http-tools` | `headers`, `bodyTemplate` | `tools.invoke` |
+
 ### Pages
 
 Pages are server components and can call `can()` directly. Rules:

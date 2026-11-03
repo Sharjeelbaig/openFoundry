@@ -7,13 +7,16 @@ import {
 } from "@/lib/store";
 import { Agent } from "@/lib/types";
 import { findModel } from "@/lib/providers";
+import { may } from "@/lib/directory/redact";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const agents = await getAgents();
-  return NextResponse.json({ agents });
+  const [agents, canInvoke] = await Promise.all([getAgents(), may("agents.invoke")]);
+  return NextResponse.json({
+    agents: canInvoke ? agents : agents.map((agent) => ({ ...agent, apiKey: "" })),
+  });
 }
 
 export async function POST(req: NextRequest) {

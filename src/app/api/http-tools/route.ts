@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { may } from "@/lib/directory/redact";
 import { getHttpTools, newId, nowIso, saveHttpTools } from "@/lib/store";
 import { HttpTool } from "@/lib/types";
 
@@ -25,7 +26,15 @@ function cleanSchema(value: unknown): Record<string, unknown> {
 }
 
 export async function GET() {
-  return NextResponse.json({ tools: await getHttpTools() });
+  const [tools, canInvoke] = await Promise.all([
+    getHttpTools(),
+    may("tools.invoke"),
+  ]);
+  return NextResponse.json({
+    tools: canInvoke
+      ? tools
+      : tools.map((tool) => ({ ...tool, headers: {}, bodyTemplate: "" })),
+  });
 }
 
 export async function POST(req: NextRequest) {
