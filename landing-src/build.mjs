@@ -21,7 +21,7 @@ if (!release.siteUrl.startsWith("https://")) {
   throw new Error("release.json has no site URL");
 }
 
-const downloadUrl = `https://github.com/Sharjeelbaig/openFoundry/releases/download/${release.tag}/${release.asset}`;
+const downloadUrl = "https://github.com/Sharjeelbaig/openFoundry/releases/latest/download/openFoundry-macos-arm64.dmg";
 
 await fs.rm(out, { recursive: true, force: true });
 await fs.rm(tmp, { recursive: true, force: true });

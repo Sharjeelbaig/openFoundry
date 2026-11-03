@@ -1,7 +1,7 @@
 import release from "./release.json";
 
 export const REPO = "https://github.com/Sharjeelbaig/openFoundry";
-export const DOWNLOAD_URL = `${REPO}/releases/download/${release.tag}/${release.asset}`;
+export const DOWNLOAD_URL = `${REPO}/releases/latest/download/openFoundry-macos-arm64.dmg`;
 export const VERSION = release.version;
 export const SIZE_MB = Math.ceil(release.bytes / (1024 * 1024));
 export const SHA256 = release.sha256;
