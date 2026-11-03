@@ -8,7 +8,7 @@
       name="description"
       content="openFoundry is a free desktop app for running local AI models, building prompt agents and searching your own documents. No account, no telemetry, no cloud bill."
     />
-    <meta name="theme-color" content="#B25121" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="robots" content="index, follow" />
     <link rel="icon" href="./assets/openfoundry-icon.svg" type="image/svg+xml" />
     <link
@@ -17,6 +17,21 @@
       href="./assets/screens/home.webp"
       fetchpriority="high"
     />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("openfoundry-theme");
+          if (t !== "light" && t !== "dark") {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="./assets/app.css" />
     {{STYLES}}
     <meta property="og:type" content="website" />

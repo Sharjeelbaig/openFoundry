@@ -11,12 +11,27 @@
     <meta name="theme-color" content="#1f1f1f" />
     <meta name="robots" content="index, follow" />
     <link rel="icon" href="../assets/openfoundry-icon.svg" type="image/svg+xml" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("openfoundry-theme");
+          if (t !== "light" && t !== "dark") {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="../assets/docs.css" />
     <style>
       html,
       body {
-        background: #1f1f1f;
-        color: #ffffff;
+        background: var(--of-bg);
+        color: var(--of-text);
       }
     </style>
     {{STYLES}}

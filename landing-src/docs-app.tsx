@@ -4,17 +4,19 @@ import {
   ArrowDownload20Regular,
   ChevronRight20Regular,
   Search20Regular,
+  WeatherMoon20Regular,
+  WeatherSunny20Regular,
 } from "@fluentui/react-icons";
 import {
   Button,
   FluentProvider,
   makeStyles,
   mergeClasses,
-  webDarkTheme,
 } from "@fluentui/react-components";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DOWNLOAD_URL, REPO } from "./content";
 import { buildLessons, type DocsLesson } from "./docs-content";
+import { fluentTheme, useThemeMode } from "./theme";
 
 /* Measured on learn.microsoft.com/en-us/dynamics365/get-started/intro-crossapp-index
    in dark mode: body #1f1f1f, bars and sidebar #292929, rules #404040,
@@ -23,16 +25,16 @@ import { buildLessons, type DocsLesson } from "./docs-content";
 const useStyles = makeStyles({
   root: {
     minHeight: "100vh",
-    backgroundColor: "#1f1f1f",
-    color: "#ffffff",
+    backgroundColor: "var(--of-bg)",
+    color: "var(--of-text)",
     fontFamily:
       "'Segoe UI', 'Segoe UI Variable Text', -apple-system, system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif",
     fontSize: "16px",
   },
   topbar: {
     height: "54px",
-    backgroundColor: "#292929",
-    borderBottom: "1px solid #404040",
+    backgroundColor: "var(--of-bar)",
+    borderBottom: "1px solid var(--of-border)",
   },
   topbarInner: {
     height: "100%",
@@ -45,7 +47,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    color: "#ffffff",
+    color: "var(--of-text)",
     textDecoration: "none",
     flexShrink: 0,
   },
@@ -57,7 +59,7 @@ const useStyles = makeStyles({
   brandDivider: {
     width: "1px",
     height: "24px",
-    backgroundColor: "#5c5c5c",
+    backgroundColor: "var(--of-border)",
   },
   brandText: {
     fontSize: "20px",
@@ -71,13 +73,13 @@ const useStyles = makeStyles({
     "@media (max-width: 1000px)": { display: "none" },
   },
   topNavLink: {
-    color: "#ffffff",
+    color: "var(--of-text)",
     fontSize: "16px",
     lineHeight: "28px",
     textDecoration: "none",
     padding: "6px 10px",
     borderRadius: "4px",
-    ":hover": { backgroundColor: "#333333" },
+    ":hover": { backgroundColor: "var(--of-active)" },
   },
   topActions: {
     marginLeft: "auto",
@@ -94,23 +96,23 @@ const useStyles = makeStyles({
     border: 0,
     borderRadius: "4px",
     backgroundColor: "transparent",
-    color: "#ffffff",
+    color: "var(--of-text)",
     cursor: "pointer",
-    ":hover": { backgroundColor: "#333333" },
+    ":hover": { backgroundColor: "var(--of-active)" },
   },
   topLink: {
-    color: "#75b6e7",
+    color: "var(--of-link)",
     fontSize: "14px",
     lineHeight: "20px",
     textDecoration: "none",
     padding: "6px 10px",
     borderRadius: "4px",
-    ":hover": { backgroundColor: "#333333" },
+    ":hover": { backgroundColor: "var(--of-active)" },
   },
   productbar: {
     height: "54px",
-    backgroundColor: "#292929",
-    borderBottom: "1px solid #404040",
+    backgroundColor: "var(--of-bar)",
+    borderBottom: "1px solid var(--of-border)",
   },
   productInner: {
     height: "100%",
@@ -132,13 +134,13 @@ const useStyles = makeStyles({
     "@media (max-width: 1100px)": { display: "none" },
   },
   productLink: {
-    color: "#ffffff",
+    color: "var(--of-text)",
     fontSize: "14px",
     lineHeight: "20px",
     textDecoration: "none",
     padding: "6px 10px",
     borderRadius: "4px",
-    ":hover": { backgroundColor: "#333333" },
+    ":hover": { backgroundColor: "var(--of-active)" },
   },
   productLinkActive: {
     fontWeight: 600,
@@ -166,8 +168,8 @@ const useStyles = makeStyles({
     },
   },
   sidebar: {
-    backgroundColor: "#292929",
-    borderRight: "1px solid #404040",
+    backgroundColor: "var(--of-bar)",
+    borderRight: "1px solid var(--of-border)",
     position: "sticky",
     top: 0,
     height: "100vh",
@@ -179,7 +181,7 @@ const useStyles = makeStyles({
       display: "block",
       overflow: "visible",
       borderRight: 0,
-      borderBottom: "1px solid #404040",
+      borderBottom: "1px solid var(--of-border)",
     },
   },
   sidebarInner: {
@@ -192,15 +194,15 @@ const useStyles = makeStyles({
   search: {
     width: "100%",
     height: "32px",
-    backgroundColor: "#1f1f1f",
-    border: "1px solid #8a8886",
+    backgroundColor: "var(--of-bg)",
+    border: "1px solid var(--of-input-border)",
     borderRadius: "4px",
-    color: "#ffffff",
+    color: "var(--of-text)",
     fontSize: "14px",
     lineHeight: "20px",
     padding: "0 12px 0 34px",
     outline: "none",
-    ":focus": { borderColor: "#75b6e7" },
+    ":focus": { borderColor: "var(--of-link)" },
   },
   searchWrap: {
     position: "relative",
@@ -210,7 +212,7 @@ const useStyles = makeStyles({
     left: "10px",
     top: "50%",
     transform: "translateY(-50%)",
-    color: "#d2d2d2",
+    color: "var(--of-text-2)",
     pointerEvents: "none",
   },
   tree: {
@@ -228,7 +230,7 @@ const useStyles = makeStyles({
     lineHeight: "24.5px",
     fontWeight: 400,
     padding: "4px 8px",
-    color: "#ffffff",
+    color: "var(--of-text)",
   },
   treeGroup: {
     display: "flex",
@@ -239,13 +241,13 @@ const useStyles = makeStyles({
     border: 0,
     borderRadius: "4px",
     backgroundColor: "transparent",
-    color: "#ffffff",
+    color: "var(--of-text)",
     fontSize: "14px",
     lineHeight: "24.5px",
     fontFamily: "inherit",
     textAlign: "left",
     cursor: "pointer",
-    ":hover": { backgroundColor: "#333333" },
+    ":hover": { backgroundColor: "var(--of-active)" },
   },
   chevron: {
     width: "14px",
@@ -260,18 +262,18 @@ const useStyles = makeStyles({
     width: "calc(100% - 16px)",
     padding: "4px 0 4px 16px",
     borderRadius: "4px",
-    color: "#e6e6e6",
+    color: "var(--of-text-2)",
     fontSize: "14px",
     lineHeight: "24.5px",
     textDecoration: "none",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    ":hover": { backgroundColor: "#333333", color: "#ffffff" },
+    ":hover": { backgroundColor: "var(--of-active)", color: "var(--of-text)" },
   },
   treeChildActive: {
-    backgroundColor: "#333333",
-    color: "#ffffff",
+    backgroundColor: "var(--of-active)",
+    color: "var(--of-text)",
     fontWeight: 600,
   },
   pdf: {
@@ -281,13 +283,13 @@ const useStyles = makeStyles({
     width: "100%",
     padding: "12px 0 0",
     marginTop: "auto",
-    borderTop: "1px solid #404040",
+    borderTop: "1px solid var(--of-border)",
     border: 0,
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    borderTopColor: "#404040",
+    borderTopColor: "var(--of-border)",
     backgroundColor: "transparent",
-    color: "#ffffff",
+    color: "var(--of-text)",
     fontFamily: "inherit",
     fontSize: "14px",
     lineHeight: "20px",
@@ -311,11 +313,11 @@ const useStyles = makeStyles({
     gap: "6px",
     fontSize: "14px",
     lineHeight: "24.5px",
-    color: "#d2d2d2",
+    color: "var(--of-text-2)",
     marginBottom: "4px",
   },
   crumbLink: {
-    color: "#75b6e7",
+    color: "var(--of-link)",
     textDecoration: "none",
     ":hover": { textDecoration: "underline" },
   },
@@ -329,7 +331,7 @@ const useStyles = makeStyles({
   lead: {
     fontSize: "16px",
     lineHeight: "28px",
-    color: "#ffffff",
+    color: "var(--of-text)",
     margin: "0 0 16px",
   },
   h2: {
@@ -351,7 +353,7 @@ const useStyles = makeStyles({
     paddingLeft: "22px",
   },
   link: {
-    color: "#75b6e7",
+    color: "var(--of-link)",
     textDecoration: "none",
     ":hover": { textDecoration: "underline" },
   },
@@ -359,14 +361,14 @@ const useStyles = makeStyles({
     fontFamily:
       "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
     fontSize: "14px",
-    backgroundColor: "#141414",
-    border: "1px solid #404040",
+    backgroundColor: "var(--of-code-bg)",
+    border: "1px solid var(--of-border)",
     borderRadius: "3px",
     padding: "1px 5px",
   },
   pre: {
-    backgroundColor: "#141414",
-    border: "1px solid #404040",
+    backgroundColor: "var(--of-code-bg)",
+    border: "1px solid var(--of-border)",
     borderRadius: "4px",
     padding: "12px 14px",
     overflowX: "auto",
@@ -383,7 +385,7 @@ const useStyles = makeStyles({
     display: "block",
     width: "100%",
     height: "auto",
-    border: "1px solid #404040",
+    border: "1px solid var(--of-border)",
     borderRadius: "4px",
   },
   figcaption: {
@@ -391,16 +393,16 @@ const useStyles = makeStyles({
     marginTop: "6px",
     fontSize: "14px",
     lineHeight: "20px",
-    color: "#d2d2d2",
+    color: "var(--of-text-2)",
   },
   note: {
-    borderLeft: "4px solid #75b6e7",
-    backgroundColor: "#252525",
+    borderLeft: "4px solid var(--of-link)",
+    backgroundColor: "var(--of-note-bg)",
     padding: "12px 14px",
     margin: "16px 0",
     fontSize: "14px",
     lineHeight: "22px",
-    color: "#ffffff",
+    color: "var(--of-text)",
   },
   table: {
     width: "100%",
@@ -412,13 +414,13 @@ const useStyles = makeStyles({
   th: {
     textAlign: "left",
     fontWeight: 600,
-    backgroundColor: "#292929",
-    border: "1px solid #404040",
+    backgroundColor: "var(--of-bar)",
+    border: "1px solid var(--of-border)",
     padding: "8px 10px",
     verticalAlign: "top",
   },
   td: {
-    border: "1px solid #404040",
+    border: "1px solid var(--of-border)",
     padding: "8px 10px",
     verticalAlign: "top",
   },
@@ -446,25 +448,26 @@ const useStyles = makeStyles({
     display: "block",
     paddingLeft: "10px",
     borderLeft: "2px solid transparent",
-    color: "#75b6e7",
+    color: "var(--of-link)",
     fontSize: "14px",
     lineHeight: "18.2px",
     textDecoration: "none",
     ":hover": { textDecoration: "underline" },
   },
   railLinkActive: {
-    color: "#ffffff",
-    borderLeftColor: "#75b6e7",
+    color: "var(--of-text)",
+    borderLeftColor: "var(--of-link)",
   },
   railDivider: {
     height: "1px",
-    backgroundColor: "#404040",
+    backgroundColor: "var(--of-border)",
     marginTop: "24px",
   },
 });
 
 export function DocsApp() {
   const s = useStyles();
+  const { mode, toggle } = useThemeMode();
   const lessons = useMemo(() => buildLessons(s), [s]);
   const [lessonId, setLessonId] = useState(lessons[0].id);
   const [sectionId, setSectionId] = useState(lessons[0].sections[0].id);
@@ -517,7 +520,7 @@ export function DocsApp() {
     item.sections.some((section) => section.title.toLowerCase().includes(needle));
 
   return (
-    <FluentProvider theme={webDarkTheme}>
+    <FluentProvider theme={fluentTheme(mode)}>
       <div className={s.root}>
         <header className={s.topbar}>
           <div className={s.topbarInner}>
@@ -544,6 +547,19 @@ export function DocsApp() {
               </a>
             </nav>
             <div className={s.topActions}>
+              <button
+                type="button"
+                className={s.iconButton}
+                aria-label={
+                  mode === "dark" ? "Switch to light theme" : "Switch to dark theme"
+                }
+                title={
+                  mode === "dark" ? "Switch to light theme" : "Switch to dark theme"
+                }
+                onClick={toggle}
+              >
+                {mode === "dark" ? <WeatherSunny20Regular /> : <WeatherMoon20Regular />}
+              </button>
               <button
                 type="button"
                 className={s.iconButton}

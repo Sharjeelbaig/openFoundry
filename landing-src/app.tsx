@@ -46,6 +46,8 @@ import {
   LockClosed24Regular,
   Navigation20Regular,
   Rocket24Regular,
+  WeatherMoon20Regular,
+  WeatherSunny20Regular,
   Window20Regular,
 } from "@fluentui/react-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -63,15 +65,15 @@ import {
   SLIDES,
   VERSION,
 } from "./content";
-import { theme } from "./theme";
+import { fluentTheme, useThemeMode } from "./theme";
 
 const YEAR = 2026;
 
 const useStyles = makeStyles({
   root: {
     minHeight: "100vh",
-    backgroundColor: tokens.colorNeutralBackground1,
-    color: tokens.colorNeutralForeground1,
+    backgroundColor: "var(--of-bg)",
+    color: "var(--of-text)",
   },
   skip: {
     position: "absolute",
@@ -180,7 +182,7 @@ const useStyles = makeStyles({
   },
   hero: {
     ...shorthands.padding("72px", "0", "80px"),
-    backgroundColor: "#FFF9F5",
+    backgroundColor: "var(--of-surface-alt)",
     scrollMarginTop: "64px",
   },
   heroCenter: {
@@ -249,10 +251,9 @@ const useStyles = makeStyles({
     width: "100%",
     marginTop: "56px",
     overflow: "hidden",
-    border: "none",
-    ...shorthands.borderRadius("24px"),
+    ...shorthands.border("1px", "solid", "var(--of-border)"),
+    ...shorthands.borderRadius("8px"),
     backgroundColor: tokens.colorNeutralBackground1,
-    boxShadow: tokens.shadow16,
     animationName: "of-slide-in-bottom",
     animationDuration: "1s",
     animationTimingFunction: "cubic-bezier(0.48, 0.04, 0.16, 1)",
@@ -268,7 +269,7 @@ const useStyles = makeStyles({
     ...shorthands.padding("80px", "0"),
     scrollMarginTop: "64px",
   },
-  sectionAlt: { backgroundColor: "#FFF9F5" },
+  sectionAlt: { backgroundColor: "var(--of-surface-alt)" },
   sectionHead: { maxWidth: "820px", marginBottom: "48px" },
   sectionTitle: {
     display: "block",
@@ -288,20 +289,12 @@ const useStyles = makeStyles({
     gap: "20px",
   },
   card: {
-    ...shorthands.padding("28px"),
-    rowGap: "14px",
+    ...shorthands.padding("24px"),
+    rowGap: "12px",
     height: "100%",
-    border: "none",
-    ...shorthands.borderRadius("24px"),
-    backgroundColor: tokens.colorNeutralBackground1,
-    boxShadow: tokens.shadow4,
-    transitionProperty: "transform, box-shadow",
-    transitionDuration: "300ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-    ":hover": {
-      transform: "translateY(-4px)",
-      boxShadow: tokens.shadow8,
-    },
+    ...shorthands.border("1px", "solid", "var(--of-border)"),
+    ...shorthands.borderRadius("8px"),
+    backgroundColor: "var(--of-bg)",
   },
   iconTile: {
     width: "32px",
@@ -325,9 +318,9 @@ const useStyles = makeStyles({
     position: "relative",
     aspectRatio: "1680 / 962",
     overflow: "hidden",
-    ...shorthands.borderRadius("24px"),
+    ...shorthands.border("1px", "solid", "var(--of-border)"),
+    ...shorthands.borderRadius("8px"),
     backgroundColor: tokens.colorNeutralBackground3,
-    boxShadow: tokens.shadow16,
   },
   slideImage: {
     display: "block",
@@ -389,9 +382,8 @@ const useStyles = makeStyles({
   codeCard: {
     ...shorthands.padding("0"),
     overflow: "hidden",
-    border: "none",
-    ...shorthands.borderRadius("24px"),
-    boxShadow: tokens.shadow4,
+    ...shorthands.border("1px", "solid", "var(--of-border)"),
+    ...shorthands.borderRadius("8px"),
     backgroundColor: tokens.colorNeutralBackground1,
   },
   codeHead: {
@@ -469,10 +461,9 @@ const useStyles = makeStyles({
     flexDirection: "column",
     rowGap: "20px",
     alignItems: "flex-start",
-    border: "none",
-    ...shorthands.borderRadius("24px"),
-    backgroundColor: "#FFF9F5",
-    boxShadow: tokens.shadow4,
+    ...shorthands.border("1px", "solid", "var(--of-border)"),
+    ...shorthands.borderRadius("8px"),
+    backgroundColor: "var(--of-surface-alt)",
     "@media (min-width: 760px)": {
       flexDirection: "row",
       alignItems: "center",
@@ -487,7 +478,7 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   button: {
-    ...shorthands.borderRadius(tokens.borderRadiusXLarge),
+    ...shorthands.borderRadius("4px"),
   },
   disabledCta: {
     color: tokens.colorNeutralForeground2,
@@ -496,7 +487,7 @@ const useStyles = makeStyles({
     opacity: 1,
   },
   footer: {
-    backgroundColor: "#FFF9F5",
+    backgroundColor: "var(--of-surface-alt)",
     ...shorthands.borderTop("1px", "solid", tokens.colorNeutralStroke2),
     ...shorthands.padding("56px", "0", "32px"),
   },
@@ -696,6 +687,7 @@ function FooterColumn({
 
 export function App() {
   const styles = useStyles();
+  const { mode, toggle } = useThemeMode();
   const toasterId = useId("toaster");
   const { dispatchToast } = useToastController(toasterId);
   const [starting, setStarting] = useState(false);
@@ -728,7 +720,7 @@ export function App() {
   };
 
   return (
-    <FluentProvider theme={theme}>
+    <FluentProvider theme={fluentTheme(mode)}>
       <div className={styles.root}>
       <a href="#main" className={styles.skip}>
         Skip to content
@@ -758,6 +750,19 @@ export function App() {
           </nav>
 
           <div className={styles.headerActions}>
+            <Button
+              appearance="subtle"
+              icon={
+                mode === "dark" ? <WeatherSunny20Regular /> : <WeatherMoon20Regular />
+              }
+              aria-label={
+                mode === "dark" ? "Switch to light theme" : "Switch to dark theme"
+              }
+              title={
+                mode === "dark" ? "Switch to light theme" : "Switch to dark theme"
+              }
+              onClick={toggle}
+            />
             <Button
               as="a"
               href={REPO}
@@ -1046,9 +1051,6 @@ export function App() {
               {DEPLOYMENT_MODES.map((mode, index) => (
                 <Reveal key={mode.title} kind="slide" delay={index * 70}>
                   <Card appearance="filled" className={styles.card}>
-                    <Text aria-hidden="true" className={styles.index}>
-                      {`0${index + 1}`}
-                    </Text>
                     <Text as="h3" size={600} weight="semibold">
                       {mode.title}
                     </Text>

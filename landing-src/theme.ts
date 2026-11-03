@@ -1,32 +1,36 @@
-import {
-  createLightTheme,
-  type BrandVariants,
-  type Theme,
-} from "@fluentui/react-components";
+"use client";
+
+import { webDarkTheme, webLightTheme } from "@fluentui/react-components";
+import { useEffect, useState } from "react";
+
+export type ThemeMode = "light" | "dark";
 
 /**
- * Copper is the accent already used by the app icon. Everything else comes from
- * Fluent's alias tokens, so contrast and dark-mode-safe values stay stock.
- * The 80 stop is the one Fluent uses for `colorBrandBackground` in the light
- * theme. #B25121 gives white text a contrast ratio of 5.13:1.
+ * The chosen mode lives on <html data-theme> so the CSS variables are correct
+ * before React hydrates. This hook only mirrors it into React state and writes
+ * it back when the user toggles.
  */
-const copper: BrandVariants = {
-  10: "#2A1206",
-  20: "#3D1A09",
-  30: "#52230C",
-  40: "#662C10",
-  50: "#7B3614",
-  60: "#8F4018",
-  70: "#A04A1C",
-  80: "#B25121",
-  90: "#BE6133",
-  100: "#C97248",
-  110: "#D4845F",
-  120: "#DE9778",
-  130: "#E7AA92",
-  140: "#EFBDAD",
-  150: "#F6D1C6",
-  160: "#FCE6DE",
-};
+export function useThemeMode(): { mode: ThemeMode; toggle: () => void } {
+  const [mode, setMode] = useState<ThemeMode>("light");
 
-export const theme: Theme = createLightTheme(copper);
+  useEffect(() => {
+    setMode(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+  }, []);
+
+  const toggle = () => {
+    const next: ThemeMode = mode === "dark" ? "light" : "dark";
+    setMode(next);
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem("openfoundry-theme", next);
+    } catch {
+      // Private mode. The switch still works for this page.
+    }
+  };
+
+  return { mode, toggle };
+}
+
+export function fluentTheme(mode: ThemeMode) {
+  return mode === "dark" ? webDarkTheme : webLightTheme;
+}

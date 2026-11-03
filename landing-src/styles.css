@@ -97,3 +97,41 @@ html[data-js="true"] [data-reveal="shown"][data-reveal-kind="slide"] {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Shared tokens. Both the landing page and the docs screen use these, and the
+   theme switch only changes data-theme on <html>. Values measured from
+   learn.microsoft.com in light and dark mode. */
+:root,
+[data-theme="light"] {
+  --of-bg: #ffffff;
+  --of-surface-alt: #faf9f8;
+  --of-bar: #fafafa;
+  --of-text: #161616;
+  --of-text-2: #605e5c;
+  --of-link: #0065b3;
+  --of-border: #e1dfdd;
+  --of-active: #f3f2f1;
+  --of-code-bg: #f3f2f1;
+  --of-note-bg: #eff6fc;
+  --of-input-border: #8a8886;
+  --of-accent: #0f6cbd;
+  --of-accent-hover: #115ea3;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --of-bg: #1f1f1f;
+  --of-surface-alt: #292929;
+  --of-bar: #292929;
+  --of-text: #ffffff;
+  --of-text-2: #d2d2d2;
+  --of-link: #75b6e7;
+  --of-border: #404040;
+  --of-active: #333333;
+  --of-code-bg: #141414;
+  --of-note-bg: #252525;
+  --of-input-border: #8a8886;
+  --of-accent: #0f6cbd;
+  --of-accent-hover: #115ea3;
+  color-scheme: dark;
+}
