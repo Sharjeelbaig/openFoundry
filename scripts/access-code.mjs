@@ -18,10 +18,40 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-const FILE = path.join(
-  process.env.OPENFOUNDRY_DATA_DIR?.trim() || path.join(process.cwd(), "data"),
-  "directory.json"
-);
+
+const args = process.argv.slice(2);
+const desktop = args.includes("--desktop");
+
+function desktopDataDir() {
+  if (process.platform === "darwin") {
+    return path.join(
+      process.env.HOME || "",
+      "Library",
+      "Application Support",
+      "app.openfoundry.desktop",
+      "data"
+    );
+  }
+  if (process.platform === "win32") {
+    return path.join(
+      process.env.APPDATA || "",
+      "app.openfoundry.desktop",
+      "data"
+    );
+  }
+  return path.join(
+    process.env.HOME || "",
+    ".local",
+    "share",
+    "app.openfoundry.desktop",
+    "data"
+  );
+}
+
+const dataDir =
+  process.env.OPENFOUNDRY_DATA_DIR?.trim() ||
+  (desktop ? desktopDataDir() : path.join(process.cwd(), "data"));
+const FILE = path.join(dataDir, "directory.json");
 
 function chars(length) {
   let out = "";
@@ -42,7 +72,6 @@ function hash(secret, salt) {
   return createHash("sha256").update(`${salt}:${secret}`).digest("hex");
 }
 
-const args = process.argv.slice(2);
 const emailFlag = args.indexOf("--email");
 const wantedEmail = emailFlag === -1 ? "" : (args[emailFlag + 1] || "").toLowerCase();
 
@@ -50,6 +79,11 @@ if (!existsSync(FILE)) {
   console.error(
     `No directory at ${FILE}. Start openFoundry once so it can create one.`
   );
+  if (!desktop) {
+    console.error(
+      "If you are using the desktop app, run: npm run access-code -- --desktop"
+    );
+  }
   process.exit(1);
 }
 
@@ -102,6 +136,7 @@ directory.credentials.push({
 
 writeFileSync(FILE, JSON.stringify(directory, null, 2), "utf8");
 
+console.log(`Directory: ${dataDir}`);
 console.log(`Access code for ${target.name} <${target.email}>:`);
 console.log("");
 console.log(`  ${secret}`);

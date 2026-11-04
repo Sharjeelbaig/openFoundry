@@ -93,7 +93,12 @@ export async function GET(req: NextRequest) {
     outcome: "allowed",
   });
 
-  const response = NextResponse.redirect(new URL("/", req.url));
+  // The cookie is host-only. Redirect to the same host the request used,
+  // otherwise a webview that opened 127.0.0.1 lands on localhost without it.
+  const destination = new URL("/", req.url);
+  const host = req.headers.get("host");
+  if (host) destination.host = host;
+  const response = NextResponse.redirect(destination);
   response.cookies.set(sessionCookie(req, sessionId));
   return response;
 }

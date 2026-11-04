@@ -155,6 +155,12 @@ code. If you lose it:
 npm run access-code
 ```
 
+For the installed desktop app, point it at the app data directory:
+
+```bash
+npm run access-code -- --desktop
+```
+
 The dev server is not a desktop build, so it uses the token, not the machine credential.
 
 ## Run the desktop app
