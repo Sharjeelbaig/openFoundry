@@ -178,6 +178,16 @@ The build hook runs `next build`, precompiles the standalone server, downloads t
 Node LTS runtime for the target platform, then bundles the Tauri app. Release bundles are
 written under `src-tauri/target/release/bundle/`.
 
+A full build leaves several gigabytes in `.next`, `src-tauri/target` and the sidecar
+folders. After copying the DMG, run:
+
+```bash
+npm run clean
+```
+
+It removes those build outputs only. The installed app and your workspace data are not
+touched.
+
 The macOS arm64 build is approximately 163 MB installed and 52 MB as a DMG. Most of that
 is the embedded Node runtime. Removing it would require replacing the Next.js server with
 a native or static implementation; the current tradeoff keeps the workspace identical to
