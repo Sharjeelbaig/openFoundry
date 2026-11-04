@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { NextRequest, NextResponse } from "next/server";
 import { completeChat } from "@/lib/chat";
 import { getDeployments, newId, nowIso, readJson, writeJson } from "@/lib/store";

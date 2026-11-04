@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import { can, projectScope, ROOT_SCOPE } from "./can";
 import { currentSession } from "./server";

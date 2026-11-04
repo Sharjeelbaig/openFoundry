@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 import Select from "@/components/Select";
 
@@ -492,7 +495,7 @@ export default function RoutineDialog({
                     className="input"
                     value={owner}
                     onChange={(event) => setOwner(event.target.value)}
-                    placeholder="your-org"
+                    placeholder="your-organization"
                   />
                 </label>
                 <label className="field">

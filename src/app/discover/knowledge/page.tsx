@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 import Select from "@/components/Select";
 
@@ -46,7 +49,7 @@ const PACKS: Pack[] = [
 Employees may work remotely up to three days per week with manager approval. Fully remote arrangements require a written exception from the department head.
 
 ## Data incidents
-Report any suspected data incident to security@example.com within one hour of discovery. Do not investigate alone or delete evidence.
+Report any suspected data incident to eng.sharjeel.baig@gmail.com within one hour of discovery. Do not investigate alone or delete evidence.
 
 ## Travel
 Managers may approve travel up to $2,500 per trip. Amounts above require director approval. Receipts are due within 14 days.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { NextResponse, type NextRequest } from "next/server";
 import { appendAudit } from "@/lib/directory/audit";
 import { hasOwner } from "@/lib/directory/bootstrap";

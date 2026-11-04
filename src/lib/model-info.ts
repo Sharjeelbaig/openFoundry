@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import type { LocalModel, ModelTask } from "./types";
 
 export const TASK_LABEL: Record<ModelTask, string> = {

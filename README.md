@@ -2,7 +2,7 @@
 
 **A local AI workbench for your own computer.**
 
-[Website](https://openfoundry.pages.dev) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/latest) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
+[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/latest) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
 
 openFoundry is a free, independent desktop app for discovering models, chatting with
 them, and building prompt agents. Workspace data stays on your machine and the app talks
@@ -14,8 +14,11 @@ directly to the model runtimes you configure.
 
 ## Status
 
-A working desktop foundation built on the openFoundry Next.js workspace and a Tauri 2
-shell. Implemented:
+openFoundry 0.3.0 is available as a macOS desktop app and as a web workspace. Both run the
+same Next.js app, keep workspace data on the machine, and talk directly to the model
+runtimes you configure. The desktop build is packaged with Tauri 2.
+
+What it does:
 
 - First-run setup before the workspace: independence terms, profile, provider endpoints,
   and a first model.
@@ -35,7 +38,7 @@ shell. Implemented:
 - Desktop packaging: the Tauri bundle starts a bundled Next.js standalone server and Node
   runtime on a free loopback port, and stores workspace data in the OS app-data directory.
 
-Not implemented yet:
+## Roadmap
 
 - Bundled llama.cpp installer (tracked in
   [issue #2](https://github.com/Sharjeelbaig/openFoundry/issues/2)).
@@ -220,6 +223,24 @@ public/brand/            openFoundry mark and app tile sources
 public/                  Other openFoundry artwork
 BRAND.md                 Mark, colour and usage rules
 ```
+
+## Support
+
+- Documentation: https://openfoundry.pages.dev/docs/
+- Issues: https://github.com/Sharjeelbaig/openFoundry/issues
+- Email: eng.sharjeel.baig@gmail.com
+
+## Credit
+
+openFoundry is created and maintained by Sharjeel Baig.
+
+If you use openFoundry, or a substantial part of it, credit it as:
+
+> openFoundry by Sharjeel Baig, https://github.com/Sharjeelbaig/openFoundry
+
+The Apache-2.0 license requires you to keep the copyright notice, the [LICENSE](LICENSE)
+file and the [NOTICE](NOTICE) file, and to state what you changed. The openFoundry name
+and logo are not covered by the license; see [TRADEMARKS.md](TRADEMARKS.md).
 
 ## License
 

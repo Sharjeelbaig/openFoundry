@@ -7,3 +7,5 @@ You are responsible for the models you use, the licenses attached to them, the d
 openFoundry has no telemetry and no cloud account. Requests leave your computer only when you configure a remote provider or endpoint.
 
 openFoundry is an independent project. It is not affiliated with, endorsed by, or sponsored by any model provider or platform vendor.
+
+Questions or reports: <eng.sharjeel.baig@gmail.com>.

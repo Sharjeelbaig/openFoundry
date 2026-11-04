@@ -44,5 +44,24 @@
     "typescript": "^5",
     "vitest": "^3.2.4"
   },
-  "description": "An independent local AI workbench for models, agents and knowledge."
+  "description": "An independent local AI workbench for models, agents and knowledge.",
+  "author": "Sharjeel Baig <eng.sharjeel.baig@gmail.com> (https://github.com/Sharjeelbaig)",
+  "homepage": "https://openfoundry.pages.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharjeelbaig/openFoundry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sharjeelbaig/openFoundry/issues"
+  },
+  "keywords": [
+    "local-ai",
+    "llm",
+    "agents",
+    "ai-workbench",
+    "tauri",
+    "nextjs",
+    "self-hosted",
+    "foundry"
+  ]
 }

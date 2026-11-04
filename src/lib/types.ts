@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 export type ProviderId = "foundry" | "ollama" | "lmstudio" | "llamacpp" | "huggingface";
 
 export type ModelTask =

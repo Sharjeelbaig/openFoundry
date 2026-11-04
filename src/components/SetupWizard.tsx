@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -375,7 +378,7 @@ export default function SetupWizard({
                   <span className="field-label">Email</span>
                   <input
                     className="input"
-                    placeholder="you@example.com"
+                    placeholder="name@company.com"
                     value={settings.userEmail}
                     onChange={(event) =>
                       setSettings((current) => ({

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";

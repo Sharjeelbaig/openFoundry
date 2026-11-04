@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 /**
  * Access codes, bootstrap tokens and the hashing around them.
  *

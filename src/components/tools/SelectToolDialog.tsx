@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

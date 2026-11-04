@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import type { WorkflowNode, WorkflowNodeType } from "@/lib/types";
 
 export const NODE_TITLES: Record<WorkflowNodeType, string> = {

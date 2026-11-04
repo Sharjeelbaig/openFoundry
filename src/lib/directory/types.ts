@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 /**
  * The local directory: people, their credentials, and the roles they hold.
  *

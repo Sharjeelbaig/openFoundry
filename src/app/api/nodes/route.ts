@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { NextRequest, NextResponse } from "next/server";
 import { ensureNode, listNodes, stopNode, zoneForRegion } from "@/lib/nodes";
 import { DataZone, ProviderId } from "@/lib/types";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import catalog from "@/data/tool-catalog.json";

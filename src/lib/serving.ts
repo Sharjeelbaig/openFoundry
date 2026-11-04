@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import { getDeployments, saveDeployments } from "./store";
 import { Deployment } from "./types";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 // openFoundry desktop shell.
 //
 // The product UI and all local APIs are the Next.js app. This Rust layer only

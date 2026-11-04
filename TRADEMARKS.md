@@ -18,4 +18,4 @@ neutral Fluent glyph. openFoundry is an independent index and does not claim par
 reseller or endorsement status.
 
 If you are a rights holder and want an attribution changed or a mark removed, open an
-issue in this repository.
+issue in this repository or write to <eng.sharjeel.baig@gmail.com>.

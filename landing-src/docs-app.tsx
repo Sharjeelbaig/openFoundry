@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 
 import {
@@ -202,7 +205,7 @@ const useStyles = makeStyles({
     lineHeight: "20px",
     padding: "0 12px 0 34px",
     outline: "none",
-    ":focus": { borderColor: "var(--of-link)" },
+    ":focus": { border: "1px solid var(--of-link)" },
   },
   searchWrap: {
     position: "relative",

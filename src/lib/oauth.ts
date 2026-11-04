@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import { createHash, randomBytes } from "crypto";
 import catalog from "@/data/tool-catalog.json";

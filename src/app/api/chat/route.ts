@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { NextRequest } from "next/server";
 import { streamCompletion } from "@/lib/chat";
 import { retrieveCitations } from "@/lib/rag";

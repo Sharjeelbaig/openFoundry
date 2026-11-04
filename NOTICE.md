@@ -1,5 +1,20 @@
 # Notices
 
+## Copyright and attribution
+
+openFoundry is Copyright 2026 Sharjeel Baig.
+
+If you redistribute openFoundry, or a substantial part of it, keep the copyright
+notice, the `LICENSE` file and the `NOTICE` file, and state what you changed. That
+is what the Apache-2.0 license requires. The name and logo are not covered by the
+license; see `TRADEMARKS.md`.
+
+Contact: <eng.sharjeel.baig@gmail.com>
+
+The credit line used on the project site and in the README is:
+
+> openFoundry by Sharjeel Baig, https://github.com/Sharjeelbaig/openFoundry
+
 ## Application
 
 openFoundry is an independent open-source project. It is not affiliated with, endorsed

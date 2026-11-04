@@ -7,3 +7,5 @@ Workspace settings and agent records are stored in the operating system's app-da
 Network requests are sent only to provider endpoints you configure. Those providers may have their own logging and retention policies.
 
 openFoundry does not operate a cloud service.
+
+Questions or reports: <eng.sharjeel.baig@gmail.com>.

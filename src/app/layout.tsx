@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import "./globals.css";

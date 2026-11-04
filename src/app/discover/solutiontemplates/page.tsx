@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 import Select from "@/components/Select";
 
@@ -112,7 +115,7 @@ const SOLUTIONS: Solution[] = [
 Up to three remote days per week with manager approval. Fully remote needs a written exception.
 
 ## Data incidents
-Report suspected incidents to security@example.com within one hour. Preserve evidence.
+Report suspected incidents to eng.sharjeel.baig@gmail.com within one hour. Preserve evidence.
 
 ## Travel
 Managers approve up to $2,500 per trip. Above that needs director approval. Receipts due in 14 days.

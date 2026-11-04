@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import AgentsHeader from "@/components/agents/AgentsHeader";
 import WorkflowsList from "@/components/workflows/WorkflowsList";
 

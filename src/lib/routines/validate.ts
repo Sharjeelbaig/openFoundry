@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { newId } from "@/lib/store";
 import type { RoutineTrigger } from "@/lib/types";
 import {

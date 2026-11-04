@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import {
   RendererProvider,

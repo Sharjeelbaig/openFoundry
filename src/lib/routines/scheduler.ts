@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import type { Routine } from "@/lib/types";
 import { dispatchRoutine, processRoutineQueue, recoverInterruptedRuns } from "./engine";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import { getToolboxes } from "./store";
 import { ChatTool, Toolbox } from "./types";

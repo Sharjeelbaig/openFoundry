@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import { createHash } from "crypto";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { NextRequest, NextResponse } from "next/server";
 import { getGateway, saveGateway } from "@/lib/gateway";
 import { GatewayConfig } from "@/lib/types";

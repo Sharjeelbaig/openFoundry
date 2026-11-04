@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 
 import {
@@ -1466,6 +1469,7 @@ export function App() {
                 { label: "Releases", href: REPO_FILES.releases },
                 { label: "Issues", href: REPO_FILES.issues },
                 { label: "Documentation", href: "./docs/" },
+                { label: "Contact", href: "mailto:eng.sharjeel.baig@gmail.com" },
               ]}
             />
             <FooterColumn
@@ -1482,7 +1486,11 @@ export function App() {
 
           <div className={styles.legal}>
             <Text size={200} className={styles.legalText}>
-              © {YEAR} openFoundry.
+              © {YEAR} openFoundry. Created by{" "}
+              <Link href={REPO} inline>
+                Sharjeel Baig
+              </Link>
+              .
             </Text>
             <Text size={200} className={styles.legalText}>
               openFoundry is an independent project. It is not affiliated with,

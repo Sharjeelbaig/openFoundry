@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import "server-only";
 import catalog from "@/data/tool-catalog.json";
 import { ToolCatalogEntry } from "./types";

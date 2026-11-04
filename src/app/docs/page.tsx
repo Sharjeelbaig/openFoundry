@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import Link from "next/link";
 import { DEPLOYMENT_TYPES } from "@/lib/deployment-types";
 

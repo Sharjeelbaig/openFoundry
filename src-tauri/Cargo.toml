@@ -2,7 +2,7 @@
 name = "openfoundry"
 version = "0.3.0"
 description = "openFoundry - a local AI workbench"
-authors = ["openFoundry contributors"]
+authors = ["Sharjeel Baig <eng.sharjeel.baig@gmail.com>"]
 license = "Apache-2.0"
 edition = "2024"
 

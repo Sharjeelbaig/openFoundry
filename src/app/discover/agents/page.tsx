@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 "use client";
 import Select from "@/components/Select";
 
@@ -109,7 +112,7 @@ Returns accepted within 30 days with tags attached. Damaged-on-arrival items are
 Employees may work remotely up to three days per week with manager approval. Fully remote arrangements require a written exception from the department head.
 
 ## Data incidents
-Report any suspected data incident to security@example.com within one hour of discovery. Do not attempt to investigate alone or delete evidence.
+Report any suspected data incident to eng.sharjeel.baig@gmail.com within one hour of discovery. Do not attempt to investigate alone or delete evidence.
 
 ## Travel
 Managers may approve travel up to $2,500 per trip. Amounts above that require director approval. Receipts are due within 14 days.

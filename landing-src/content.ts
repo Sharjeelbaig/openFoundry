@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import release from "./release.json";
 
 export const REPO = "https://github.com/Sharjeelbaig/openFoundry";

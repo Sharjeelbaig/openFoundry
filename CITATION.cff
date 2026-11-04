@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use openFoundry in your work, cite it."
+title: openFoundry
+abstract: "A local AI workbench for models, agents and knowledge."
+authors:
+  - family-names: Baig
+    given-names: Sharjeel
+    email: eng.sharjeel.baig@gmail.com
+repository-code: "https://github.com/Sharjeelbaig/openFoundry"
+url: "https://openfoundry.pages.dev"
+license: Apache-2.0
+version: 0.3.0
+date-released: 2026-11-04

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";

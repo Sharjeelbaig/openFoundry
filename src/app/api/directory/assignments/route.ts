@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { appendAudit } from "@/lib/directory/audit";

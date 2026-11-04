@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import SetupWizard from "@/components/SetupWizard";
 import { hasOwner } from "@/lib/directory/bootstrap";
 import { getDirectory } from "@/lib/directory/store";

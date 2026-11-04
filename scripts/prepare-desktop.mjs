@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 /**
  * Assemble the self-contained Next.js server and Node runtime that the Tauri
  * desktop bundle starts. Run automatically by `tauri build` (beforeBuildCommand)

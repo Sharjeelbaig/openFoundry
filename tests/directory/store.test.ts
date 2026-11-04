@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";

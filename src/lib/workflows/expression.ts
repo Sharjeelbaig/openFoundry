@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 /**
  * A small, safe expression language for openFoundry workflows.
  *

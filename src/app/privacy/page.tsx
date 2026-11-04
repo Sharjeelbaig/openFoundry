@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Sharjeel Baig
+
 export const metadata = { title: "Privacy — openFoundry" };
 
 export default function PrivacyPage() {
@@ -19,6 +22,11 @@ export default function PrivacyPage() {
       <p>
         Requests are sent only to provider endpoints you configure. Those providers may
         have their own logging and retention policies.
+      </p>
+      <h2>Contact</h2>
+      <p>
+        Privacy questions:{" "}
+        <a href="mailto:eng.sharjeel.baig@gmail.com">eng.sharjeel.baig@gmail.com</a>.
       </p>
       <h2>No affiliation</h2>
       <p>
