@@ -19,6 +19,66 @@ import { Spinner } from "@/components/ui";
 import type { Workflow } from "@/lib/types";
 import { TEMPLATE_META, type WorkflowTemplate } from "@/lib/workflows/templates";
 
+function CreateWorkflowMenu({
+  onPick,
+  busy,
+}: {
+  onPick: (template: WorkflowTemplate) => void;
+  busy: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div className="workflow-create" ref={ref}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => setOpen((value) => !value)}
+        disabled={busy}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        {busy ? <Spinner /> : <Add20Regular />}
+        Create workflow <ChevronDown20Regular />
+      </button>
+      {open && (
+        <div className="menu-popover workflow-template-menu" role="menu">
+          {TEMPLATE_META.map((item) => (
+            <button
+              key={item.template}
+              type="button"
+              role="menuitem"
+              className="workflow-template-item"
+              onClick={() => {
+                setOpen(false);
+                onPick(item.template);
+              }}
+            >
+              <span className="workflow-template-icon">
+                <Flow20Regular />
+              </span>
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.description}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WorkflowsList() {
   const router = useRouter();
   const { toast } = useToast();
@@ -27,10 +87,8 @@ export default function WorkflowsList() {
     5000
   );
   const [query, setQuery] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [creating, setCreating] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Workflow | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const workflows = useMemo(() => data?.workflows ?? [], [data?.workflows]);
   const filtered = useMemo(() => {
@@ -43,17 +101,8 @@ export default function WorkflowsList() {
     );
   }, [workflows, query]);
 
-  useEffect(() => {
-    const onDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
-
   const create = async (template: WorkflowTemplate) => {
     setCreating(template);
-    setMenuOpen(false);
     try {
       const res = await fetch("/api/workflows", {
         method: "POST",
@@ -89,38 +138,6 @@ export default function WorkflowsList() {
     refresh();
   };
 
-  const createMenu = (
-    <div className="workflow-create" ref={menuRef}>
-      <button
-        className="btn btn-primary"
-        onClick={() => setMenuOpen((value) => !value)}
-        disabled={Boolean(creating)}
-      >
-        {creating ? <Spinner /> : <Add20Regular />}
-        Create workflow <ChevronDown20Regular />
-      </button>
-      {menuOpen && (
-        <div className="menu-popover workflow-template-menu">
-          {TEMPLATE_META.map((item) => (
-            <button
-              key={item.template}
-              className="workflow-template-item"
-              onClick={() => void create(item.template)}
-            >
-              <span className="workflow-template-icon">
-                <Flow20Regular />
-              </span>
-              <span>
-                <strong>{item.label}</strong>
-                <small>{item.description}</small>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <>
       <div className="workflow-toolbar">
@@ -134,7 +151,7 @@ export default function WorkflowsList() {
           />
         </div>
         <span className="spacer" />
-        {createMenu}
+        <CreateWorkflowMenu onPick={(template) => void create(template)} busy={Boolean(creating)} />
       </div>
 
       {loading && workflows.length === 0 ? (
@@ -154,7 +171,12 @@ export default function WorkflowsList() {
             Workflows orchestrate agents, branching and human approvals in a
             repeatable local process.
           </p>
-          <div style={{ display: "flex", gap: 8 }}>{createMenu}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <CreateWorkflowMenu
+              onPick={(template) => void create(template)}
+              busy={Boolean(creating)}
+            />
+          </div>
         </div>
       ) : (
         <div className="table-card">

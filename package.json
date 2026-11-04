@@ -1,6 +1,6 @@
 {
   "name": "openfoundry",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
@@ -19,7 +19,8 @@
     "landing:serve": "node scripts/serve-site.mjs",
     "landing:deploy": "wrangler pages deploy landing --project-name openfoundry --branch main",
     "tauri": "tauri",
-    "test": "vitest run"
+    "test": "vitest run",
+    "clean": "node scripts/clean.mjs"
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.345",
