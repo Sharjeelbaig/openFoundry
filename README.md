@@ -14,7 +14,7 @@ directly to the model runtimes you configure.
 
 ## Status
 
-openFoundry 0.4.1 is available as a macOS desktop app and as a web workspace. Both run the
+openFoundry 0.4.2 is available as a macOS desktop app and as a web workspace. Both run the
 same Next.js app, keep workspace data on the machine, and talk directly to the model
 runtimes you configure. The desktop build is packaged with Tauri 2.
 

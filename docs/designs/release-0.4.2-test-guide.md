@@ -1,4 +1,4 @@
-# openFoundry 0.4.1 — macOS test build and feature guide
+# openFoundry 0.4.2 — macOS test build and feature guide
 
 This is the test build for the three hardening features added on the
 `refurbishing` branch:
@@ -7,12 +7,12 @@ This is the test build for the three hardening features added on the
 2. **Semantic guardrail** — a real local-model second layer.
 3. **SharePoint/OneDrive and Fabric export knowledge connectors.**
 
-The build is **macOS Apple silicon (arm64)**, version **0.4.1**, ad-hoc signed
+The build is **macOS Apple silicon (arm64)**, version **0.4.2**, ad-hoc signed
 and **not notarized**. It is for testing, not a store release.
 
 ## Artifact
 
-- DMG: `~/Downloads/openFoundry-0.4.1-macos-arm64/openFoundry-0.4.1-macos-arm64.dmg`
+- DMG: `~/Downloads/openFoundry-0.4.2-macos-arm64/openFoundry-0.4.2-macos-arm64.dmg`
 - SHA-256: see `SHA256SUMS.txt` in the same folder
 - Installed app size: about 190 MB
 - DMG size: about 56 MB
@@ -31,17 +31,17 @@ and **not notarized**. It is for testing, not a store release.
    this local build, run:
 
    ```bash
-   xattr -dr com.apple.quarantine ~/Downloads/openFoundry-0.4.1-macos-arm64/openFoundry-0.4.1-macos-arm64.dmg
+   xattr -dr com.apple.quarantine ~/Downloads/openFoundry-0.4.2-macos-arm64/openFoundry-0.4.2-macos-arm64.dmg
    ```
 
    Re-open the DMG afterwards. Do not run that on files you did not build or
    download yourself.
 
-**Install side by side with 0.4.0**
+**Install side by side with 0.4.1**
 
 Drag **openFoundry** from the DMG to `~/Applications` (not `/Applications`) to
 keep the old copy. If you drag it to `/Applications`, macOS will offer to
-replace the existing 0.4.0 app. Both versions share the same workspace data
+replace the existing 0.4.1 app. Both versions share the same workspace data
 folder, so back it up first:
 
 ```bash
@@ -506,7 +506,7 @@ want to reset the app; that is workspace data, not a build cache.
 - `docs/designs/guardrails-real-2026-11-06/`
 - `docs/designs/ai103-roadmap.md`
 
-Source: branch `refurbishing`, commit `74a8fcb` plus the 0.4.1 release bump.
+Source: branch `refurbishing`, commit `74a8fcb` plus the 0.4.2 release bump.
 
 ## 0.4.1 fix
 
@@ -514,3 +514,10 @@ Source: branch `refurbishing`, commit `74a8fcb` plus the 0.4.1 release bump.
 chat handler in-process after validating the agent API key, instead of making a server-side
 HTTP call to `/api/chat` without a session cookie. The curl sample in the Builder works
 again for both normal and streaming requests.
+
+## 0.4.2 fixes
+
+0.4.2 adds the responsive workspace fixes: the primary navigation becomes a drawer on
+small screens, the sidebar no longer takes content width, and headers, tabs, toolbars,
+metric cards, docs and tables wrap or scroll instead of clipping. The agent builder is
+single-column on tablets and phones.
