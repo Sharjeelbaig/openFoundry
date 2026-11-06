@@ -14,7 +14,7 @@ directly to the model runtimes you configure.
 
 ## Status
 
-openFoundry 0.3.1 is available as a macOS desktop app and as a web workspace. Both run the
+openFoundry 0.4.0 is available as a macOS desktop app and as a web workspace. Both run the
 same Next.js app, keep workspace data on the machine, and talk directly to the model
 runtimes you configure. The desktop build is packaged with Tauri 2.
 
@@ -198,7 +198,7 @@ npm run clean
 It removes those build outputs only. The installed app and your workspace data are not
 touched.
 
-The macOS arm64 build is approximately 163 MB installed and 52 MB as a DMG. Most of that
+The macOS arm64 build is approximately 190 MB installed and 56 MB as a DMG. Most of that
 is the embedded Node runtime. Removing it would require replacing the Next.js server with
 a native or static implementation; the current tradeoff keeps the workspace identical to
 the web build and works without requiring Node on the user's computer.

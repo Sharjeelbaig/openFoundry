@@ -1,8 +1,8 @@
 {
-  "version": "0.3.1",
-  "tag": "v0.3.1",
-  "asset": "openFoundry-0.3.1-macos-arm64.dmg",
-  "bytes": 58399197,
-  "sha256": "a38cf86b6f6621621a6c31eb7f7aea2f0a0e08cd8c451b28ff7cf5e7489cfaa3",
+  "version": "0.4.0",
+  "tag": "v0.4.0",
+  "asset": "openFoundry-0.4.0-macos-arm64.dmg",
+  "bytes": 58962282,
+  "sha256": "ab03249986662d8430bfd2c463c3c7c9350119496154a12380e72da897d50bb1",
   "siteUrl": "https://openfoundry.pages.dev"
 }
