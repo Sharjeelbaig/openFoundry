@@ -112,10 +112,26 @@ function groupsFor(pathname: string): NavGroup[] {
   return [];
 }
 
-export default function Sidebar() {
+const MOBILE_NAV = [
+  { label: "Home", href: "/" },
+  { label: "Discover", href: "/discover/overview" },
+  { label: "Build", href: "/build/agents" },
+  { label: "Operate", href: "/operate" },
+  { label: "Manage", href: "/manage" },
+  { label: "Docs", href: "/docs" },
+];
+
+export default function Sidebar({
+  mobileOpen = false,
+  onNavigate,
+}: {
+  mobileOpen?: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const groups = groupsFor(pathname);
   const [collapsed, setCollapsed] = useState(false);
+  const [mobile, setMobile] = useState(false);
 
   useEffect(() => {
     try {
@@ -125,20 +141,49 @@ export default function Sidebar() {
     }
   }, []);
 
-  if (groups.length === 0) return null;
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 900px)");
+    const update = () => setMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  if (groups.length === 0 && !mobileOpen) return null;
 
   const onDiscover = pathname.startsWith("/discover");
+  const isCollapsed = collapsed && !mobile;
 
   return (
     <aside
-      className={`sidebar${collapsed ? " collapsed" : ""}${
+      id="app-sidebar"
+      aria-hidden={mobile && !mobileOpen ? true : undefined}
+      className={`sidebar${isCollapsed ? " collapsed" : ""}${
         onDiscover ? " base" : ""
-      }`}
+      }${mobileOpen ? " mobile-open" : ""}`}
     >
       <div className="sidebar-scroll">
+        <nav className="mobile-primary-nav" aria-label="Primary mobile">
+          {MOBILE_NAV.map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href.split("/").slice(0, 2).join("/"));
+            return (
+              <Link
+                key={item.href}
+                className={`sidebar-link${active ? " active" : ""}`}
+                href={item.href}
+                onClick={onNavigate}
+              >
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
         {groups.map((group) => (
           <div className="sidebar-section" key={group.title}>
-            <h2 className="sidebar-heading">{collapsed ? "" : group.title}</h2>
+            <h2 className="sidebar-heading">{isCollapsed ? "" : group.title}</h2>
             <div className="stack" style={{ gap: 2 }}>
               {group.items.map((item) => {
                 const active =
@@ -161,11 +206,12 @@ export default function Sidebar() {
                     key={item.href}
                     href={item.href}
                     className={`sidebar-link${active ? " active" : ""}`}
-                    title={collapsed ? item.label : undefined}
+                    title={isCollapsed ? item.label : undefined}
+                    onClick={onNavigate}
                   >
                     {item.icon}
-                    {!collapsed && <span className="truncate">{item.label}</span>}
-                    {!collapsed && item.tag && (
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    {!isCollapsed && item.tag && (
                       <span className="badge gray">{item.tag}</span>
                     )}
                   </Link>
@@ -178,8 +224,8 @@ export default function Sidebar() {
       <div className="sidebar-bottom">
         <button
           className="icon-button"
-          aria-label={collapsed ? "Expand left navigation" : "Collapse left navigation"}
-          title={collapsed ? "Expand left navigation" : "Collapse left navigation"}
+          aria-label={isCollapsed ? "Expand left navigation" : "Collapse left navigation"}
+          title={isCollapsed ? "Expand left navigation" : "Collapse left navigation"}
           onClick={() => {
             setCollapsed((value) => {
               const next = !value;
@@ -195,7 +241,7 @@ export default function Sidebar() {
             });
           }}
         >
-          {collapsed ? <PanelLeftExpand20Regular /> : <PanelLeftContract20Regular />}
+          {isCollapsed ? <PanelLeftExpand20Regular /> : <PanelLeftContract20Regular />}
         </button>
       </div>
     </aside>

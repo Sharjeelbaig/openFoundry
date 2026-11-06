@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import Header from "./Header";
 import SetupWizard from "./SetupWizard";
 import Sidebar from "./Sidebar";
@@ -35,6 +36,10 @@ export default function AppShell({
   } | null;
 }) {
   const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
   const showFooter = pathname === "/" || pathname.startsWith("/discover");
   const noScroll =
     /^\/build\/agents\/[^/]+\/build/.test(pathname) ||
@@ -75,9 +80,20 @@ export default function AppShell({
             roleName={user?.roleName}
             access={user?.access}
             initialTheme={theme}
+            navOpen={navOpen}
+            onToggleNav={() => setNavOpen((open) => !open)}
           />
           <div className={`app-body${surface ? " surface-body" : ""}`}>
-            <Sidebar />
+            <Sidebar
+              mobileOpen={navOpen}
+              onNavigate={() => setNavOpen(false)}
+            />
+            <button
+              type="button"
+              className={`sidebar-backdrop${navOpen ? " open" : ""}`}
+              aria-label="Close navigation"
+              onClick={() => setNavOpen(false)}
+            />
             <main
               className={`app-main${noScroll ? " no-scroll" : ""}${
                 surface ? " surface" : ""

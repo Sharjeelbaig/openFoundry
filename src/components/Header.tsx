@@ -15,6 +15,7 @@ import {
   Dismiss20Regular,
   ErrorCircle20Regular,
   Info20Regular,
+  Navigation20Regular,
   Person20Regular,
   Search20Regular,
   Settings20Regular,
@@ -41,6 +42,8 @@ export default function Header({
   roleName,
   access,
   initialTheme,
+  navOpen,
+  onToggleNav,
 }: {
   projectName: string;
   userName: string;
@@ -49,6 +52,8 @@ export default function Header({
   roleName?: string;
   access?: string;
   initialTheme: "dark" | "light";
+  navOpen: boolean;
+  onToggleNav: () => void;
 }) {
   const pathname = usePathname();
   const { toast } = useToast();
@@ -95,6 +100,16 @@ export default function Header({
   return (
     <header className="app-header" ref={wrapRef}>
       <div className="header-left">
+        <button
+          type="button"
+          className="icon-button mobile-nav-toggle"
+          aria-label={navOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={navOpen}
+          aria-controls="app-sidebar"
+          onClick={onToggleNav}
+        >
+          <Navigation20Regular />
+        </button>
         <Link href="/" className="brand" aria-label="openFoundry home">
           <span className="brand-logo">
             <FoundryLogo />
