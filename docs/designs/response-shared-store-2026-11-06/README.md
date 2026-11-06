@@ -65,7 +65,7 @@ A.
 `tests/response-store.test.ts` (6 tests) continues to cover local persistence,
 owner scoping and TTL/count pruning.
 
-The full Vitest suite is 238 passing with 1 skipped (41 files). The Python live
+The full Vitest suite is 241 passing with 1 skipped (42 files). The Python live
 suite remains 14 tests.
 
 ## API

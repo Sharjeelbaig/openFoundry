@@ -2,6 +2,7 @@
 // Copyright 2026 Sharjeel Baig
 
 import { NextRequest, NextResponse } from "next/server";
+import { POST as chatPost } from "@/app/api/chat/route";
 import { isAgentKey, unauthorized } from "@/lib/auth";
 import { getAgent } from "@/lib/store";
 
@@ -52,16 +53,27 @@ export async function POST(req: NextRequest, { params }: Params) {
     knowledgeBaseIds: agent.knowledgeBaseIds,
     tools: agent.tools,
     guardrail: agent.guardrail || "Default",
+    guardrailId: agent.guardrailId,
+    memoryStoreId: agent.memoryStoreId,
     saveTrace: true,
   };
 
-  const upstream = await fetch(new URL("/api/chat", req.url), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: req.signal,
-    cache: "no-store",
-  });
+  // Call the shared chat handler in-process. The public agent endpoint is
+  // authenticated by the agent key above; the internal /api/chat route is
+  // guarded by a session cookie and would reject this server-side call.
+  const upstream = await chatPost(
+    new NextRequest(new URL("/api/chat", req.url), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(req.headers.get("cookie")
+          ? { cookie: req.headers.get("cookie") as string }
+          : {}),
+      },
+      body: JSON.stringify(body),
+      signal: req.signal,
+    })
+  );
 
   if (!upstream.ok || !upstream.body) {
     return NextResponse.json(

@@ -86,7 +86,7 @@ redacted text.
 
 ## Tests
 
-The full Vitest suite is **238 passed with 1 skipped (41 files)**.
+The full Vitest suite is **241 passed with 1 skipped (42 files)**.
 `tests/guardrails.test.ts` (13 tests) covers:
 
 - email and Luhn-valid card redaction,
