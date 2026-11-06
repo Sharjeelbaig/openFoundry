@@ -34,7 +34,10 @@ These are labelled in the product rather than presented as cloud services:
   scopes other than `Device` are simulated.
 - Foundry IQ, Web IQ and AI Search are local equivalents, not Azure AI Search.
   Web IQ uses the project's own crawler, not Bing.
-- Guardrails are deterministic regex/prompt controls, not Azure Content Safety.
+- Guardrails are deterministic PII/credential and pattern controls with
+  block/redact/mask/hash strategies, not Azure Content Safety or a semantic
+  safety classifier. Human approval for destructive tool calls is not
+  implemented yet. See `docs/designs/guardrails-real-2026-11-06/`.
 - Evaluations are real model calls with local heuristics, not Azure evaluators.
 - Billing is local usage accounting. No payment provider, invoice, tax or
   subscription lifecycle is configured.

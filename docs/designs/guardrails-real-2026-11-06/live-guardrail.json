@@ -1,0 +1,23 @@
+{
+  "redact_input": {
+    "status": 200,
+    "blocked": false,
+    "text": "Email [REDACTED_EMAIL] and card [REDACTED_CREDIT_CARD].",
+    "findings": [
+      { "controlId": "pii", "riskType": "PII", "category": "pii", "count": 1, "detail": "personal data (email)" },
+      { "controlId": "pii", "riskType": "PII", "category": "pii", "count": 1, "detail": "personal data (credit card)" }
+    ]
+  },
+  "jailbreak": {
+    "status": 200,
+    "blocked": true,
+    "reason": "It contains a jailbreak attempt.",
+    "control": { "id": "jailbreak", "riskType": "Jailbreak", "action": "Block" }
+  },
+  "tool_pii": {
+    "status": 200,
+    "blocked": true,
+    "reason": "It contains personal data (email).",
+    "control": { "id": "pii", "riskType": "PII", "action": "Redact" }
+  }
+}

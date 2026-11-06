@@ -555,6 +555,8 @@ export interface GuardrailControl {
   intervention: string;
   /** Action, e.g. "Block", "Deny", "On". */
   action: string;
+  /** How PII/secrets are handled when the control matches. */
+  strategy?: "block" | "redact" | "mask" | "hash";
   /** Severity qualifier ("Medium blocking") for content harms. */
   severity?: string;
   /** True when Foundry adds it by default and it cannot be removed. */

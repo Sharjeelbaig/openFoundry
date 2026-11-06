@@ -393,11 +393,12 @@ export function defaultGuardrails(): Guardrail[] {
       group: "Sensitive data leakage",
       riskType: "PII",
       intervention: "User input, Tool call, Tool response, Output",
-      action: "Block",
+      action: "Redact",
+      strategy: "redact",
       defaulted: false,
       enabled: false,
       description:
-        "Blocks the disclosure of personal data such as names, emails, phone numbers, and addresses.",
+        "Detects personal data and credentials such as emails, phone numbers, card numbers, API keys and private keys. Choose Block, Redact, Mask or Hash.",
     },
     {
       id: "task-adherence",

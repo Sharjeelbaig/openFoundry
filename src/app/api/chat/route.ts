@@ -3,7 +3,7 @@
 
 import { NextRequest } from "next/server";
 import { streamCompletion } from "@/lib/chat";
-import { messageText } from "@/lib/chat-content";
+import { messageText, replaceMessageText } from "@/lib/chat-content";
 import { retrieveViaMcp } from "@/lib/knowledge/mcp-client";
 import {
   appendTrace,
@@ -17,9 +17,10 @@ import {
 } from "@/lib/store";
 import {
   evaluate,
+  evaluateToolCall,
   guardrailInstructions,
+  hasOutputStreamGuard,
   refusalMessage,
-  type GuardrailVerdict,
 } from "@/lib/guardrails";
 import { getMemoryStore, recall, rememberTurn, renderMemory } from "@/lib/memory";
 import { nodeForDeployment } from "@/lib/nodes";
@@ -187,6 +188,9 @@ export async function POST(req: NextRequest) {
             ? guardrails.find((g) => g.id === guardrailId)
             : undefined;
           const blocklists = await getBlocklists();
+          const bufferOutput = guardrailResource
+            ? hasOutputStreamGuard(guardrailResource)
+            : false;
 
           // Enforce input controls before any model work happens.
           if (lastUser && guardrailResource) {
@@ -234,6 +238,13 @@ export async function POST(req: NextRequest) {
                 error: `Blocked by ${verdict.control.riskType} guardrail`,
               });
               return;
+            }
+            const inputText = messageText(lastUser.content);
+            if (verdict.text !== inputText) {
+              lastUser.content = replaceMessageText(
+                lastUser.content,
+                verdict.text
+              );
             }
           }
 
@@ -496,7 +507,7 @@ export async function POST(req: NextRequest) {
                 // chat transcript.
                 if (!mcpChatTools.length) {
                   answer += event.text;
-                  send({ type: "delta", text: event.text });
+                  if (!bufferOutput) send({ type: "delta", text: event.text });
                 }
               } else if (event.type === "tool_calls") {
                 toolCalls = event.calls;
@@ -509,7 +520,7 @@ export async function POST(req: NextRequest) {
             if (!toolCalls.length || !mcpChatTools.length) {
               if (mcpChatTools.length && roundText) {
                 answer += roundText;
-                send({ type: "delta", text: roundText });
+                if (!bufferOutput) send({ type: "delta", text: roundText });
               }
               break;
             }
@@ -574,34 +585,69 @@ export async function POST(req: NextRequest) {
                 continue;
               }
 
+              const serverLabel = resolved.id.startsWith("mcp:")
+                ? "MCP server"
+                : resolved.id.startsWith("http:")
+                ? "HTTP tool"
+                : "Tool";
+              if (guardrailResource) {
+                const toolVerdict = evaluateToolCall(
+                  guardrailResource,
+                  blocklists,
+                  resolved.definition.function.name,
+                  toolArgs
+                );
+                if (toolVerdict.blocked && toolVerdict.control) {
+                  const blocked = `[${refusalMessage(toolVerdict.control)}]`;
+                  lastToolResult = blocked;
+                  conversation.push({
+                    role: "tool",
+                    tool_call_id: call.id,
+                    content: blocked,
+                  });
+                  send({
+                    type: "tool",
+                    status: "error",
+                    name: resolved.definition.function.name,
+                    server: serverLabel,
+                    preview: blocked,
+                  });
+                  continue;
+                }
+              }
               send({
                 type: "tool",
                 status: "running",
                 name: resolved.definition.function.name,
-                server: resolved.id.startsWith("mcp:")
-                  ? "MCP server"
-                  : resolved.id.startsWith("http:")
-                  ? "HTTP tool"
-                  : "Tool",
+                server: serverLabel,
               });
               try {
                 const result = await resolved.execute(toolArgs);
-                lastToolResult = result.text;
+                let toolText = result.text;
+                if (guardrailResource) {
+                  const toolOutputVerdict = evaluate(
+                    guardrailResource,
+                    blocklists,
+                    result.text,
+                    "tool"
+                  );
+                  toolText =
+                    toolOutputVerdict.blocked && toolOutputVerdict.control
+                      ? `[${refusalMessage(toolOutputVerdict.control)}]`
+                      : toolOutputVerdict.text;
+                }
+                lastToolResult = toolText;
                 conversation.push({
                   role: "tool",
                   tool_call_id: call.id,
-                  content: result.text,
+                  content: toolText,
                 });
                 send({
                   type: "tool",
                   status: result.isError ? "error" : "done",
                   name: resolved.definition.function.name,
-                  server: resolved.id.startsWith("mcp:")
-                    ? "MCP server"
-                    : resolved.id.startsWith("http:")
-                    ? "HTTP tool"
-                    : "Tool",
-                  preview: result.text.slice(0, 500),
+                  server: serverLabel,
+                  preview: toolText.slice(0, 500),
                 });
               } catch (error) {
                 const message =
@@ -638,7 +684,7 @@ export async function POST(req: NextRequest) {
           // tool. Surface the real tool output instead of an empty chat turn.
           if (!answer.trim() && lastToolResult) {
             answer = `Tool result:\n${lastToolResult}`.slice(0, 4000);
-            send({ type: "delta", text: answer });
+            if (!bufferOutput) send({ type: "delta", text: answer });
           }
 
           if (!promptTokens) {
@@ -652,7 +698,8 @@ export async function POST(req: NextRequest) {
           if (deployment)
             void meter(deployment.id, promptTokens, completionTokens);
 
-          // Enforce output controls on the final answer.
+          // Enforce output controls on the final answer. PII output controls
+          // buffer the response so sensitive data is never sent to the client.
           if (guardrailResource && answer) {
             const verdict = evaluate(
               guardrailResource,
@@ -661,10 +708,19 @@ export async function POST(req: NextRequest) {
               "output"
             );
             if (verdict.blocked && verdict.control) {
-              const notice = `\n\n[${refusalMessage(verdict.control)}]`;
-              send({ type: "delta", text: notice });
-              answer += notice;
+              if (bufferOutput) {
+                answer = refusalMessage(verdict.control);
+              } else {
+                const notice = `\n\n[${refusalMessage(verdict.control)}]`;
+                send({ type: "delta", text: notice });
+                answer += notice;
+              }
+            } else {
+              answer = verdict.text;
             }
+          }
+          if (bufferOutput && answer) {
+            send({ type: "delta", text: answer });
           }
 
           // Persist anything worth remembering for the next turn.

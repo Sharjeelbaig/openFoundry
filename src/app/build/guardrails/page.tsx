@@ -15,7 +15,24 @@ import { useToast } from "@/components/Toast";
 import { Field, Spinner } from "@/components/ui";
 import type { Agent, Blocklist, Deployment, Guardrail } from "@/lib/types";
 
-type Tab = "Guardrails" | "Blocklists" | "Integrations";
+type Tab = "Guardrails" | "Blocklists" | "Test" | "Integrations";
+type TestPoint = "input" | "output" | "tool";
+
+interface TestFinding {
+  controlId: string;
+  riskType: string;
+  category: string;
+  count: number;
+  detail: string;
+}
+
+interface TestResult {
+  blocked: boolean;
+  reason: string | null;
+  text: string;
+  findings: TestFinding[];
+  control: { id: string; riskType: string; action: string } | null;
+}
 
 interface GuardrailsResponse {
   guardrails: Guardrail[];
@@ -27,7 +44,7 @@ interface GuardrailsResponse {
 export default function GuardrailsPage() {
   const { toast } = useToast();
   const { data, loading, refresh } = useApi<GuardrailsResponse>("/api/guardrails");
-  const guardrails = data?.guardrails ?? [];
+  const guardrails = useMemo(() => data?.guardrails ?? [], [data?.guardrails]);
   const blocklists = data?.blocklists ?? [];
   const agents = data?.agents ?? [];
   const deployments = data?.deployments ?? [];
@@ -38,6 +55,11 @@ export default function GuardrailsPage() {
   const [blocklistName, setBlocklistName] = useState("");
   const [blocklistTerms, setBlocklistTerms] = useState("");
   const [busy, setBusy] = useState(false);
+  const [testGuardrailId, setTestGuardrailId] = useState("");
+  const [testText, setTestText] = useState("");
+  const [testPoint, setTestPoint] = useState<TestPoint>("input");
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const filtered = useMemo(
     () =>
@@ -133,6 +155,7 @@ export default function GuardrailsPage() {
           [
             { id: "Guardrails", label: "Guardrails" },
             { id: "Blocklists", label: "Blocklists" },
+            { id: "Test", label: "Test" },
             { id: "Integrations", label: "Integrations", preview: true },
           ] as { id: Tab; label: string; preview?: boolean }[]
         ).map((item) => (
@@ -303,6 +326,155 @@ export default function GuardrailsPage() {
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {tab === "Test" && (
+        <>
+          <p className="page-note">
+            Run a guardrail against text before it reaches a model. PII and
+            credentials are detected locally; redact, mask, hash and block
+            strategies are enforced by the same engine the chat route uses.
+          </p>
+          <div className="operate-card">
+            <div className="form-grid">
+              <label className="field">
+                <span className="field-label">Guardrail</span>
+                <select
+                  className="select"
+                  value={testGuardrailId || guardrails[0]?.id || ""}
+                  onChange={(event) => {
+                    setTestGuardrailId(event.target.value);
+                    setTestResult(null);
+                  }}
+                >
+                  {guardrails.map((guardrail) => (
+                    <option key={guardrail.id} value={guardrail.id}>
+                      {guardrail.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field-label">Intervention point</span>
+                <select
+                  className="select"
+                  value={testPoint}
+                  onChange={(event) =>
+                    setTestPoint(event.target.value as TestPoint)
+                  }
+                >
+                  <option value="input">User input</option>
+                  <option value="output">Model output</option>
+                  <option value="tool">Tool call</option>
+                </select>
+              </label>
+            </div>
+            <label className="field mt-8">
+              <span className="field-label">Text to check</span>
+              <textarea
+                className="textarea"
+                style={{ minHeight: 120 }}
+                placeholder="Paste a prompt, a model answer or tool arguments"
+                value={testText}
+                onChange={(event) => setTestText(event.target.value)}
+              />
+            </label>
+            <button
+              className="btn btn-primary mt-8"
+              disabled={
+                testing || !testText.trim() || !(testGuardrailId || guardrails[0]?.id)
+              }
+              onClick={async () => {
+                setTesting(true);
+                setTestResult(null);
+                try {
+                  const res = await fetch("/api/guardrails/test", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      guardrailId: testGuardrailId || guardrails[0]?.id,
+                      text: testText,
+                      point: testPoint,
+                    }),
+                  });
+                  const json = (await res.json().catch(() => ({}))) as
+                    | TestResult
+                    | { error?: string };
+                  if (!res.ok || !("blocked" in json)) {
+                    throw new Error(
+                      (json as { error?: string }).error ||
+                        "Could not check the guardrail."
+                    );
+                  }
+                  setTestResult(json);
+                } catch (error) {
+                  toast(
+                    error instanceof Error
+                      ? error.message
+                      : "Guardrail check failed.",
+                    "error"
+                  );
+                } finally {
+                  setTesting(false);
+                }
+              }}
+            >
+              {testing ? <Spinner /> : null} Run check
+            </button>
+          </div>
+
+          {testResult && (
+            <>
+              <div
+                className={`banner ${testResult.blocked ? "error" : "info"} mt-12`}
+              >
+                <Info20Regular />
+                <span>
+                  {testResult.blocked
+                    ? `Blocked by ${testResult.control?.riskType || "the guardrail"}: ${testResult.reason}`
+                    : `Allowed. ${testResult.findings.length} finding(s); the text below is what would be sent.`}
+                </span>
+              </div>
+              {testResult.findings.length > 0 && (
+                <div className="table-card mt-12">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Control</th>
+                        <th>Category</th>
+                        <th>Count</th>
+                        <th>Detail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {testResult.findings.map((finding, index) => (
+                        <tr key={`${finding.controlId}-${index}`}>
+                          <td className="strong">{finding.riskType}</td>
+                          <td>{finding.category}</td>
+                          <td>{finding.count}</td>
+                          <td className="muted">{finding.detail}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="operate-card mt-12">
+                <h3 className="mb-8">Transformed text</h3>
+                <pre
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    margin: 0,
+                    color: "var(--fg-2)",
+                  }}
+                >
+                  {testResult.text}
+                </pre>
+              </div>
+            </>
+          )}
         </>
       )}
 

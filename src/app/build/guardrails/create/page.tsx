@@ -42,7 +42,10 @@ export default function GuardrailCreatePage() {
   const router = useRouter();
   const { toast } = useToast();
   const { data } = useApi<GuardrailsResponse>("/api/guardrails");
-  const template = data?.guardrails?.[0]?.controls ?? [];
+  const template = useMemo(
+    () => data?.guardrails?.[0]?.controls ?? [],
+    [data?.guardrails]
+  );
   const agents = data?.agents ?? [];
   const deployments = data?.deployments ?? [];
 
@@ -244,14 +247,27 @@ export default function GuardrailCreatePage() {
                                   setControl(control, { action: event.target.value })
                                 }
                               >
-                                {["Block", "On", "Off", "Deny"].includes(
-                                  actionFor(control)
-                                ) ? null : (
+                                {[
+                                  "Block",
+                                  "On",
+                                  "Off",
+                                  "Deny",
+                                  "Redact",
+                                  "Mask",
+                                  "Hash",
+                                ].includes(actionFor(control)) ? null : (
                                   <option>{actionFor(control)}</option>
                                 )}
                                 <option>Block</option>
                                 <option>On</option>
                                 <option>Off</option>
+                                {control.id === "pii" && (
+                                  <>
+                                    <option>Redact</option>
+                                    <option>Mask</option>
+                                    <option>Hash</option>
+                                  </>
+                                )}
                               </Select>
                             )}
                           </div>

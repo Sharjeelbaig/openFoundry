@@ -57,6 +57,7 @@ const RULES: Rule[] = [
   { pattern: /^\/api\/extraction\/foundation\/train$/, actions: { POST: "knowledge.write" } },
   { pattern: /^\/api\/extraction\/foundation\/setup$/, actions: { POST: "knowledge.write" } },
   { pattern: /^\/api\/gateway$/, actions: { GET: "gateway.read", PATCH: "gateway.write" } },
+  { pattern: /^\/api\/guardrails\/test$/, actions: { POST: "guardrails.read" } },
   { pattern: /^\/api\/guardrails(\/[^/]+)?$/, actions: { GET: "guardrails.read", POST: "guardrails.write", PATCH: "guardrails.write", DELETE: "guardrails.write" } },
   { pattern: /^\/api\/http-tools(\/[^/]+)?\/call$/, actions: { POST: "tools.invoke" } },
   { pattern: /^\/api\/http-tools(\/[^/]+)?$/, actions: { GET: "tools.read", POST: "tools.write", PATCH: "tools.write", DELETE: "tools.write" } },

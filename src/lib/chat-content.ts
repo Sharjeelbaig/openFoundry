@@ -20,6 +20,18 @@ export function messageText(content: string | MessageContentPart[]): string {
     .trim();
 }
 
+/** Replaces text while preserving any image parts in a multimodal message. */
+export function replaceMessageText(
+  content: string | MessageContentPart[],
+  text: string
+): string | MessageContentPart[] {
+  if (typeof content === "string") return text;
+  return [
+    { type: "text", text },
+    ...content.filter((part) => part.type === "image_url"),
+  ];
+}
+
 /** Data URL for an uploaded image, capped so a single message stays small. */
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 

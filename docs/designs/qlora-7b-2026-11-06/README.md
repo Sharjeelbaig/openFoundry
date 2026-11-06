@@ -115,7 +115,7 @@ UI show the same preflight, and the UI disables the train button when it fails.
 - `assertFoundationFeasible` throws for the refused configuration,
 - plus the existing dataset, scoring, runtime and cleanup cases.
 
-The full Vitest suite is **205 passed with 1 skipped (36 files)**.
+The full Vitest suite is **217 passed with 1 skipped (37 files)**.
 
 ## Limits
 
