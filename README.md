@@ -203,6 +203,24 @@ is the embedded Node runtime. Removing it would require replacing the Next.js se
 a native or static implementation; the current tradeoff keeps the workspace identical to
 the web build and works without requiring Node on the user's computer.
 
+## Run from a phone
+
+The workspace is an installable PWA. On Android, Termux can host the server on
+the phone itself using its native Node.js build:
+
+```bash
+pkg install git
+git clone https://github.com/Sharjeelbaig/openFoundry.git
+cd openFoundry
+bash scripts/termux-server.sh
+```
+
+Open `http://127.0.0.1:3000` in Chrome and choose **Install app**. For LAN access
+use `bash scripts/termux-server.sh --lan`. The desktop build binds to loopback
+and is not reachable from the phone. See `docs/designs/mobile-pwa.md` for the
+supported paths and limitations. Tauri mobile cannot run this app's Node
+sidecar, so no APK is published.
+
 ## Providers
 
 | Provider | Default endpoint |

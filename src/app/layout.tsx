@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Sharjeel Baig
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
@@ -11,6 +11,7 @@ import { hasOwner } from "@/lib/directory/bootstrap";
 import { currentSession } from "@/lib/directory/server";
 import { getDirectory } from "@/lib/directory/store";
 import { getSettings, hostName } from "@/lib/store";
+import { ServiceWorker } from "@/components/ServiceWorker";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,20 @@ export const metadata: Metadata = {
   title: "openFoundry",
   description:
     "An independent local AI workbench for models, agents and knowledge.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "openFoundry",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#643fb2",
 };
 
 export default async function RootLayout({
@@ -68,6 +83,7 @@ export default async function RootLayout({
             {children}
           </AppShell>
         </OriginProvider>
+        <ServiceWorker />
       </body>
     </html>
   );
