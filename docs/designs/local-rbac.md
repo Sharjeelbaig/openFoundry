@@ -147,7 +147,7 @@ narrower action exists.
 | models | `models.read`, `models.download`, `models.deploy`, `models.delete`, `models.invoke` | `/api/models`, `/api/models/download`, `/api/deployments`, `/api/v1/chat/completions` |
 | agents | `agents.read`, `agents.write`, `agents.invoke` | `/api/agents`, `/api/projects/[project]/agents/...` |
 | knowledge | `knowledge.read`, `knowledge.write` | `/api/knowledge`, `/api/knowledge/search` |
-| tools | `tools.read`, `tools.write`, `tools.invoke` | `/api/toolboxes`, `/api/mcp`, `/api/http-tools`, `/api/tools/catalog` |
+| tools | `tools.read`, `tools.write`, `tools.invoke` | `/api/toolboxes`, `/api/mcp`, `/api/http-tools`, `/api/tools/catalog`, `/api/tool-approvals` |
 | workflows | `workflows.read`, `workflows.write` | `/api/workflows/...` |
 | routines | `routines.read`, `routines.write` | `/api/routines/...` |
 | evaluations | `evaluations.read`, `evaluations.write` | `/api/evaluations` |

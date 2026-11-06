@@ -54,8 +54,10 @@ import type {
   McpServer,
   ToolCatalogEntry,
   Toolbox,
+  ToolApprovalRecord,
   Trace,
 } from "@/lib/types";
+import { ToolApprovalCard } from "@/components/ToolApprovalCard";
 import { useOrigin } from "@/components/Origin";
 
 type BuilderTab =
@@ -216,6 +218,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [approvals, setApprovals] = useState<ToolApprovalRecord[]>([]);
   const [usage, setUsage] = useState<{
     promptTokens: number;
     completionTokens: number;
@@ -457,6 +460,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
     const next = [...(base ?? messages), userTurn];
     setMessages(next);
     if (override === undefined) setInput("");
+    setApprovals([]);
     setStreaming(true);
     let assistant = "";
     let citations: Citation[] = [];
@@ -510,9 +514,23 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
             latencyMs?: number;
             model?: string;
             embeddingModel?: string;
+            approval?: ToolApprovalRecord;
+            id?: string;
+            status?: string;
           };
           if (event.type === "meta") {
             citations = event.citations || [];
+          } else if (event.type === "approval_required" && event.approval) {
+            const approval = event.approval;
+            setApprovals((current) =>
+              current.some((item) => item.id === approval.id)
+                ? current
+                : [...current, approval]
+            );
+          } else if (event.type === "approval_decided" && event.id) {
+            setApprovals((current) =>
+              current.filter((item) => item.id !== event.id)
+            );
           } else if (event.type === "delta" && event.text) {
             assistant += event.text;
             setMessages((current) => {
@@ -544,6 +562,7 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
         }
       }
     } catch (error) {
+      setApprovals([]);
       const message = error instanceof Error ? error.message : "Model request failed";
       setMessages((current) => {
         const copy = [...current];
@@ -1595,6 +1614,17 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
 
             {chatMode === "Chat" && (
               <>
+                {approvals.map((approval) => (
+                  <ToolApprovalCard
+                    key={approval.id}
+                    approval={approval}
+                    onDecision={(approvalId) =>
+                      setApprovals((current) =>
+                        current.filter((item) => item.id !== approvalId)
+                      )
+                    }
+                  />
+                ))}
                 <div className="chat-input-wrap">
                   <textarea
                     className="chat-input"

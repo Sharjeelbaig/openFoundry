@@ -33,7 +33,10 @@ export type SourceKind =
   | "sharepoint-remote"
   // Indexed, requires a Microsoft tenant.
   | "sharepoint-indexed"
-  | "onelake";
+  | "onelake"
+  // Local exports: real ingestion from files the user is allowed to export.
+  | "sharepoint-export"
+  | "fabric-export";
 
 export type SourceMode = "indexed" | "remote" | "unavailable";
 

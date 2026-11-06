@@ -1,0 +1,48 @@
+{
+  "knowledgeBase": {
+    "name": "Tenant exports live",
+    "documents": 8,
+    "chunks": 8,
+    "embeddingModel": "hf.co/nomic-ai/nomic-embed-text-v1.5-GGUF:Q8_0",
+    "status": "Ready"
+  },
+  "sources": [
+    {
+      "kind": "sharepoint-export",
+      "name": "SharePoint export",
+      "config": { "path": "/tmp/openfoundry-tenant-exports/sharepoint" },
+      "documentCount": 2,
+      "documents": ["leave-policy.md", "security-guidelines.txt"]
+    },
+    {
+      "kind": "fabric-export",
+      "name": "Fabric export",
+      "config": { "path": "/tmp/openfoundry-tenant-exports/fabric" },
+      "documentCount": 6,
+      "documents": [
+        "revenue.csv row 2",
+        "revenue.csv row 3",
+        "revenue.csv row 4",
+        "revenue.csv row 5",
+        "tickets.jsonl row 1",
+        "tickets.jsonl row 2"
+      ]
+    }
+  ],
+  "retrieval": {
+    "query": "EMEA Q1 revenue 1250000 EUR",
+    "maxOutputDocuments": 2,
+    "references": [
+      { "type": "sharepoint-export", "docName": "leave-policy.md" },
+      { "type": "fabric-export", "docName": "revenue.csv row 2" }
+    ],
+    "activity": [
+      { "type": "sharepoint-export", "knowledgeSourceName": "SharePoint export", "count": 2 },
+      { "type": "fabric-export", "knowledgeSourceName": "Fabric export", "count": 6 }
+    ]
+  },
+  "indexedRows": {
+    "revenue.csv row 2": "region: EMEA\nquarter: Q1\nrevenue: 1250000\ncurrency: EUR",
+    "tickets.jsonl row 1": "ticket: TCK-1042\nregion: EMEA\npriority: high\nstatus: closed"
+  }
+}

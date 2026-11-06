@@ -24,8 +24,8 @@ Foundry does, what openFoundry does, and whether the difference is deliberate.
 
 | Foundry behaviour | openFoundry | Status |
 | --- | --- | --- |
-| Indexed sources: File, Blob, SQL, OneLake, SharePoint Indexed | File, Folder, Web, Git, SQLite, CSV, S3, Azure Blob, WebDAV, Google Drive | Superset locally; OneLake/SharePoint need a tenant |
-| Remote sources queried at retrieval time | **Azure AI Search and MCP are real remote sources**; Work IQ/Fabric/SharePoint are not built | Partial |
+| Indexed sources: File, Blob, SQL, OneLake, SharePoint Indexed | File, Folder, Web, Git, SQLite, CSV, S3, Azure Blob, WebDAV, Google Drive, SharePoint/OneDrive export, Fabric export | Superset locally; live OneLake/SharePoint need a tenant |
+| Remote sources queried at retrieval time | **Azure AI Search and MCP are real remote sources**; Work IQ/Fabric/live SharePoint are not built | Partial; export connectors cover local copies |
 | Web source is Bing grounding | Web is an on-machine crawler | Local equivalent |
 | File limits: 100/200 files, 50–100 MB, 180 s | 200 files per upload, 50 MB each; retrieval enforces `maxRuntimeInSeconds` (default 180) and returns a partial result at the budget | Match |
 | Incremental indexing and deletion detection | Content hash identity; unseen documents deleted per source | Match |
@@ -92,9 +92,11 @@ Fixed in this pass:
    real configured sources; reusing one copies its definition, connection
    reference and indexed content into the new base. A later sync of the original
    does not rewrite the copy.
-3. **Work IQ, Fabric and SharePoint remote knowledge sources are not built.**
+3. **Work IQ, Fabric IQ and live SharePoint knowledge sources are not built.**
    Azure AI Search and MCP are the working examples of the pattern; the
    tenant-gated ones stay disabled until a tenant is available.
+   `sharepoint-export` and `fabric-export` provide a real local alternative for
+   files the operator is allowed to export.
 
 ## Response-shape parity (live capture)
 

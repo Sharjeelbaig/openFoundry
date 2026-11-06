@@ -66,25 +66,28 @@ redacted text.
 
 ## Honest limits
 
-- The pattern checks are deterministic and real, but they are not a semantic
-  safety classifier. Novel paraphrases can evade regexes. A model-based
-  classifier is a separate layer and is not implemented here.
+- The pattern checks are deterministic and real. Novel paraphrases can evade
+  regexes. An optional model-based second layer is now implemented in
+  `src/lib/guardrail-semantic.ts`; see
+  `docs/designs/semantic-guardrail-2026-11-06/`. It is off by default and is not
+  Azure Content Safety.
 - PII detection covers the common structured types above. It does not detect
   names, addresses or arbitrary unstructured PII.
-- Human-in-the-loop approval for destructive tool calls is **not** implemented.
-  The LangChain docs describe that middleware pattern; openFoundry currently
-  blocks policy violations and limits tool rounds, but it does not pause a tool
-  for a human decision.
-- Output buffering is enabled for PII output controls. Other output categories
-  are checked after streaming and append a refusal notice; they are not
-  stream-safe in the same way.
-- The engine is local and deterministic; it does not call Azure Content Safety
-  or any external moderation service.
+- Human-in-the-loop approval for destructive tool calls is implemented
+  separately from the guardrail engine; see
+  `docs/designs/tool-approvals-2026-11-06/`. The chat route pauses before the
+  tool executes and waits for a signed-in decision.
+- Output buffering is enabled for PII output controls and semantic output
+  checks. Other output categories are checked after streaming and append a
+  refusal notice; they are not stream-safe in the same way.
+- The deterministic engine is local and does not call Azure Content Safety or
+  any external moderation service. The optional semantic layer calls a local
+  chat model only.
 
 ## Tests
 
-The full Vitest suite is **217 passed with 1 skipped (37 files)**.
-`tests/guardrails.test.ts` (12 tests) covers:
+The full Vitest suite is **238 passed with 1 skipped (41 files)**.
+`tests/guardrails.test.ts` (13 tests) covers:
 
 - email and Luhn-valid card redaction,
 - block strategy,

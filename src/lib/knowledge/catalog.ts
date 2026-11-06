@@ -213,6 +213,36 @@ export const SOURCE_CATALOG: CatalogEntry[] = [
     ],
   },
   {
+    kind: "sharepoint-export",
+    label: "SharePoint / OneDrive export",
+    mode: "indexed",
+    group: "local",
+    description:
+      "Index a local folder synced or exported from SharePoint/OneDrive. This is not a live tenant connection.",
+    available: true,
+    fields: [
+      { key: "path", label: "Export folder", type: "text", required: true, placeholder: "/Users/you/SharePoint/Exports" },
+      { key: "include", label: "Include globs", type: "list", help: "Empty means every supported text file." },
+      { key: "exclude", label: "Exclude globs", type: "list" },
+      { key: "maxFileBytes", label: "Max file size (bytes)", type: "number", placeholder: "20971520" },
+    ],
+  },
+  {
+    kind: "fabric-export",
+    label: "Fabric export (CSV/JSONL)",
+    mode: "indexed",
+    group: "local",
+    description:
+      "Index CSV, JSON or JSONL exported from a Fabric lakehouse or warehouse. This is not a live Fabric connection.",
+    available: true,
+    fields: [
+      { key: "path", label: "Export folder", type: "text", required: true, placeholder: "/Users/you/Fabric/Exports" },
+      { key: "delimiter", label: "CSV delimiter", type: "text", placeholder: "," },
+      { key: "titleColumn", label: "Title column", type: "text", placeholder: "name" },
+      { key: "maxRows", label: "Row limit", type: "number", placeholder: "5000" },
+    ],
+  },
+  {
     kind: "git",
     label: "Git repository",
     mode: "indexed",

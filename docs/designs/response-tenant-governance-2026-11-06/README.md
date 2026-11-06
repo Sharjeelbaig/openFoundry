@@ -92,7 +92,7 @@ was tenant-scoped.
 `tests/response-store.test.ts` (6 tests) still cover the shared client and the
 local SQLite backend.
 
-The full Vitest suite is 217 passing with 1 skipped (37 files).
+The full Vitest suite is 238 passing with 1 skipped (41 files).
 
 ## Limits
 

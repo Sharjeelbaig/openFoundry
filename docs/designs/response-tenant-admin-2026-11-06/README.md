@@ -133,7 +133,7 @@ values above.
 remote store becomes `ResponseStoreQuotaError` and that a `401` preserves its
 status.
 
-The full Vitest suite is **217 passed with 1 skipped (37 files)**. The skipped
+The full Vitest suite is **238 passed with 1 skipped (41 files)**. The skipped
 test is the gated MLX fine-tune.
 
 ## Limits

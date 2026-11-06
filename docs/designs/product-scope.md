@@ -34,18 +34,22 @@ These are labelled in the product rather than presented as cloud services:
   scopes other than `Device` are simulated.
 - Foundry IQ, Web IQ and AI Search are local equivalents, not Azure AI Search.
   Web IQ uses the project's own crawler, not Bing.
-- Guardrails are deterministic PII/credential and pattern controls with
-  block/redact/mask/hash strategies, not Azure Content Safety or a semantic
-  safety classifier. Human approval for destructive tool calls is not
-  implemented yet. See `docs/designs/guardrails-real-2026-11-06/`.
+- Guardrails combine deterministic PII/credential and pattern controls with
+  block/redact/mask/hash strategies and an optional local-model semantic layer.
+  They are not Azure Content Safety. Destructive tool calls can pause for
+  human approval. See `docs/designs/guardrails-real-2026-11-06/`,
+  `docs/designs/semantic-guardrail-2026-11-06/` and
+  `docs/designs/tool-approvals-2026-11-06/`.
 - Evaluations are real model calls with local heuristics, not Azure evaluators.
 - Billing is local usage accounting. No payment provider, invoice, tax or
   subscription lifecycle is configured.
 
 ## Not supported without an external prerequisite
 
-- Microsoft 365 / Work IQ / Fabric / SharePoint: needs a Microsoft tenant and
-  admin consent.
+- Work IQ and live Microsoft 365/SharePoint/Fabric access: need a Microsoft
+  tenant and admin consent. Local SharePoint/OneDrive and Fabric **export**
+  connectors are supported; see
+  `docs/designs/local-export-connectors-2026-11-06/`.
 - Content Understanding and video generation: no local runtime adapter.
 - Payment/invoice integration: needs a provider choice and test credentials.
 - 7B bf16 and larger bf16 fine-tunes: need more memory than this 8 GB machine.

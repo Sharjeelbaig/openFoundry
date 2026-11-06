@@ -88,6 +88,25 @@ describe("real guardrails", () => {
     expect(verdict.reason).toMatch(/personal data/i);
   });
 
+  it("honours a Block action even when the template strategy says redact", () => {
+    const verdict = evaluate(
+      guardrail([
+        control({
+          id: "pii",
+          riskType: "PII",
+          action: "Block",
+          strategy: "redact",
+          intervention: "User input",
+        }),
+      ]),
+      [],
+      "Email a@example.com.",
+      "input"
+    );
+    expect(verdict.blocked).toBe(true);
+    expect(verdict.control?.id).toBe("pii");
+  });
+
   it("does not flag an invalid card number", () => {
     const verdict = evaluate(
       guardrail([pii("redact")]),
@@ -187,9 +206,20 @@ describe("real guardrails", () => {
     expect(verdict.control?.id).toBe("pii");
   });
 
-  it("buffers output only when a PII output control is active", () => {
+  it("buffers output only when a PII or semantic output control is active", () => {
     expect(hasOutputStreamGuard(guardrail([pii("redact")]))).toBe(true);
     expect(hasOutputStreamGuard(guardrail([]))).toBe(false);
+    expect(
+      hasOutputStreamGuard(
+        guardrail([
+          control({
+            id: "semantic-safety",
+            riskType: "Semantic safety",
+            intervention: "User input, Output",
+          }),
+        ])
+      )
+    ).toBe(true);
   });
 
   it("maps the dry-run endpoint to guardrails.read", () => {

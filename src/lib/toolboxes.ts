@@ -3,20 +3,54 @@
 
 import "server-only";
 import { getToolboxes } from "./store";
-import { ChatTool, Toolbox } from "./types";
+import { ChatTool, HttpTool, McpToolDefinition } from "./types";
 import { resolveMcpTools, callMcpTool } from "./mcp";
 import { resolveHttpTools, callHttpTool } from "./http-tools";
 import { cosine, embedTexts } from "./providers";
+
+/** Enough for the approval layer to decide without guessing from the name. */
+export interface ToolApprovalMetadata {
+  write: boolean;
+  destructive: boolean;
+  reason: string;
+}
 
 export interface ResolvedTool {
   id: string;
   functionName: string;
   definition: ChatTool;
   description: string;
+  approval: ToolApprovalMetadata;
   execute: (args: Record<string, unknown>) => Promise<{
     text: string;
     isError: boolean;
   }>;
+}
+
+export function mcpToolApproval(tool: McpToolDefinition): ToolApprovalMetadata {
+  const readOnly = tool.annotations?.readOnlyHint === true;
+  const destructive = tool.annotations?.destructiveHint === true;
+  return {
+    write: !readOnly,
+    destructive,
+    reason: destructive
+      ? "The MCP server marks this tool as destructive."
+      : readOnly
+      ? "The MCP server marks this tool read-only."
+      : "This MCP tool is not marked read-only and may change external state.",
+  };
+}
+
+export function httpToolApproval(tool: HttpTool): ToolApprovalMetadata {
+  const method = tool.method.toUpperCase();
+  const write = !["GET", "HEAD", "OPTIONS"].includes(method);
+  return {
+    write,
+    destructive: write,
+    reason: write
+      ? `The HTTP tool uses ${method} and may change remote state.`
+      : "The HTTP tool only reads remote state.",
+  };
 }
 
 export interface ToolboxResolution {
@@ -65,6 +99,7 @@ async function resolveToolIds(toolIds: string[]): Promise<{
         resolved.tool.description ||
         resolved.definition.function.description ||
         resolved.tool.name,
+      approval: mcpToolApproval(resolved.tool),
       execute: async (args) => callMcpTool(resolved.server, resolved.tool.name, args),
     });
   }
@@ -77,6 +112,7 @@ async function resolveToolIds(toolIds: string[]): Promise<{
         resolved.tool.description ||
         resolved.definition.function.description ||
         resolved.tool.name,
+      approval: httpToolApproval(resolved.tool),
       execute: async (args) => callHttpTool(resolved.tool, args),
     });
   }

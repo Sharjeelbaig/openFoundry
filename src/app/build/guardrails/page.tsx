@@ -4,7 +4,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Delete20Regular,
   Info20Regular,
@@ -13,9 +13,22 @@ import {
 import { formatDate, useApi } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { Field, Spinner } from "@/components/ui";
-import type { Agent, Blocklist, Deployment, Guardrail } from "@/lib/types";
+import type {
+  Agent,
+  Blocklist,
+  Deployment,
+  Guardrail,
+  ToolApprovalMode,
+  ToolApprovalPolicy,
+  ToolApprovalRecord,
+} from "@/lib/types";
 
-type Tab = "Guardrails" | "Blocklists" | "Test" | "Integrations";
+type Tab =
+  | "Guardrails"
+  | "Blocklists"
+  | "Test"
+  | "Tool approvals"
+  | "Integrations";
 type TestPoint = "input" | "output" | "tool";
 
 interface TestFinding {
@@ -32,6 +45,22 @@ interface TestResult {
   text: string;
   findings: TestFinding[];
   control: { id: string; riskType: string; action: string } | null;
+  semantic?: {
+    ran: boolean;
+    model?: string;
+    provider?: string;
+    latencyMs?: number;
+    categories?: string[];
+    reason?: string;
+    error?: string;
+    skipped?: string;
+  } | null;
+}
+
+interface ToolApprovalsResponse {
+  policy: ToolApprovalPolicy;
+  pending: ToolApprovalRecord[];
+  history: ToolApprovalRecord[];
 }
 
 interface GuardrailsResponse {
@@ -60,6 +89,28 @@ export default function GuardrailsPage() {
   const [testPoint, setTestPoint] = useState<TestPoint>("input");
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [testing, setTesting] = useState(false);
+  const [approvalMode, setApprovalMode] = useState<ToolApprovalMode>("writes");
+  const [approvalAllowlist, setApprovalAllowlist] = useState("");
+  const [approvalTimeout, setApprovalTimeout] = useState(300);
+  const [approvalHistory, setApprovalHistory] = useState<ToolApprovalRecord[]>([]);
+  const [approvalBusy, setApprovalBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/tool-approvals")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: ToolApprovalsResponse | null) => {
+        if (!active || !json?.policy) return;
+        setApprovalMode(json.policy.mode);
+        setApprovalAllowlist(json.policy.allowlist.join("\n"));
+        setApprovalTimeout(json.policy.timeoutSeconds);
+        setApprovalHistory(json.history || []);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -156,6 +207,7 @@ export default function GuardrailsPage() {
             { id: "Guardrails", label: "Guardrails" },
             { id: "Blocklists", label: "Blocklists" },
             { id: "Test", label: "Test" },
+            { id: "Tool approvals", label: "Tool approvals" },
             { id: "Integrations", label: "Integrations", preview: true },
           ] as { id: Tab; label: string; preview?: boolean }[]
         ).map((item) => (
@@ -335,6 +387,8 @@ export default function GuardrailsPage() {
             Run a guardrail against text before it reaches a model. PII and
             credentials are detected locally; redact, mask, hash and block
             strategies are enforced by the same engine the chat route uses.
+            When the Semantic safety control is on, a local chat model also
+            classifies the text.
           </p>
           <div className="operate-card">
             <div className="form-grid">
@@ -436,6 +490,37 @@ export default function GuardrailsPage() {
                     : `Allowed. ${testResult.findings.length} finding(s); the text below is what would be sent.`}
                 </span>
               </div>
+              {testResult.semantic?.ran && (
+                <div className="banner info mt-12">
+                  <Info20Regular />
+                  <span>
+                    Semantic check ran with {testResult.semantic.model} in{" "}
+                    {testResult.semantic.latencyMs ?? 0} ms. Categories:{" "}
+                    {testResult.semantic.categories?.length
+                      ? testResult.semantic.categories.join(", ")
+                      : "none"}
+                    {testResult.semantic.reason
+                      ? ` — ${testResult.semantic.reason}`
+                      : ""}
+                  </span>
+                </div>
+              )}
+              {testResult.semantic?.error && (
+                <div className="banner warning mt-12">
+                  <Info20Regular />
+                  <span>
+                    Semantic check did not run: {testResult.semantic.error}
+                  </span>
+                </div>
+              )}
+              {testResult.semantic?.skipped && (
+                <div className="banner info mt-12">
+                  <Info20Regular />
+                  <span>
+                    Semantic check skipped: {testResult.semantic.skipped}
+                  </span>
+                </div>
+              )}
               {testResult.findings.length > 0 && (
                 <div className="table-card mt-12">
                   <table className="data-table">
@@ -475,6 +560,136 @@ export default function GuardrailsPage() {
               </div>
             </>
           )}
+        </>
+      )}
+
+      {tab === "Tool approvals" && (
+        <>
+          <p className="page-note">
+            A paused tool call is a real stop in the execution path. The chat
+            stream stays open, and nothing runs until the signed-in person
+            approves it. The decision is also written to the audit log.
+          </p>
+          <div className="operate-card">
+            <div className="form-grid">
+              <label className="field">
+                <span className="field-label">Ask before</span>
+                <select
+                  className="select"
+                  value={approvalMode}
+                  onChange={(event) =>
+                    setApprovalMode(event.target.value as ToolApprovalMode)
+                  }
+                >
+                  <option value="off">Never (off)</option>
+                  <option value="destructive">Destructive tools only</option>
+                  <option value="writes">Any write-capable tool</option>
+                  <option value="all">Every tool call</option>
+                </select>
+              </label>
+              <label className="field">
+                <span className="field-label">Decision timeout (seconds)</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={15}
+                  max={3600}
+                  value={approvalTimeout}
+                  onChange={(event) =>
+                    setApprovalTimeout(Number(event.target.value))
+                  }
+                />
+              </label>
+            </div>
+            <label className="field mt-8">
+              <span className="field-label">Always allow (one tool id or name per line)</span>
+              <textarea
+                className="textarea"
+                style={{ minHeight: 96 }}
+                placeholder="mcp:server:list_files"
+                value={approvalAllowlist}
+                onChange={(event) => setApprovalAllowlist(event.target.value)}
+              />
+            </label>
+            <button
+              className="btn btn-primary mt-8"
+              disabled={approvalBusy}
+              onClick={async () => {
+                setApprovalBusy(true);
+                try {
+                  const res = await fetch("/api/tool-approvals/policy", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      mode: approvalMode,
+                      allowlist: approvalAllowlist
+                        .split("\n")
+                        .map((entry) => entry.trim())
+                        .filter(Boolean),
+                      timeoutSeconds: approvalTimeout,
+                    }),
+                  });
+                  const json = (await res.json().catch(() => ({}))) as {
+                    policy?: ToolApprovalPolicy;
+                    error?: string;
+                  };
+                  if (!res.ok || !json.policy) {
+                    throw new Error(json.error || "Could not save the policy.");
+                  }
+                  setApprovalMode(json.policy.mode);
+                  setApprovalTimeout(json.policy.timeoutSeconds);
+                  setApprovalAllowlist(json.policy.allowlist.join("\n"));
+                  toast("Tool approval policy saved", "success");
+                } catch (error) {
+                  toast(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not save the policy.",
+                    "error"
+                  );
+                } finally {
+                  setApprovalBusy(false);
+                }
+              }}
+            >
+              {approvalBusy ? <Spinner /> : null} Save policy
+            </button>
+          </div>
+
+          <div className="table-card mt-12">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Tool</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                  <th>Decided</th>
+                  <th>At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {approvalHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="muted">
+                      No tool call has needed approval yet.
+                    </td>
+                  </tr>
+                ) : (
+                  approvalHistory.slice(0, 20).map((record) => (
+                    <tr key={record.id}>
+                      <td className="strong">{record.toolName}</td>
+                      <td>{record.status}</td>
+                      <td className="muted">{record.reason}</td>
+                      <td>{record.decidedBy || "--"}</td>
+                      <td className="muted">
+                        {formatDate(record.decidedAt || record.createdAt)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 

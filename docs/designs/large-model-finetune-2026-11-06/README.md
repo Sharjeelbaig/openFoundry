@@ -102,7 +102,7 @@ it on this machine. See `docs/designs/qlora-7b-2026-11-06/`.
   candidate-id sanitization, the 8-candidate cap, best-candidate selection and
   duration tie-breaking, in addition to dataset/scoring/runtime tests.
 - The focused foundation test is 13 passed with 1 skipped; the full Vitest suite
-  is 217 passed with 1 skipped (37 files).
+  is 238 passed with 1 skipped (41 files).
 - The `/build/data/extraction` foundation panel shows the selected base model,
   the candidate table, the winner and the per-field base-vs-tuned metrics.
 

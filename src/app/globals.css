@@ -10275,3 +10275,66 @@ svg {
   margin-bottom: 8px;
   object-fit: contain;
 }
+
+/* Human-in-the-loop tool approval. */
+.tool-approval-card {
+  border: 1px solid var(--warning, #faa06b);
+  border-radius: 8px;
+  background: rgba(250, 160, 107, 0.08);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tool-approval-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.tool-approval-head svg {
+  color: var(--warning, #faa06b);
+  flex: none;
+  margin-top: 2px;
+}
+.tool-approval-reason {
+  color: var(--fg-2);
+  font-size: 12px;
+  line-height: 17px;
+}
+.tool-approval-toggle {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  color: var(--link-fg);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+.tool-approval-toggle:hover {
+  text-decoration: underline;
+}
+.tool-approval-args {
+  margin: 0;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--fg-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 16px;
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tool-approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tool-approval-expiry {
+  color: var(--fg-3);
+  font-size: 11px;
+  line-height: 15px;
+}

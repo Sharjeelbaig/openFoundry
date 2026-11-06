@@ -1,0 +1,9 @@
+
+ RUN  v3.2.4 /Users/shazi/Projects/openFoundry
+
+ ✓ tests/knowledge-export.test.ts (3 tests) 6ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  20:26:50
+   Duration  513ms (transform 107ms, setup 0ms, collect 132ms, tests 6ms, environment 0ms, prepare 45ms)

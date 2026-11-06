@@ -488,6 +488,136 @@ const csvConnector: Connector = {
   },
 };
 
+const sharePointExportConnector: Connector = {
+  kind: "sharepoint-export",
+  mode: "indexed",
+  validate: (config) => folderConnector.validate(config),
+  async discover(ctx) {
+    const items = await folderConnector.discover(ctx);
+    return items.map((item) => ({
+      ...item,
+      metadata: { ...item.metadata, sharePointExport: true },
+    }));
+  },
+};
+
+function objectLines(value: Record<string, unknown>): string {
+  return Object.entries(value)
+    .map(([key, entry]) => `${key}: ${typeof entry === "string" ? entry : JSON.stringify(entry)}`)
+    .join("\n");
+}
+
+const fabricExportConnector: Connector = {
+  kind: "fabric-export",
+  mode: "indexed",
+  validate(config) {
+    if (!asString(config.path)) return "An export folder is required.";
+    return null;
+  },
+  async discover(ctx) {
+    const root = asString(ctx.config.path);
+    const delimiter = asString(ctx.config.delimiter) || ",";
+    const titleColumn = asString(ctx.config.titleColumn);
+    const maxRows = Math.min(asNumber(ctx.config.maxRows, 5000), 50000);
+    const files = await walk(root, [".csv", ".jsonl", ".json"], []);
+    const items: SourceItem[] = [];
+    for (const file of files) {
+      if (ctx.signal?.aborted || items.length >= maxRows) break;
+      const relative = path.relative(path.resolve(root), file);
+      const extension = path.extname(file).toLowerCase();
+      try {
+        if (extension === ".csv") {
+          const rows = parseCsv(await fs.readFile(file, "utf8"), delimiter);
+          if (!rows.length) continue;
+          const header = rows[0];
+          for (let index = 1; index < rows.length && items.length < maxRows; index += 1) {
+            const row = rows[index];
+            const value = Object.fromEntries(
+              header.map((column, columnIndex) => [column, row[columnIndex] ?? ""])
+            );
+            const text = objectLines(value);
+            if (!text.trim()) continue;
+            const title =
+              (titleColumn ? String(value[titleColumn] ?? "") : "") ||
+              `${path.basename(file)} row ${index + 1}`;
+            items.push({
+              externalId: `${relative}:${index + 1}`,
+              title,
+              mime: "text/csv",
+              uri: `${file}#row=${index + 1}`,
+              size: Buffer.byteLength(text),
+              content: text,
+              metadata: {
+                fabricExport: true,
+                file: relative,
+                row: index + 1,
+              },
+            });
+          }
+        } else {
+          const raw = await fs.readFile(file, "utf8");
+          const rows: Record<string, unknown>[] = [];
+          if (extension === ".jsonl") {
+            for (const line of raw.split(/\r?\n/)) {
+              if (!line.trim()) continue;
+              const parsed = JSON.parse(line) as unknown;
+              rows.push(
+                parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                  ? (parsed as Record<string, unknown>)
+                  : { value: parsed }
+              );
+            }
+          } else {
+            const parsed = JSON.parse(raw) as unknown;
+            const list = Array.isArray(parsed) ? parsed : [parsed];
+            for (const entry of list) {
+              rows.push(
+                entry && typeof entry === "object" && !Array.isArray(entry)
+                  ? (entry as Record<string, unknown>)
+                  : { value: entry }
+              );
+            }
+          }
+          for (let index = 0; index < rows.length && items.length < maxRows; index += 1) {
+            const value = rows[index];
+            const text = objectLines(value);
+            if (!text.trim()) continue;
+            const title =
+              (titleColumn ? String(value[titleColumn] ?? "") : "") ||
+              `${path.basename(file)} row ${index + 1}`;
+            items.push({
+              externalId: `${relative}:${index + 1}`,
+              title,
+              mime: "application/json",
+              uri: `${file}#row=${index + 1}`,
+              size: Buffer.byteLength(text),
+              content: text,
+              metadata: {
+                fabricExport: true,
+                file: relative,
+                row: index + 1,
+              },
+            });
+          }
+        }
+      } catch (error) {
+        items.push({
+          externalId: relative,
+          title: path.basename(file),
+          mime: "error",
+          uri: file,
+          size: 0,
+          content: "",
+          metadata: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
+    }
+    return items;
+  },
+};
+
 const gitConnector: Connector = {
   kind: "git",
   mode: "indexed",
@@ -594,6 +724,8 @@ export const CONNECTORS: Partial<Record<SourceKind, Connector>> = {
   webdav: webdavConnector,
   "google-drive": googleDriveConnector,
   folder: folderConnector,
+  "sharepoint-export": sharePointExportConnector,
+  "fabric-export": fabricExportConnector,
   web: webConnector,
   sqlite: sqliteConnector,
   csv: csvConnector,

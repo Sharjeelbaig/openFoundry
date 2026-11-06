@@ -225,10 +225,26 @@ export async function saveMemoryItems(items: MemoryItem[]): Promise<void> {
 
 export async function getGuardrails(): Promise<Guardrail[]> {
   const existing = await readJson<Guardrail[] | null>("guardrails.json", null);
-  if (existing) return existing;
-  const seeded = defaultGuardrails();
-  await writeJson("guardrails.json", seeded);
-  return seeded;
+  if (!existing) {
+    const seeded = defaultGuardrails();
+    await writeJson("guardrails.json", seeded);
+    return seeded;
+  }
+  // Add newly shipped controls to already saved guardrails as disabled, so an
+  // upgrade never silently enables a new check or hides it from the editor.
+  const template = defaultGuardrails()[0]?.controls ?? [];
+  let changed = false;
+  const migrated = existing.map((guardrail) => {
+    const missing = template.filter(
+      (control) =>
+        !guardrail.controls.some((saved) => saved.id === control.id)
+    );
+    if (!missing.length) return guardrail;
+    changed = true;
+    return { ...guardrail, controls: [...guardrail.controls, ...missing] };
+  });
+  if (changed) await writeJson("guardrails.json", migrated);
+  return migrated;
 }
 
 export async function saveGuardrails(items: Guardrail[]): Promise<void> {
@@ -399,6 +415,17 @@ export function defaultGuardrails(): Guardrail[] {
       enabled: false,
       description:
         "Detects personal data and credentials such as emails, phone numbers, card numbers, API keys and private keys. Choose Block, Redact, Mask or Hash.",
+    },
+    {
+      id: "semantic-safety",
+      group: "Content harms",
+      riskType: "Semantic safety",
+      intervention: "User input, Output",
+      action: "Block",
+      defaulted: false,
+      enabled: false,
+      description:
+        "A local chat model classifies the text for violence, self-harm, hate, sexual content involving minors, illegal activity, credential theft, harassment and prompt injection. It complements the deterministic checks. Choose the classifier with OPENFOUNDRY_GUARDRAIL_MODEL.",
     },
     {
       id: "task-adherence",

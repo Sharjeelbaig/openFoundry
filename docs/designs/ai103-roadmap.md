@@ -23,7 +23,7 @@ It is not a claim that AI-103 can be completed entirely in openFoundry.
 | Chat app with projects and Responses API | Local Responses API with streaming, history and `previous_response_id` | Local equivalent |
 | Apps that use tools | MCP servers, HTTP tools, toolboxes and function tools | Local equivalent |
 | Optimize: prompt, RAG, fine-tune | Local RAG, prompt changes, dataset export, MLX LoRA/QLoRA | Local equivalent, different trainer |
-| Responsible AI | Deterministic guardrails with PII/credential strategies; see `docs/designs/guardrails-real-2026-11-06/` | Alternative; not Azure Content Safety |
+| Responsible AI | Deterministic guardrails with PII/credential strategies, an optional local-model semantic layer, and human approval for destructive tools; see `docs/designs/guardrails-real-2026-11-06/`, `docs/designs/semantic-guardrail-2026-11-06/` and `docs/designs/tool-approvals-2026-11-06/` | Alternative; not Azure Content Safety |
 
 ## Path 2 — Develop AI agents
 
@@ -34,7 +34,7 @@ It is not a claim that AI-103 can be completed entirely in openFoundry.
 | MCP tools | Real MCP stdio/SSE/HTTP clients and server endpoints | Local equivalent |
 | Foundry IQ knowledge | SQLite FTS5 + vectors + reranking + citations | Local equivalent |
 | Web IQ | Project-owned web crawler | Alternative; not Bing |
-| Microsoft 365 / Work IQ | Requires a Microsoft 365 tenant and admin consent | Limitation |
+| Microsoft 365 / Work IQ / SharePoint / Fabric | Work IQ and live tenant access need Microsoft 365 and admin consent. Local `sharepoint-export` and `fabric-export` connectors index exported files | Limitation, with a local export alternative |
 | Agent-driven workflows | Local workflow engine | Local equivalent |
 | Agent Framework SDK | Official `agent-framework` SDK against the local project | Local equivalent |
 | Multi-agent orchestration | Sequential, concurrent, group-chat, handoff and Magentic builders | Local equivalent |
@@ -65,20 +65,22 @@ It is not a claim that AI-103 can be completed entirely in openFoundry.
 
 ## Alternatives for Microsoft-only services
 
-- **Microsoft 365 / SharePoint:** export the files you are allowed to use into a
-  local folder and index them with a local file knowledge source. If the tenant
-  exposes a Graph or MCP endpoint, connect it as an MCP/HTTP tool. This is not a
+- **Microsoft 365 / SharePoint:** the `sharepoint-export` connector indexes a
+  folder you have already exported or synced; see
+  `docs/designs/local-export-connectors-2026-11-06/`. If the tenant exposes a
+  Graph or MCP endpoint, connect it as an MCP/HTTP tool. This is not a
   tenant-wide Work IQ replacement.
 - **Work IQ:** no local equivalent. Local retrieval over exported content is the
   honest fallback; tenant-wide organizational knowledge requires Microsoft 365.
-- **Fabric:** no local OneLake/Fabric equivalent. Export CSV/SQL data and use the
-  local knowledge or database connectors; Fabric semantics and governance remain
-  a limitation.
+- **Fabric:** no local OneLake/Fabric equivalent. The `fabric-export` connector
+  indexes CSV/JSON/JSONL exported from a lakehouse or warehouse; Fabric
+  semantics, lineage and governance remain a limitation.
 - **Azure AI Search:** the local RAG engine is a functional alternative for text
   retrieval, not a scale/feature equivalent.
-- **Azure Content Safety:** local deterministic guardrails are real, but they are
-  not a semantic safety classifier. A model-based layer and human approval for
-  destructive tools are planned, not present.
+- **Azure Content Safety:** local deterministic guardrails are real, and an
+  optional local-model semantic layer and human approval for destructive tools
+  are implemented. They are not Azure Content Safety and do not match its
+  hosted classifiers.
 - **Content Understanding and video generation:** no local substitute today.
 
 ## What this means

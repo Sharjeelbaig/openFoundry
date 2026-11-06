@@ -1,0 +1,10 @@
+
+ RUN  v3.2.4 /Users/shazi/Projects/openFoundry
+
+ ✓ tests/tool-approvals.test.ts (9 tests) 3ms
+ ✓ tests/tool-approval-broker.test.ts (3 tests) 42ms
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  20:35:33
+   Duration  473ms (transform 69ms, setup 0ms, collect 62ms, tests 46ms, environment 0ms, prepare 96ms)

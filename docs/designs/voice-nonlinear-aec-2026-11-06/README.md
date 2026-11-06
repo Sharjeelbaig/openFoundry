@@ -128,7 +128,7 @@ fixture uses the sounddevice path.
 - `tests/aec-physical.test.ts` — 2 tests against the real fixture: the physical
   capture is suppressed (aggregate ERLE > 4 dB, peak total > peak linear + 5 dB,
   output RMS < 0.7 × mic RMS), and a silent reference does not diverge.
-- The full Vitest suite is 217 passed with 1 skipped (37 files).
+- The full Vitest suite is 238 passed with 1 skipped (41 files).
 - The live Python suite is 14 tests, including `test_voice_aec_suppression`
   (now `echoPath=room`); `python-tests.txt` records 14 tests in 96.849s.
 

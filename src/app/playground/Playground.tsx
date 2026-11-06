@@ -25,7 +25,9 @@ import type {
   Citation,
   Deployment,
   MessageContentPart,
+  ToolApprovalRecord,
 } from "@/lib/types";
+import { ToolApprovalCard } from "@/components/ToolApprovalCard";
 import {
   imagePart,
   MAX_IMAGE_BYTES,
@@ -73,6 +75,7 @@ export default function Playground() {
   const [messages, setMessages] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [approvals, setApprovals] = useState<ToolApprovalRecord[]>([]);
   const [usage, setUsage] = useState<{
     promptTokens: number;
     completionTokens: number;
@@ -155,6 +158,7 @@ export default function Playground() {
     setMessages(next);
     setInput("");
     setImage(null);
+    setApprovals([]);
     setStreaming(true);
     stream.current = { assistant: "", citations: [] };
     try {
@@ -208,9 +212,23 @@ export default function Playground() {
             latencyMs?: number;
             model?: string;
             embeddingModel?: string;
+            approval?: ToolApprovalRecord;
+            id?: string;
+            status?: string;
           };
           if (event.type === "meta") {
             stream.current.citations = event.citations || [];
+          } else if (event.type === "approval_required" && event.approval) {
+            const approval = event.approval;
+            setApprovals((current) =>
+              current.some((item) => item.id === approval.id)
+                ? current
+                : [...current, approval]
+            );
+          } else if (event.type === "approval_decided" && event.id) {
+            setApprovals((current) =>
+              current.filter((item) => item.id !== event.id)
+            );
           } else if (event.type === "delta" && event.text) {
             stream.current.assistant += event.text;
             setMessages((current) =>
@@ -245,6 +263,7 @@ export default function Playground() {
         }
       }
     } catch (error) {
+      setApprovals([]);
       const message =
         error instanceof Error ? error.message : "Model request failed";
       setMessages((current) => {
@@ -618,6 +637,17 @@ export default function Playground() {
             </div>
 
             <div className="chat-composer">
+              {approvals.map((approval) => (
+                <ToolApprovalCard
+                  key={approval.id}
+                  approval={approval}
+                  onDecision={(approvalId) =>
+                    setApprovals((current) =>
+                      current.filter((item) => item.id !== approvalId)
+                    )
+                  }
+                />
+              ))}
               {image ? (
                 <div className="chat-attachment">
                   <img src={image} alt="Image to send" />

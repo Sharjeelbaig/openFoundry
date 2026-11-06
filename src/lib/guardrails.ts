@@ -200,11 +200,18 @@ function findPii(text: string): PiiMatch[] {
 }
 
 function strategyFor(control: GuardrailControl): GuardrailStrategy {
-  const raw = (control.strategy || control.action || "").toLowerCase();
-  if (raw.includes("redact") || raw.includes("anonym")) return "redact";
-  if (raw.includes("mask")) return "mask";
-  if (raw.includes("hash")) return "hash";
-  if (raw.includes("block") || raw.includes("deny")) return "block";
+  // The action is the current choice in the editor. It wins over a stale
+  // strategy left from the control template.
+  const action = (control.action || "").toLowerCase();
+  if (action.includes("block") || action.includes("deny")) return "block";
+  if (action.includes("redact") || action.includes("anonym")) return "redact";
+  if (action.includes("mask")) return "mask";
+  if (action.includes("hash")) return "hash";
+  const strategy = (control.strategy || "").toLowerCase();
+  if (strategy.includes("redact") || strategy.includes("anonym")) return "redact";
+  if (strategy.includes("mask")) return "mask";
+  if (strategy.includes("hash")) return "hash";
+  if (strategy.includes("block") || strategy.includes("deny")) return "block";
   return "observe";
 }
 
@@ -419,11 +426,15 @@ export function evaluate(
   };
 }
 
-/** True when output must be buffered so PII is filtered before it reaches the client. */
+/**
+ * True when output must be buffered before it reaches the client: PII has to
+ * be filtered, and a semantic classifier has to see the complete answer.
+ */
 export function hasOutputStreamGuard(guardrail?: Guardrail): boolean {
   return activeControls(guardrail).some(
     (control) =>
-      control.id === "pii" && /output/i.test(control.intervention)
+      (control.id === "pii" || control.id === "semantic-safety") &&
+      /output/i.test(control.intervention)
   );
 }
 

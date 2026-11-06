@@ -333,11 +333,21 @@ export interface HttpTool {
   updatedAt: string;
 }
 
+/** MCP tool annotations, as advertised by the server (MCP 2024-11-05). */
+export interface McpToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 /** A tool advertised by a user-owned MCP server. */
 export interface McpToolDefinition {
   name: string;
   description?: string;
   inputSchema: Record<string, unknown>;
+  annotations?: McpToolAnnotations;
 }
 
 /** A local or remote Model Context Protocol server registered in the workspace. */
@@ -565,6 +575,22 @@ export interface GuardrailControl {
   enabled: boolean;
   /** Human description used for the enforcement prompt. */
   description: string;
+}
+
+export interface SemanticCheckResult {
+  /** True when the classifier model actually ran and returned a verdict. */
+  ran: boolean;
+  model?: string;
+  provider?: string;
+  latencyMs?: number;
+  categories?: string[];
+  reason?: string;
+  /** The classifier's own boolean verdict. */
+  unsafe?: boolean;
+  /** Why the classifier did not run; never presented as a pass. */
+  error?: string;
+  /** A benign skip, such as a deterministic control blocking first. */
+  skipped?: string;
 }
 
 export interface Guardrail {
@@ -994,4 +1020,37 @@ export interface SystemStats {
   knowledgeBases: number;
   traces: number;
   tokens: number;
+}
+
+/** How destructive tool calls are handled before they run. */
+export type ToolApprovalMode = "off" | "destructive" | "writes" | "all";
+
+export interface ToolApprovalPolicy {
+  mode: ToolApprovalMode;
+  /** Tool ids or function names that never need approval. */
+  allowlist: string[];
+  /** How long the chat waits for a decision. */
+  timeoutSeconds: number;
+}
+
+/** One request for a human decision, recorded for audit. */
+export interface ToolApprovalRecord {
+  id: string;
+  principalId: string;
+  agentId?: string;
+  toolId: string;
+  toolName: string;
+  server: string;
+  arguments: Record<string, unknown>;
+  reason: string;
+  status: "pending" | "approved" | "rejected" | "expired" | "cancelled";
+  createdAt: string;
+  expiresAt: string;
+  decidedAt?: string;
+  decidedBy?: string;
+}
+
+export interface ToolApprovalState {
+  policy: ToolApprovalPolicy;
+  history: ToolApprovalRecord[];
 }

@@ -1,0 +1,72 @@
+{
+  "policy": {
+    "mode": "writes",
+    "allowlist": [],
+    "timeoutSeconds": 300
+  },
+  "approve": {
+    "approval_required": {
+      "type": "approval_required",
+      "approval": {
+        "toolName": "http_http_mw53qjtpxbbaex_delete_account_record",
+        "server": "HTTP tool",
+        "arguments": { "id": " cust-42" },
+        "reason": "The HTTP tool uses DELETE and may change remote state.",
+        "status": "pending"
+      }
+    },
+    "decision": {
+      "status": 200,
+      "approval": {
+        "status": "approved",
+        "decidedBy": "usr_8e1981c7"
+      }
+    },
+    "tool_events": [
+      { "type": "tool", "status": "running" },
+      {
+        "type": "tool",
+        "status": "done",
+        "preview": "{\"deleted\": true, \"path\": \"/accounts/%20cust-42\"}"
+      }
+    ],
+    "recorder": "{\"method\": \"DELETE\", \"path\": \"/accounts/%20cust-42\"}"
+  },
+  "reject": {
+    "approval_required": {
+      "toolName": "http_http_mw53qjtpxbbaex_delete_account_record",
+      "arguments": { "id": " cust-99" },
+      "reason": "The HTTP tool uses DELETE and may change remote state."
+    },
+    "decision": {
+      "status": 200,
+      "approval": { "status": "rejected", "decidedBy": "usr_8e1981c7" }
+    },
+    "tool_event": {
+      "type": "tool",
+      "status": "error",
+      "preview": "[The user rejected this tool call. It was not executed.]"
+    },
+    "recorder_after_reject": [
+      "{\"method\": \"DELETE\", \"path\": \"/accounts/%20cust-42\"}"
+    ],
+    "result": "The recorder has no cust-99 request: the tool did not run."
+  },
+  "timeout": {
+    "policy": { "mode": "writes", "allowlist": [], "timeoutSeconds": 15 },
+    "approval_required_arguments": { "id": " cust-timeout ID" },
+    "decision": {
+      "type": "approval_decided",
+      "status": "expired",
+      "elapsedSeconds": 17.1
+    },
+    "tool_event": {
+      "type": "tool",
+      "status": "error",
+      "preview": "[The approval request timed out. The tool was not executed.]"
+    },
+    "recorder_after_timeout": [
+      "{\"method\": \"DELETE\", \"path\": \"/accounts/%20cust-42\"}"
+    ]
+  }
+}

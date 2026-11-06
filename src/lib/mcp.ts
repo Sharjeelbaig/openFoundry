@@ -580,6 +580,22 @@ async function withSession<T>(
   }
 }
 
+function normalizeAnnotations(value: unknown): McpToolDefinition["annotations"] {
+  const annotations = asObject(value);
+  if (!annotations) return undefined;
+  const result: NonNullable<McpToolDefinition["annotations"]> = {};
+  if (typeof annotations.title === "string") result.title = annotations.title;
+  for (const key of [
+    "readOnlyHint",
+    "destructiveHint",
+    "idempotentHint",
+    "openWorldHint",
+  ] as const) {
+    if (typeof annotations[key] === "boolean") result[key] = annotations[key];
+  }
+  return Object.keys(result).length ? result : undefined;
+}
+
 function normalizeTool(value: unknown): McpToolDefinition | null {
   const tool = asObject(value);
   if (!tool || typeof tool.name !== "string" || !tool.name.trim()) return null;
@@ -589,6 +605,7 @@ function normalizeTool(value: unknown): McpToolDefinition | null {
       typeof tool.description === "string" ? tool.description : undefined,
     inputSchema:
       asObject(tool.inputSchema) || { type: "object", properties: {} },
+    annotations: normalizeAnnotations(tool.annotations),
   };
 }
 

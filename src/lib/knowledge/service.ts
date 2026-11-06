@@ -1360,6 +1360,8 @@ const LEGACY_KIND: Record<string, LegacySource["kind"]> = {
   "fabric-ontology": "fabric-iq",
   "sharepoint-remote": "fabric-iq",
   "sharepoint-indexed": "fabric-iq",
+  "sharepoint-export": "upload",
+  "fabric-export": "upload",
   onelake: "fabric-iq",
 };
 

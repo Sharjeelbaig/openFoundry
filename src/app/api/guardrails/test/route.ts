@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getBlocklists, getGuardrails } from "@/lib/store";
-import { evaluate, type InterventionPoint } from "@/lib/guardrails";
+import { type InterventionPoint } from "@/lib/guardrails";
+import { evaluateWithModel } from "@/lib/guardrail-semantic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,12 +34,18 @@ export async function POST(req: NextRequest) {
   if (!guardrail) {
     return NextResponse.json({ error: "Guardrail not found." }, { status: 404 });
   }
-  const verdict = evaluate(guardrail, blocklists, body.text, point);
+  const verdict = await evaluateWithModel(
+    guardrail,
+    blocklists,
+    body.text,
+    point
+  );
   return NextResponse.json({
     blocked: verdict.blocked,
     reason: verdict.reason || null,
     text: verdict.text,
     findings: verdict.findings,
+    semantic: verdict.semantic || null,
     control: verdict.control
       ? {
           id: verdict.control.id,

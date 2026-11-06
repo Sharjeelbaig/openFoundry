@@ -29,6 +29,10 @@ What it does:
 - Background model downloads through the configured local runtime, with an expandable
   download center, percentage progress, byte counts, logs, cancel, and dismiss.
 - A guided return to provider setup when a model needs a runtime that is not running.
+- Guardrails with deterministic PII and credential checks, an optional local-model
+  semantic layer, and human approval for destructive tool calls.
+- Knowledge connectors for local SharePoint/OneDrive exports and Fabric CSV/JSON
+  exports, alongside files, folders, web, git, SQLite, S3, Azure Blob and WebDAV.
 - The complete openFoundry workspace: home, discover, build, operate, manage, playground,
   model detail pages, filters, deployments, agents, knowledge, services, tools and docs.
 - Workspace settings, local API key, provider URLs, terms and privacy pages.

@@ -150,10 +150,10 @@ pretend to be connected.
 | Azure Blob source | BYO only | Optional, requires credentials; otherwise unavailable |
 | Azure AI Search source | BYO only | Optional remote query or mirror; otherwise unavailable |
 | Azure SQL source (Preview) | Local equivalent | SQLite/CSV connector, same shape |
-| Microsoft SharePoint Remote (Preview) | Not reproducible | Show disabled with explanation |
-| Microsoft SharePoint Indexed (Preview) | Not reproducible | Show disabled with explanation |
+| Microsoft SharePoint Remote (Preview) | Not reproducible | Live tenant version disabled; `sharepoint-export` indexes local exports |
+| Microsoft SharePoint Indexed (Preview) | Not reproducible | Live tenant version disabled; `sharepoint-export` indexes local exports |
 | Work IQ | Not reproducible | Show disabled with explanation |
-| Fabric IQ / OneLake | Not reproducible | Show disabled with explanation |
+| Fabric IQ / OneLake | Not reproducible | Live tenant version disabled; `fabric-export` indexes exported CSV/JSON |
 | Reasoning effort Minimal/Low/Medium | Full, with local models | Replicate semantics; heuristic fallback when no chat model |
 | Extractive vs answer synthesis | Full | Replicate |
 | Retrieval / answer instructions | Full | Replicate |

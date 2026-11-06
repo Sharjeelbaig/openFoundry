@@ -116,7 +116,9 @@ explicit message instead of returning extractive data labelled as an answer.
 | GCS, SFTP | not built | shown disabled with the reason |
 | Azure AI Search | working | remote source: connection holds the service URL and key, the source holds the index and field mapping |
 | MCP | working | remote: picks a saved MCP server and one of its advertised tools, calls it at retrieval time, and reports `mcpServer` activity |
-| Work IQ, Fabric, SharePoint, OneLake | not built | shown disabled with the tenant prerequisite |
+| SharePoint / OneDrive export | working | indexes a local export folder; see `docs/designs/local-export-connectors-2026-11-06/` |
+| Fabric export | working | indexes exported CSV/JSON/JSONL rows; see `docs/designs/local-export-connectors-2026-11-06/` |
+| Work IQ, Fabric IQ, SharePoint remote/indexed, OneLake | live tenant versions not built | shown disabled with the tenant prerequisite; use an export folder where possible |
 
 Nothing unbuilt is selectable. The picker renders the reason on the row.
 
@@ -199,7 +201,7 @@ chunk breadcrumbs, page breaks, hard splits, RRF ordering and CSV parsing.
 `modelQueryPlanning` record, per-source activity ids, the extractive response
 shape and the runtime budget. `tests/remote.test.ts` covers the `searchIndex`
 activity and reference shape plus a real MCP `tools/call` through a saved
-server. The full suite is 217 passing tests with 1 skipped (37 files). The skipped test is the gated MLX fine-tune, which passes when `OPENFOUNDRY_RUN_FINETUNE=1` is set. `tests/aec.test.ts` covers delay estimation, echo cancellation, double-talk preservation, nonlinear room suppression and WAV resampling. `tests/aec-physical.test.ts` runs the canceller against a real speaker-to-microphone capture. `tests/response-store-shared.test.ts` covers the cross-machine HTTP store, shared policy, owner scoping and token rejection. `tests/response-store-tenants.test.ts` covers per-tenant tokens, quotas, policies and audit isolation. `tests/response-tenant-admin.test.ts` covers persistent tenant creation, token rotation, disable/enable, quotas and the admin audit stream. `tests/guardrails.test.ts` covers the real PII/credential and injection guardrail engine. `tests/foundation-finetune.test.ts` covers the MLX fine-tune, candidate-grid construction, best-candidate tie-breaking, the 7B 4-bit QLoRA defaults and the hardware preflight. `sdk/python/tests/test_live.py` adds fourteen live Agent Framework SDK and Voice Live integration tests across streaming, tool calls, orchestration, barge-in, noise-gated VAD and reference-signal AEC.
+server. The full suite is 238 passing tests with 1 skipped (41 files). The skipped test is the gated MLX fine-tune, which passes when `OPENFOUNDRY_RUN_FINETUNE=1` is set. `tests/aec.test.ts` covers delay estimation, echo cancellation, double-talk preservation, nonlinear room suppression and WAV resampling. `tests/aec-physical.test.ts` runs the canceller against a real speaker-to-microphone capture. `tests/response-store-shared.test.ts` covers the cross-machine HTTP store, shared policy, owner scoping and token rejection. `tests/response-store-tenants.test.ts` covers per-tenant tokens, quotas, policies and audit isolation. `tests/response-tenant-admin.test.ts` covers persistent tenant creation, token rotation, disable/enable, quotas and the admin audit stream. `tests/guardrails.test.ts` covers the real PII/credential and injection guardrail engine. `tests/tool-approvals.test.ts` and `tests/tool-approval-broker.test.ts` cover the human approval policy and broker, `tests/semantic-guardrail.test.ts` covers the semantic verdict contract, and `tests/knowledge-export.test.ts` covers the SharePoint/OneDrive and Fabric export connectors. `tests/foundation-finetune.test.ts` covers the MLX fine-tune, candidate-grid construction, best-candidate tie-breaking, the 7B 4-bit QLoRA defaults and the hardware preflight. `sdk/python/tests/test_live.py` adds fourteen live Agent Framework SDK and Voice Live integration tests across streaming, tool calls, orchestration, barge-in, noise-gated VAD and reference-signal AEC.
 
 `tests/knowledge-reuse.test.ts` proves an uploaded file source is listed with
 sanitized config, cloned into a fresh base with its documents, chunks and
@@ -221,14 +223,17 @@ Runtime checks against the dev server:
 ## Known gaps
 
 - Remote knowledge sources other than Azure AI Search and MCP (Work IQ,
-  Fabric, SharePoint) are not built. They are disabled, not simulated.
+  Fabric, SharePoint) are not built. Their live tenant versions are disabled,
+  not simulated. `sharepoint-export` and `fabric-export` index local exports
+  instead; see `docs/designs/local-export-connectors-2026-11-06/`.
 - The L2 reranker uses a chat model, not a trained cross-encoder. It is honest
   about which one ran, but relevance will differ from Azure's semantic ranker.
 - Azure Blob uses a SAS token; account-key (SharedKey) signing is not
   implemented.
 - Azure AI Search is a remote-only source; the connection provider and retrieval
-  path use it live, but Microsoft-tenant sources (OneLake, SharePoint, Work IQ,
-  Fabric) remain disabled until a tenant is available.
+  path use it live. Microsoft-tenant sources (OneLake, live SharePoint, Work IQ,
+  Fabric) remain disabled until a tenant is available; exported files can be
+  indexed locally.
 - Google Drive has not been run against a live Google account in this
   environment. The consent URL, state signing, PKCE derivation, token refresh
   and folder query are unit-tested; the first real proof is the operator
