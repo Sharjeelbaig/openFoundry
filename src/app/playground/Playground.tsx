@@ -7,26 +7,37 @@ import Select from "@/components/Select";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Add20Regular,
   Attach20Regular,
   Code20Regular,
   Dismiss20Regular,
   History20Regular,
+  Image20Regular,
   Options20Regular,
   Send20Regular,
   Sparkle20Regular,
 } from "@fluentui/react-icons";
-import { useApi, useDeployments, useModels } from "@/lib/client";
+import { useDeployments, useModels } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import { ModelLogo } from "@/components/Logos";
 import { taskLabel } from "@/lib/model-info";
-import type { Citation, Deployment, LocalModel } from "@/lib/types";
+import type {
+  Citation,
+  Deployment,
+  MessageContentPart,
+} from "@/lib/types";
+import {
+  imagePart,
+  MAX_IMAGE_BYTES,
+  textPart,
+} from "@/lib/chat-content";
 import { useOrigin } from "@/components/Origin";
 
 type Turn = {
   role: "user" | "assistant";
   content: string;
+  image?: string;
+  parts?: MessageContentPart[];
   citations?: Citation[];
   error?: string;
 };
@@ -58,6 +69,7 @@ export default function Playground() {
   const [temperature, setTemperature] = useState(0.7);
   const [topP, setTopP] = useState(0.95);
   const [maxTokens, setMaxTokens] = useState(1024);
+  const [image, setImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -131,10 +143,18 @@ export default function Playground() {
 
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
-    if (!text || streaming || !activeModel) return;
-    const next: Turn[] = [...messages, { role: "user", content: text }];
+    if ((!text && !image) || streaming || !activeModel) return;
+    const prompt = text || "Describe this image.";
+    const parts = image
+      ? [textPart(prompt), imagePart(image)]
+      : undefined;
+    const next: Turn[] = [
+      ...messages,
+      { role: "user", content: prompt, image: image || undefined, parts },
+    ];
     setMessages(next);
     setInput("");
+    setImage(null);
     setStreaming(true);
     stream.current = { assistant: "", citations: [] };
     try {
@@ -153,7 +173,10 @@ export default function Playground() {
             ...(systemPrompt.trim()
               ? [{ role: "system", content: systemPrompt }]
               : []),
-            ...next.map((turn) => ({ role: turn.role, content: turn.content })),
+            ...next.map((turn) => ({
+              role: turn.role,
+              content: turn.parts ?? turn.content,
+            })),
           ],
         }),
       });
@@ -563,6 +586,13 @@ export default function Playground() {
                         {turn.role === "user" ? "You" : activeModel?.displayName || "Assistant"}
                       </span>
                       <div className="chat-bubble">
+                        {turn.image ? (
+                          <img
+                            className="chat-msg-image"
+                            src={turn.image}
+                            alt="Attached image"
+                          />
+                        ) : null}
                         {turn.content}
                         {streaming &&
                           index === messages.length - 1 &&
@@ -588,6 +618,18 @@ export default function Playground() {
             </div>
 
             <div className="chat-composer">
+              {image ? (
+                <div className="chat-attachment">
+                  <img src={image} alt="Image to send" />
+                  <button
+                    className="icon-button small"
+                    aria-label="Remove image"
+                    onClick={() => setImage(null)}
+                  >
+                    <Dismiss20Regular />
+                  </button>
+                </div>
+              ) : null}
               <div className="chat-input-wrap">
                 <textarea
                   className="chat-input"
@@ -604,6 +646,30 @@ export default function Playground() {
                 />
               </div>
               <div className="chat-composer-actions">
+                <button
+                  className="icon-button small"
+                  aria-label="Attach image"
+                  title="Attach an image to the next message"
+                  onClick={() => {
+                    const chooser = document.createElement("input");
+                    chooser.type = "file";
+                    chooser.accept = "image/*";
+                    chooser.onchange = () => {
+                      const file = chooser.files?.[0];
+                      if (!file) return;
+                      if (file.size > MAX_IMAGE_BYTES) {
+                        toast("Images are limited to 4 MB.", "error");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => setImage(String(reader.result));
+                      reader.readAsDataURL(file);
+                    };
+                    chooser.click();
+                  }}
+                >
+                  <Image20Regular />
+                </button>
                 <button
                   className="icon-button small"
                   aria-label="Attach file"
@@ -632,7 +698,7 @@ export default function Playground() {
                 <button
                   className="icon-button"
                   aria-label="Send message"
-                  disabled={streaming || !input.trim() || !activeModel}
+                  disabled={streaming || (!input.trim() && !image) || !activeModel}
                   onClick={() => void send()}
                   style={{ color: "var(--brand-stroke)" }}
                 >

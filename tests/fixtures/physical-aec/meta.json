@@ -1,0 +1,14 @@
+{
+  "capture": {
+    "device": "MacBook Pro Microphone",
+    "sampleRate": 48000,
+    "captureRate": 16000,
+    "api": "sounddevice/CoreAudio, latency=high",
+    "playback": "afplay, system output volume 90",
+    "room": "same desk, built-in speakers to built-in mic"
+  },
+  "alignmentSamples": 19197,
+  "alignmentMs": 1199.81,
+  "referenceSamples": 92516,
+  "recordingSamples": 160000
+}

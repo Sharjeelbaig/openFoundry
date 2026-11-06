@@ -44,3 +44,15 @@ src-tauri/next-server/
 # Landing page build scratch output
 landing-src/.build/
 landing-src/screens/*.png
+
+# Local work notes and reference captures (not product assets)
+docs/_work/
+docs/designs/foundry-knowledge-reference/
+
+# Python bytecode
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Source master; the landing page ships the compressed cut
+landing-src/gemma-tour-1080p.mp4

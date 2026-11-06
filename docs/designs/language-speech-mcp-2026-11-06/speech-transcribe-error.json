@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"Speech-to-text needs whisper.cpp and a model file. Install with `brew install whisper-cpp`, download a ggml model, then set WHISPER_CPP_BIN and WHISPER_MODEL."}],"isError":true}}

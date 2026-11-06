@@ -1,0 +1,2 @@
+STREAM_CHUNKS: ['The', ' code for "', 'vault" is', ' ZX-4', '417.', 'The code for "vault" is ZX-4417.']
+STREAM_ANSWER: The code for "vault" is ZX-4417.The code for "vault" is ZX-4417.

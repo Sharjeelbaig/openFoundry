@@ -3,14 +3,27 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { isProjectKey, unauthorized } from "@/lib/auth";
-import { ResponsesRequest, runResponse } from "@/lib/foundry-responses";
+import { currentSession } from "@/lib/directory/server";
+import {
+  ResponsesRequest,
+  runResponse,
+  runResponseStream,
+} from "@/lib/foundry-responses";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  if (!(await isProjectKey(req))) return unauthorized();
+  const hasProjectKey = await isProjectKey(req);
+  const session = hasProjectKey ? null : await currentSession();
+  if (!hasProjectKey && !session) return unauthorized();
+  // Project-key clients are their own tenant; browser sessions are scoped to
+  // the signed-in principal so one user cannot read another user's responses.
+  const ownerId = session?.principal.id || "project";
   const body = (await req.json().catch(() => ({}))) as ResponsesRequest;
-  const result = await runResponse(body);
+  if (body.stream === true) {
+    return runResponseStream(body, ownerId);
+  }
+  const result = await runResponse(body, ownerId);
   return NextResponse.json(result.body, { status: result.status });
 }

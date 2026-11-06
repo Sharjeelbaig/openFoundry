@@ -9,12 +9,20 @@ import { useToast } from "./Toast";
 import { DottedObject as OwnDottedObject } from "./Logos";
 
 export function StatusBadge({ status }: { status: string }) {
+  const normalised = status.toLowerCase();
   const tone =
-    status === "Running" || status === "Ready" || status === "Online"
+    normalised === "running" ||
+    normalised === "ready" ||
+    normalised === "online" ||
+    normalised === "active" ||
+    normalised === "succeeded"
       ? ""
-      : status === "Creating" || status === "Indexing"
+      : normalised === "creating" ||
+        normalised === "indexing" ||
+        normalised === "ready with errors" ||
+        normalised === "partial"
       ? "warning"
-      : status === "Failed" || status === "Stopped"
+      : normalised === "failed" || normalised === "error"
       ? "danger"
       : "muted";
   return (

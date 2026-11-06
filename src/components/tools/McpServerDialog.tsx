@@ -46,7 +46,7 @@ export default function McpServerDialog({
 }) {
   const editing = Boolean(server);
   const [name, setName] = useState("");
-  const [transport, setTransport] = useState<"stdio" | "http">("http");
+  const [transport, setTransport] = useState<"stdio" | "http" | "sse">("http");
   const [command, setCommand] = useState("");
   const [args, setArgs] = useState("");
   const [env, setEnv] = useState("");
@@ -78,7 +78,7 @@ export default function McpServerDialog({
       setError("Enter the command that starts the MCP server.");
       return;
     }
-    if (transport === "http" && !url.trim()) {
+    if (transport !== "stdio" && !url.trim()) {
       setError("Enter the MCP server URL.");
       return;
     }
@@ -102,8 +102,8 @@ export default function McpServerDialog({
                     .filter(Boolean)
                 : undefined,
             env: transport === "stdio" ? parsePairs(env) : undefined,
-            url: transport === "http" ? url.trim() : undefined,
-            headers: transport === "http" ? parsePairs(headers) : undefined,
+            url: transport === "stdio" ? undefined : url.trim(),
+            headers: transport === "stdio" ? undefined : parsePairs(headers),
           }),
         }
       );
@@ -168,15 +168,16 @@ export default function McpServerDialog({
               className="select"
               value={transport}
               onChange={(event) =>
-                setTransport(event.target.value as "stdio" | "http")
+                setTransport(event.target.value as "stdio" | "http" | "sse")
               }
               disabled={editing}
             >
               <option value="http">Streamable HTTP</option>
+              <option value="sse">SSE (legacy remote)</option>
               <option value="stdio">Local stdio process</option>
             </Select>
           </label>
-          {transport === "http" ? (
+          {transport !== "stdio" ? (
             <>
               <label className="field">
                 <span className="field-label">URL</span>

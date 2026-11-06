@@ -8,39 +8,35 @@ import { OpenFoundryAppIcon } from "@/components/Logos";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-  ArrowClockwise20Regular,
-  Book20Regular,
-  Delete20Regular,
-  Dismiss20Regular,
-  MoreHorizontal20Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
   Search20Regular,
 } from "@fluentui/react-icons";
-import { formatDate, useApi, useKnowledge } from "@/lib/client";
-import { useToast } from "@/components/Toast";
+import { useKnowledge } from "@/lib/client";
 import { Spinner, StatusBadge } from "@/components/ui";
-import type { Connection, KnowledgeBase, SearchIndex } from "@/lib/types";
+import type { SearchIndex } from "@/lib/types";
 
 type Tab = "Knowledge bases" | "Indexes";
 
+const PAGE_SIZE = 20;
+
+function statusPill(status: string): { label: string; tone: string } {
+  const value = status.toLowerCase();
+  if (value === "ready") return { label: "Active", tone: "ok" };
+  if (value === "indexing") return { label: "Indexing", tone: "warn" };
+  if (value === "failed") return { label: "Failed", tone: "bad" };
+  return { label: status, tone: "muted" };
+}
+
 export default function KnowledgePage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const { data, loading, refresh } = useKnowledge();
-  const { data: connectionsData } = useApi<{ connections: Connection[] }>(
-    "/api/connections"
-  );
+  const { data, loading } = useKnowledge();
   const bases = data?.knowledgeBases ?? [];
-  const indexes =
-    (data as { indexes?: SearchIndex[] } | null)?.indexes ?? [];
-  const connections = connectionsData?.connections ?? [];
+  const indexes = (data as { indexes?: SearchIndex[] } | null)?.indexes ?? [];
 
   const [tab, setTab] = useState<Tab>("Knowledge bases");
   const [query, setQuery] = useState("");
-  const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [reindexing, setReindexing] = useState<string | null>(null);
-  const [connection, setConnection] = useState<Connection | null>(null);
-
-  const activeConnection = connection ?? connections[0] ?? null;
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(
     () =>
@@ -61,72 +57,30 @@ export default function KnowledgePage() {
     [indexes, query]
   );
 
-  const reindex = async (base: KnowledgeBase) => {
-    setReindexing(base.id);
-    setMenuFor(null);
-    try {
-      const res = await fetch("/api/knowledge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reindex", id: base.id }),
-      });
-      if (!res.ok) throw new Error("Reindex failed");
-      toast(`${base.name} reindexed`, "success");
-      refresh();
-    } catch (error) {
-      toast(error instanceof Error ? error.message : "Reindex failed", "error");
-    } finally {
-      setReindexing(null);
-    }
-  };
-
-  const remove = async (base: KnowledgeBase) => {
-    setMenuFor(null);
-    const res = await fetch("/api/knowledge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", id: base.id }),
-    });
-    if (!res.ok) {
-      toast("Could not delete the knowledge base", "error");
-      return;
-    }
-    toast(`${base.name} deleted`, "success");
-    refresh();
-  };
-
-  const chunks = bases.reduce(
-    (sum, base) => sum + base.documents.reduce((n, doc) => n + doc.chunks.length, 0),
-    0
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const rows = filtered.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE
   );
-  const vectors = bases.reduce(
-    (sum, base) =>
-      sum +
-      base.documents.reduce((n, doc) => n + (doc.embeddings?.length || 0), 0),
-    0
-  );
+  const from = filtered.length === 0 ? 0 : currentPage * PAGE_SIZE + 1;
+  const to = Math.min(filtered.length, (currentPage + 1) * PAGE_SIZE);
 
   const startCreate = () => router.push("/build/knowledge/create");
 
   return (
     <div className="page" style={{ paddingTop: 18 }}>
-      <div className="page-header" style={{ marginBottom: 0 }}>
-        <h1 className="page-title">Knowledge (Foundry IQ)</h1>
-        {bases.length > 0 ? (
-          <div className="page-header-actions">
-            <button className="btn btn-primary" onClick={startCreate}>
-              Create a knowledge base
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <h1 className="page-title">Knowledge (Foundry IQ)</h1>
 
       <div className="tabbar mt-8">
         {(["Knowledge bases", "Indexes"] as Tab[]).map((item) => (
           <button
             key={item}
             className={`tab${tab === item ? " active" : ""}`}
-            onClick={() => setTab(item)}
+            onClick={() => {
+              setTab(item);
+              setPage(0);
+            }}
           >
             {item}
           </button>
@@ -135,34 +89,6 @@ export default function KnowledgePage() {
 
       {tab === "Knowledge bases" && (
         <>
-          {activeConnection && (
-            <div className="kb-connection-row">
-              <span className="kb-connection-label">Connection</span>
-              <button
-                className="kb-connection-chip"
-                aria-label="Connection"
-                title={activeConnection.target}
-              >
-                {activeConnection.name}
-              </button>
-              {activeConnection !== connections[0] || connections.length > 1 ? (
-                <button
-                  className="icon-button small"
-                  aria-label="Clear selection"
-                  onClick={() => setConnection(null)}
-                >
-                  <Dismiss20Regular />
-                </button>
-              ) : null}
-              <Link
-                className="link kb-connection-manage"
-                href="/manage/resources/projectDetails/connections"
-              >
-                Manage
-              </Link>
-            </div>
-          )}
-
           {loading && bases.length === 0 ? (
             <div className="row" style={{ gap: 8, color: "var(--fg-3)", padding: 40 }}>
               <Spinner /> Reading local knowledge bases...
@@ -176,10 +102,10 @@ export default function KnowledgePage() {
               </div>
               <h2>Ground your agent in enterprise knowledge</h2>
               <p>
-                Connect your agent to Foundry IQ to combine multiple data sources
-                behind an agentic retrieval engine. In this local build, knowledge
-                bases are indexed on this computer with real embeddings and never
-                leave it.
+                Connect your agent to a knowledge base to combine multiple data
+                sources behind an agentic retrieval engine. In this local build,
+                knowledge bases are indexed on this computer with real embeddings
+                and never leave it.
               </p>
               <div className="knowledge-create-link">
                 <button className="btn btn-primary" onClick={startCreate}>
@@ -189,85 +115,99 @@ export default function KnowledgePage() {
             </div>
           ) : (
             <>
-              <div className="page-toolbar">
-                <div className="search-input">
+              <div className="kb-toolbar">
+                <div className="search-input kb-search">
                   <Search20Regular />
                   <input
                     className="input"
-                    placeholder="Search knowledge bases"
+                    placeholder="Search"
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setPage(0);
+                    }}
                   />
                 </div>
+                <div
+                  className="kb-conn"
+                  title="Knowledge bases are stored in data/knowledge/knowledge.db on this computer."
+                >
+                  <span className="kb-conn-label">Connection</span>
+                  <span className="kb-conn-value">Local knowledge store</span>
+                </div>
+                <Link className="link" href="/build/data">
+                  Manage
+                </Link>
                 <span className="spacer" />
-                <span className="muted text-12">
-                  {bases.length} bases · {chunks} chunks · {vectors} vectors
-                </span>
+                <button className="btn btn-primary" onClick={startCreate}>
+                  Create a knowledge base
+                </button>
               </div>
-              <div className="kb-grid">
-                {filtered.map((base) => {
-                  const baseChunks = base.documents.reduce(
-                    (sum, doc) => sum + doc.chunks.length,
-                    0
-                  );
-                  return (
-                    <div className="kb-card" key={base.id}>
-                      <div className="row between">
-                        <span className="kb-icon">
-                          <Book20Regular />
-                        </span>
-                        <div style={{ position: "relative" }}>
-                          <button
-                            className="icon-button small"
-                            aria-label={`Actions for ${base.name}`}
-                            onClick={() =>
-                              setMenuFor(menuFor === base.id ? null : base.id)
-                            }
-                          >
-                            <MoreHorizontal20Regular />
-                          </button>
-                          {menuFor === base.id && (
-                            <div className="menu-popover" style={{ right: 0, top: 30, minWidth: 190 }}>
-                              <button className="menu-item" onClick={() => reindex(base)}>
-                                <ArrowClockwise20Regular /> Reindex
-                              </button>
-                              <button className="menu-item" onClick={() => remove(base)}>
-                                <Delete20Regular /> Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <Link
-                          href={`/build/knowledge/${encodeURIComponent(base.id)}`}
-                          className="kb-name"
-                        >
-                          {base.name}
-                        </Link>
-                        <p className="kb-desc">{base.description}</p>
-                      </div>
-                      <div className="kb-meta">
-                        <span>{base.documents.length} documents</span>
-                        <span>{baseChunks} chunks</span>
-                        <span className="truncate">{base.embeddingModel}</span>
-                      </div>
-                      <div className="row between">
-                        <StatusBadge status={base.status} />
-                        <span className="muted text-12">
-                          {reindexing === base.id
-                            ? "Reindexing..."
-                            : formatDate(base.updatedAt)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <div className="operate-card muted" style={{ gridColumn: "1 / -1", padding: 36, textAlign: "center" }}>
-                    No knowledge bases match “{query}”.
+
+              <div className="table-card">
+                <table className="data-table kb-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "24%" }}>Name</th>
+                      <th>Description</th>
+                      <th style={{ width: "26%" }}>Knowledge sources</th>
+                      <th style={{ width: 120 }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((base) => {
+                      const pill = statusPill(base.status);
+                      const sources = (base.sources ?? [])
+                        .map((source) => source.name)
+                        .join(", ");
+                      return (
+                        <tr key={base.id}>
+                          <td>
+                            <Link
+                              href={`/build/knowledge/${encodeURIComponent(base.id)}`}
+                              className="kb-row-name"
+                            >
+                              {base.name}
+                            </Link>
+                          </td>
+                          <td className="cell-muted">
+                            <span className="kb-desc">{base.description || "—"}</span>
+                          </td>
+                          <td className="cell-muted">{sources || "—"}</td>
+                          <td>
+                            <span className={`kb-pill ${pill.tone}`}>{pill.label}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {rows.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="muted" style={{ textAlign: "center", padding: 36 }}>
+                          No knowledge bases match “{query}”.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <div className="kb-pager">
+                  <span>
+                    {from}-{to} of {filtered.length}
+                  </span>
+                  <div className="row" style={{ gap: 4 }}>
+                    <button
+                      disabled={currentPage === 0}
+                      onClick={() => setPage(currentPage - 1)}
+                    >
+                      <ChevronLeft20Regular /> Prev
+                    </button>
+                    <button
+                      disabled={currentPage >= pageCount - 1}
+                      onClick={() => setPage(currentPage + 1)}
+                    >
+                      Next <ChevronRight20Regular />
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             </>
           )}
@@ -275,7 +215,7 @@ export default function KnowledgePage() {
       )}
 
       {tab === "Indexes" && (
-        <div className="table-card">
+        <div className="table-card" style={{ marginTop: 16 }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -322,8 +262,10 @@ export default function KnowledgePage() {
             </tbody>
           </table>
           {filteredIndexes.length > 0 && (
-            <div className="table-footer">
-              1-{filteredIndexes.length} of {filteredIndexes.length}
+            <div className="kb-pager">
+              <span>
+                1-{filteredIndexes.length} of {filteredIndexes.length}
+              </span>
             </div>
           )}
         </div>

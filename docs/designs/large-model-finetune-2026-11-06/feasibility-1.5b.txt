@@ -1,0 +1,41 @@
+Command:
+/usr/bin/time -l mlx_lm lora --model Qwen/Qwen2.5-1.5B-Instruct --train --data /tmp/ft-15b/data --iters 20 --batch-size 1 --num-layers 8 --learning-rate 1e-5 --adapter-path /tmp/ft-15b/adapter-feasibility --val-batches 1 --steps-per-eval 10 --max-seq-length 512 --seed 7
+
+Loading pretrained model
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 1511.54it/s]
+Loading datasets
+Training
+[34m╭─[0m[34m [0m[1;35mmlx_lm.lora[0m[34m [0m[34m───────────────────────────────────────────────────────────────────────────────────────────────────────[0m[34m─╮[0m
+[34m│[0m    [39mmodel        [0m   [1mQwen/Qwen2.5-1.5B-Instruct[0m                                                                        [34m│[0m
+[34m│[0m    [39mtype         [0m   [1mlora · 8 layers · rank 8[0m                                                                          [34m│[0m
+[34m│[0m    [39mdataset      [0m   [1m/tmp/ft-15b/data[0m                                                                                  [34m│[0m
+[34m│[0m    [39moptimizer    [0m   [1madam · lr 1.0e-05[0m                                                                                 [34m│[0m
+[34m│[0m    [39mbatch · iters[0m   [1m1 · 20[0m                                                                                            [34m│[0m
+[34m│[0m    [39mmax seq      [0m   [1m512[0m                                                                                               [34m│[0m
+[34m╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
+Trainable parameters: 0.171% (2.638M/1543.714M)
+  [1miter   train_loss     tok/s     tokens[0m
+  [38;5;244m   1[0m    [1;35mval[0m [1m3.251[0m    [38;5;244m0.83s[0m
+  [38;5;244m  10[0m    [1;35mval[0m [1m1.102[0m    [38;5;244m0.77s[0m
+  [38;5;244m  10[0m    [1;32m1.983 ▼[0m    [1m  164[0m    [38;5;244m  1.5k[0m
+  [38;5;244m  20[0m    [1;35mval[0m [1m0.488[0m    [38;5;244m0.80s[0m
+  [38;5;244m  20[0m    [1;32m0.488 ▼[0m    [1m  161[0m    [38;5;244m  3.0k[0m
+[1;34mtrain[0m [34m██████████████████████████████[0m [1;34m100%[0m [38;5;244m·[0m [1;34m   20[0m[38;5;244m/20[0m
+       26.75 real         2.32 user         4.40 sys
+           812531712  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              331877  page reclaims
+                3759  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                  14  messages sent
+                  37  messages received
+                   0  signals received
+               11155  voluntary context switches
+               87057  involuntary context switches
+         29776831821  instructions retired
+         18796465269  cycles elapsed
+          3957116288  peak memory footprint

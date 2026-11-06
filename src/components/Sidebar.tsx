@@ -17,6 +17,8 @@ import {
   Database20Regular,
   DataUsage20Regular,
   Grid20Regular,
+  Image20Regular,
+  Mic20Regular,
   PanelLeftContract20Regular,
   PanelLeftExpand20Regular,
   PeopleTeam20Regular,
@@ -43,6 +45,9 @@ const CREATE: NavGroup = {
   items: [
     { href: "/build/agents", label: "Agents", icon: <PeopleTeam20Regular /> },
     { href: "/build/models/deployments", label: "Models", icon: <Box20Regular /> },
+    { href: "/build/images", label: "Images", icon: <Image20Regular /> },
+    { href: "/build/speech", label: "Speech", icon: <Mic20Regular /> },
+    { href: "/build/voice", label: "Voice Live", icon: <Mic20Regular /> },
     { href: "/build/services", label: "Services", icon: <Cloud20Regular /> },
     { href: "/build/tools", label: "Tools", icon: <Wrench20Regular /> },
     { href: "/build/knowledge/search", label: "Knowledge", icon: <Book20Regular /> },
@@ -92,6 +97,8 @@ const MANAGE: NavGroup = {
     { href: "/manage/quota", label: "Quota", icon: <DataBarVertical20Regular /> },
     { href: "/manage/gateway", label: "AI Gateway", icon: <Cloud20Regular /> },
     { href: "/manage/resources", label: "Resource details", icon: <Server20Regular /> },
+    { href: "/manage/retention", label: "Responses", icon: <DataUsage20Regular /> },
+    { href: "/manage/tenants", label: "Tenants", icon: <PeopleTeam20Regular /> },
     { href: "/manage", label: "Project details", icon: <Settings20Regular /> },
   ],
 };
@@ -143,6 +150,8 @@ export default function Sidebar() {
                     pathname.startsWith("/build/models")) ||
                   (item.href === "/build/knowledge/search" &&
                     pathname.startsWith("/build/knowledge")) ||
+                  (item.href === "/build/data" &&
+                    pathname.startsWith("/build/data")) ||
                   (item.href === "/discover/tools" &&
                     pathname.startsWith("/discover/tools")) ||
                   (item.href === "/operate" && pathname === "/operate") ||

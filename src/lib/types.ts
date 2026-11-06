@@ -315,7 +315,7 @@ export interface Toolbox {
   updatedAt: string;
 }
 
-export type McpTransport = "stdio" | "http";
+export type McpTransport = "stdio" | "http" | "sse";
 
 /** A user-owned HTTP endpoint exposed to agents as a function. */
 export interface HttpTool {
@@ -349,7 +349,7 @@ export interface McpServer {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
-  /** streamable HTTP transport */
+  /** streamable HTTP or legacy SSE transport */
   url?: string;
   headers?: Record<string, string>;
   status: "Connected" | "Error" | "Unknown";
@@ -472,14 +472,35 @@ export interface SearchIndex {
   updatedAt: string;
 }
 
-/** A connection (Azure AI Search, storage, M365...) usable by Foundry IQ. */
+/**
+ * A credentialed link to an external product. The secret itself is never part
+ * of this shape; `secretSet` and `secretHint` describe it without exposing it.
+ */
 export interface Connection {
   id: string;
   name: string;
-  kind: "Azure AI Search" | "Azure Blob Storage" | "Microsoft 365" | "Microsoft Fabric";
+  /** Legacy label kept for older rows. New rows use `provider`. */
+  kind?: "Azure AI Search" | "Azure Blob Storage" | "Microsoft 365" | "Microsoft Fabric";
+  provider?: "s3" | "azure-blob" | "azure-ai-search" | "webdav" | "google-drive";
+  providerLabel?: string;
   target: string;
-  authType: "API key" | "Managed identity" | "Local (no key required)";
+  authType:
+    | "API key"
+    | "Managed identity"
+    | "Local (no key required)"
+    | "Access key"
+    | "SAS token"
+    | "Basic"
+    | "oauth2";
+  config?: Record<string, unknown>;
+  secretSet?: boolean;
+  secretHint?: string;
+  status?: "unknown" | "ok" | "failed";
+  oauthConnected?: boolean;
+  lastCheckedAt?: string;
+  lastError?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 /** Memory store kinds, matching Foundry's Memory store creator. */
@@ -588,6 +609,27 @@ export interface Trace {
   citations: Citation[];
   at: string;
   error?: string;
+}
+
+/* ---------------------------------------------------------------- fine-tune */
+
+export interface FineTuneMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface FineTuneRow {
+  messages: FineTuneMessage[];
+}
+
+export interface FineTuneDataset {
+  id: string;
+  name: string;
+  source: "traces" | "agents" | "custom";
+  rows: FineTuneRow[];
+  rowCount: number;
+  characters: number;
+  createdAt: string;
 }
 
 /* ----------------------------------------------------------------- routines */
@@ -824,9 +866,13 @@ export interface EvaluationRun {
   results: EvaluationResult[];
 }
 
+export type MessageContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | MessageContentPart[];
 }
 
 /** A function call the model asked for, in OpenAI wire format. */
@@ -842,7 +888,7 @@ export interface WireToolCall {
  */
 export interface WireMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string;
+  content: string | MessageContentPart[];
   tool_calls?: WireToolCall[];
   tool_call_id?: string;
 }
@@ -919,6 +965,11 @@ export interface LocalSettings {
   lmStudioUrl: string;
   llamaCppUrl: string;
   huggingFacePath: string;
+  /** Image generation runtime. "auto" probes known local ports. */
+  imageProvider: "auto" | "automatic1111" | "openai";
+  imageUrl: string;
+  imageApiKey: string;
+  imageModel: string;
   defaultProviderId: string;
   defaultModel: string;
 }

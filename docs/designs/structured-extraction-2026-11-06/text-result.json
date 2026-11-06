@@ -1,0 +1,57 @@
+{
+  "kind": "text",
+  "keyValues": [
+    {
+      "key": "Vendor",
+      "value": "Contoso Ltd.",
+      "line": 2,
+      "page": 1,
+      "confidence": 0.9
+    },
+    {
+      "key": "Invoice",
+      "value": "INV-4417",
+      "line": 3,
+      "page": 1,
+      "confidence": 0.9
+    },
+    {
+      "key": "Total",
+      "value": "$1,250.00",
+      "line": 4,
+      "page": 1,
+      "confidence": 0.9
+    }
+  ],
+  "tables": [
+    {
+      "index": 0,
+      "title": "Line items",
+      "columns": [
+        "Item",
+        "Qty",
+        "Unit price",
+        "Total"
+      ],
+      "rows": [
+        [
+          "Foundry hosting",
+          "2",
+          "$500.00",
+          "$1,000.00"
+        ],
+        [
+          "Support",
+          "1",
+          "$250.00",
+          "$250.00"
+        ]
+      ],
+      "lineStart": 7,
+      "lineEnd": 10,
+      "page": 1,
+      "confidence": 0.95
+    }
+  ],
+  "warnings": []
+}

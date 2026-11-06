@@ -1,0 +1,35 @@
+{
+  "model": {
+    "id": "xmdl_mw4uhlxii9jwnj",
+    "name": "foundation-search-1.5b-live",
+    "description": "1.5B hyperparameter search with learned vendor codes",
+    "fields": [
+      {
+        "name": "vendor",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "invoice",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "total",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "vendor_code",
+        "type": "string",
+        "description": "internal vendor code from the vendor master record",
+        "required": true
+      }
+    ],
+    "examples": [],
+    "instructions": "",
+    "status": "draft",
+    "createdAt": "2026-11-06T10:41:59.622Z",
+    "updatedAt": "2026-11-06T10:41:59.622Z"
+  }
+}

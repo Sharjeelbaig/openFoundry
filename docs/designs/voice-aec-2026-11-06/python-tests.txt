@@ -1,0 +1,19 @@
+test_agent_streaming (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_agent_streaming) ... ok
+test_concurrent_orchestration (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_concurrent_orchestration) ... ok
+test_foundry_chat_client_runs_an_agent (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_foundry_chat_client_runs_an_agent) ... ok
+test_group_chat_orchestration (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_group_chat_orchestration) ... ok
+test_handoff_orchestration (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_handoff_orchestration) ... ok
+test_magentic_orchestration (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_magentic_orchestration) ... ok
+test_openai_responses_stream_events (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_openai_responses_stream_events) ... ok
+test_project_agent_version_and_foundry_agent (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_project_agent_version_and_foundry_agent) ... ok
+test_sequential_multi_agent_orchestration (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_sequential_multi_agent_orchestration) ... ok
+test_streaming_tool_call (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_streaming_tool_call) ... ok
+test_voice_aec_suppression (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_voice_aec_suppression) ... ok
+test_voice_full_duplex_barge_in (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_voice_full_duplex_barge_in) ... ok
+test_voice_live_transport (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_voice_live_transport) ... ok
+test_voice_noise_gate (sdk.python.tests.test_live.AgentFrameworkLiveTests.test_voice_noise_gate) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 61.619s
+
+OK

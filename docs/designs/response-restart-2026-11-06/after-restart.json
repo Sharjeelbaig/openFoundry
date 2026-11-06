@@ -1,0 +1,20 @@
+{
+ "id": "resp_mw4ksqns98a9m5",
+ "output": [
+  {
+   "id": "msg_mw4ksqns1uvus6",
+   "content": [
+    {
+     "annotations": [],
+     "text": "The code for \"vault\" is ZX-4417.",
+     "type": "output_text",
+     "logprobs": null
+    }
+   ],
+   "role": "assistant",
+   "status": "completed",
+   "type": "message",
+   "phase": null
+  }
+ ]
+}

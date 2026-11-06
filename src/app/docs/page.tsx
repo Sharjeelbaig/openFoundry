@@ -220,10 +220,52 @@ with AIProjectClient(
           served locally.
         </p>
         <ul>
-          <li>Responses are non-streaming on the project surface.</li>
+          <li>The project Responses surface supports <span className="mono">stream: true</span> with OpenAI Responses SSE events.</li>
           <li>Function tools come from the agent definition, as they do in Foundry.</li>
           <li>The deployment name resolves to a local deployment or a model the runtime reports.</li>
         </ul>
+
+        <h3 id="agent-framework">Microsoft Agent Framework SDK</h3>
+        <p>
+          The official <span className="mono">agent-framework</span> Python SDK can
+          use this project. The repository includes a small helper package at{" "}
+          <span className="mono">sdk/python</span> that presents the project API key
+          as the bearer token the SDK expects:
+        </p>
+        <pre className="code-block">{`from openfoundry_agent_framework import create_agent
+
+agent = create_agent(
+    name="LocalAgent",
+    instructions="Answer in one short sentence.",
+)
+result = await agent.run("What is the Agent Framework SDK?")
+print(result.text)`}</pre>
+        <p>
+          <span className="mono">FoundryChatClient</span>,{" "}
+          <span className="mono">FoundryAgent</span> against a project agent version,
+          and the <span className="mono">Sequential</span>,{" "}
+          <span className="mono">Concurrent</span>,{" "}
+          <span className="mono">GroupChat</span>,{" "}
+          <span className="mono">Handoff</span> and{" "}
+          <span className="mono">Magentic</span> orchestration builders all run
+          against the local project. Streaming supports function calls, including
+          a tool result passed back through <span className="mono">previous_response_id</span>;
+          response history is stored in SQLite and survives a server restart. Pass{" "}
+          <span className="mono">enforce_https=False</span> to per-operation calls
+          on the loopback HTTP endpoint, and create versions with the project key.
+        </p>
+        <pre className="code-block">{`from azure.ai.projects.models import PromptAgentDefinition
+from openfoundry_agent_framework import create_project_client
+
+project = create_project_client()
+version = project.agents.create_version(
+    agent_name="local-agent",
+    definition=PromptAgentDefinition(
+        model="<deployment>",
+        instructions="Answer briefly.",
+    ),
+    enforce_https=False,
+)`}</pre>
 
         <h2 id="knowledge">Knowledge and retrieval</h2>
         <p>
@@ -358,6 +400,23 @@ api-key: <project api key>
                 ["/api/agents", "Agent CRUD", "GET / POST / PATCH / DELETE"],
                 ["/api/knowledge", "Knowledge bases, uploads and text", "GET / POST"],
                 ["/api/knowledge/search", "Retrieval test", "POST"],
+                ["/api/extract/structured", "Tables and key/value pairs from PDFs, images or text", "POST"],
+                ["/api/extraction", "Custom extraction models, examples and training", "GET / POST"],
+                ["/api/extraction/extract", "Extract custom fields from text, PDFs or images", "POST"],
+                ["/api/extraction/foundation", "MLX fine-tune runtime status", "GET"],
+                ["/api/extraction/foundation/train", "Train and fuse a local LoRA adapter with held-out metrics", "POST"],
+                ["/api/extraction/foundation/setup", "Create the MLX venv and install mlx-lm", "POST"],
+                ["/api/voice/live", "Voice Live turn: local STT, agent answer and TTS over SSE", "POST"],
+                ["/api/voice/live/token", "Issue a short-lived token for the Voice Live WebSocket", "POST"],
+                ["ws://127.0.0.1:3002", "Full-duplex Voice Live: PCM, VAD, barge-in, server AEC", "WebSocket"],
+                ["/.well-known/agent-card.json", "A2A agent-card discovery (optional ?agent=<id>)", "GET"],
+                ["/api/a2a", "A2A JSON-RPC endpoint: message/send, SendMessage", "POST"],
+                ["/api/a2a/token", "Issue a bearer token for the A2A endpoint", "POST"],
+                ["/api/language/mcp", "Language MCP server: analyze_text, translate_text", "POST"],
+                ["/api/language/mcp/token", "Issue a bearer token for the language MCP server", "POST"],
+                ["/api/speech/mcp", "Speech MCP server: synthesize_speech, transcribe_audio, speech_status", "POST"],
+                ["/api/speech/mcp/token", "Issue a bearer token for the speech MCP server", "POST"],
+                ["/api/speech/setup", "Check, install and model-download whisper.cpp for STT", "GET / POST"],
                 ["/api/memory", "Memory stores and remembered items", "GET / POST"],
                 ["/api/guardrails", "Guardrails, blocklists and controls", "GET / POST"],
                 ["/api/connections", "Project connections used by Foundry IQ sources", "GET / POST"],
@@ -366,6 +425,11 @@ api-key: <project api key>
                 ["/api/evaluations", "Quality and red team runs", "GET / POST / PATCH"],
                 ["/api/users", "Local project access records", "GET / POST / PATCH / DELETE"],
                 ["/api/settings", "Project identity and runtime endpoints", "GET / PATCH"],
+                ["/api/responses/retention", "Responses history retention policy and owner stats", "GET / POST"],
+                ["/api/responses/store/<action>", "Per-tenant shared Responses store: save, load, prune, stats, policy, audit (bearer token)", "GET / POST"],
+                ["/api/responses/tenants", "Tenant registry, usage and quotas for the shared store", "GET / POST"],
+                ["/api/responses/tenants/<tenant>", "Update quotas, rotate token, disable or delete a tenant", "GET / PATCH / DELETE"],
+                ["/api/responses/tenants/audit", "Admin audit stream across tenants", "GET"],
                 ["/api/export", "Download the full project bundle", "GET"],
               ].map(([endpoint, purpose, method]) => (
                 <tr key={endpoint}>
@@ -402,7 +466,7 @@ api-key: <project api key>
           <li>There is no cloud resource, subscription, quota or billing behind any page. Local serving behaviour (metering, rate limits, reserved slots, queues, batch) is real; only data residency is simulated.</li>
           <li>No fine-tuning runtime is bundled; datasets can be exported for an external trainer.</li>
           <li>Guardrails combine a deterministic local classifier with prompt instructions; they are not a hosted moderation model. Hosted-agent-only controls such as network egress rules are recorded but not enforced against local models.</li>
-          <li>The project Responses surface is non-streaming; chat completions support streaming.</li>
+          <li>The project Responses surface and chat completions both support streaming.</li>
           <li>Local models are smaller than hosted frontier models and can hallucinate.</li>
           <li>Deployment types that need Azure-only infrastructure (Arc, VM Managed Compute, Provisioned Throughput Classic) are disabled with an explanation; register a runtime node to approximate Arc or VM compute against another machine.</li>
         </ul>

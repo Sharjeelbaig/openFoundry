@@ -1,0 +1,17 @@
+PER-TENANT RESPONSES ADMINISTRATION
+====================================
+Store server A: 127.0.0.1:3010, shared SQLite /tmp/of-tenant-admin-data/responses.db
+Client B:       127.0.0.1:3011, data dir /tmp/of-tenant-admin-b, HTTP shared store
+
+Tenants: [["acme", "4/5", "near-quota", "ofst_lbst0Aq"], ["globex", "0/10", "active", "ofst_DAKmv95"]]
+Totals: {"tenants": 2, "active": 2, "disabled": 0, "overQuota": 0, "responses": 4, "bytes": 1668}
+
+Old client token after rotation: 401 {"error":{"message":"Unauthorized","type":"authentication_error","code":"unauthorized"}}
+New client token after rotation: 200 -> rotated token works.
+Third response at quota 2: 429 {"error":{"message":"Tenant \"acme\" has reached its response quota (2).","type":"quota_exceeded","code":"quota_exceeded"}}
+
+Acme audit actions: save, save, tenant.update, tenant.update, tenant.rotate, tenant.update, save, save, tenant.create
+Globex audit actions: tenant.enable, tenant.disable, tenant.create
+
+The admin list contains tokenPrefix only; the raw token was returned once on create
+and once on rotation. B has no local responses.db.

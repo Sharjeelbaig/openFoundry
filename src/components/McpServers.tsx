@@ -51,7 +51,7 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
   const [addOpen, setAddOpen] = useState(false);
   const [editId, setEditId] = useState("");
   const [name, setName] = useState("");
-  const [transport, setTransport] = useState<"stdio" | "http">("stdio");
+  const [transport, setTransport] = useState<"stdio" | "http" | "sse">("stdio");
   const [command, setCommand] = useState("");
   const [args, setArgs] = useState("");
   const [env, setEnv] = useState("");
@@ -133,7 +133,7 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
       setError("Enter the command that starts the MCP server.");
       return;
     }
-    if (transport === "http" && !url.trim()) {
+    if (transport !== "stdio" && !url.trim()) {
       setError("Enter the MCP server URL.");
       return;
     }
@@ -157,8 +157,8 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
                     .filter(Boolean)
                 : undefined,
             env: transport === "stdio" ? parsePairs(env) : undefined,
-            url: transport === "http" ? url.trim() : undefined,
-            headers: transport === "http" ? parsePairs(headers) : undefined,
+            url: transport === "stdio" ? undefined : url.trim(),
+            headers: transport === "stdio" ? undefined : parsePairs(headers),
           }),
         }
       );
@@ -350,7 +350,11 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
                   <span>
                     <strong className="text-14">{server.name}</strong>
                     <div className="muted text-12">
-                      {server.transport === "stdio" ? "Local stdio" : "Streamable HTTP"}
+                      {server.transport === "stdio"
+                        ? "Local stdio"
+                        : server.transport === "sse"
+                        ? "SSE (legacy remote)"
+                        : "Streamable HTTP"}
                     </div>
                   </span>
                 </span>
@@ -540,12 +544,13 @@ export default function McpServers({ agents, onAgentsChanged }: McpServersProps)
                   className="select"
                   value={transport}
                   onChange={(event) =>
-                    setTransport(event.target.value as "stdio" | "http")
+                    setTransport(event.target.value as "stdio" | "http" | "sse")
                   }
                   disabled={Boolean(editId)}
                 >
                   <option value="stdio">Local stdio process</option>
                   <option value="http">Streamable HTTP</option>
+                  <option value="sse">SSE (legacy remote)</option>
                 </Select>
               </label>
 

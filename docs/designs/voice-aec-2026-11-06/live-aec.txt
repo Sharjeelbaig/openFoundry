@@ -1,0 +1,10 @@
+READY: {"enabled": true, "echoSim": true, "echoGain": 0.7, "echoDelayMs": 120}
+NOISE_SUPPRESSION: adaptive-noise-floor+browser-constraints+server-aec
+FIRST_TRANSCRIPT: In one short sentence, say hello to the user.
+FALSE_STARTS_DURING_ECHO: 0
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 10.48, "delayMs": 120, "doubleTalk": false, "echoSim": true, "frames": 25}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 19.81, "delayMs": 120, "doubleTalk": false, "echoSim": true, "frames": 50}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 28.31, "delayMs": 120, "doubleTalk": false, "echoSim": true, "frames": 75}
+MAX_ERLE_DB: 28.31 DELAY_MS: 120
+SECOND_TRANSCRIPT: What is 2 + 2? Answer with just the number.
+SECOND_ANSWER: 4

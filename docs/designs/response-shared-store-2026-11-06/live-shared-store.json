@@ -1,0 +1,156 @@
+{
+  "unauthorized_status": 401,
+  "policy": {
+    "maxResponsesPerOwner": 3,
+    "ttlDays": 30
+  },
+  "first_response_id": "resp_mw4sy17jmb5320",
+  "first_response": {
+    "id": "resp_mw4sy17jmb5320",
+    "object": "response",
+    "created_at": 1793959126,
+    "status": "completed",
+    "model": "gemma4:31b-cloud",
+    "output": [
+      {
+        "id": "msg_mw4sy17jstqx3z",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "shared store works.",
+            "annotations": []
+          }
+        ]
+      }
+    ],
+    "parallel_tool_calls": true,
+    "tool_choice": "none",
+    "tools": [],
+    "instructions": null,
+    "metadata": {},
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "max_output_tokens": null,
+    "previous_response_id": null,
+    "error": null,
+    "incomplete_details": null,
+    "usage": {
+      "input_tokens": 21,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens": 5,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 26
+    }
+  },
+  "stats_after_first": {
+    "total": 1,
+    "owners": [
+      {
+        "ownerId": "project",
+        "count": 1
+      }
+    ],
+    "oldest": "2026-11-06T09:58:46.693Z",
+    "newest": "2026-11-06T09:58:46.693Z"
+  },
+  "loaded_response": {
+    "response": {
+      "id": "resp_mw4sy17jmb5320",
+      "ownerId": "project",
+      "items": [
+        {
+          "id": "msg_mw4sy0kgjo8qcq",
+          "object": "conversation.item",
+          "type": "message",
+          "created_at": 1793959125,
+          "status": "completed",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "Reply with exactly: shared store works."
+            }
+          ]
+        },
+        {
+          "id": "msg_mw4sy17jtri2yk",
+          "object": "conversation.item",
+          "type": "message",
+          "created_at": 1793959126,
+          "status": "completed",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "shared store works."
+            }
+          ]
+        }
+      ],
+      "createdAt": "2026-11-06T09:58:46.693Z"
+    }
+  },
+  "second_response_id": "resp_mw4sy1pt5j2e6z",
+  "second_response": {
+    "id": "resp_mw4sy1pt5j2e6z",
+    "object": "response",
+    "created_at": 1793959127,
+    "status": "completed",
+    "model": "gemma4:31b-cloud",
+    "output": [
+      {
+        "id": "msg_mw4sy1pt3mg6by",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "cross machine works.",
+            "annotations": []
+          }
+        ]
+      }
+    ],
+    "parallel_tool_calls": true,
+    "tool_choice": "none",
+    "tools": [],
+    "instructions": null,
+    "metadata": {},
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "max_output_tokens": null,
+    "previous_response_id": null,
+    "error": null,
+    "incomplete_details": null,
+    "usage": {
+      "input_tokens": 43,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens": 5,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 48
+    }
+  },
+  "stats_final": {
+    "total": 2,
+    "owners": [
+      {
+        "ownerId": "project",
+        "count": 2
+      }
+    ],
+    "oldest": "2026-11-06T09:58:46.693Z",
+    "newest": "2026-11-06T09:58:47.352Z"
+  }
+}

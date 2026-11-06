@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   cacheComponents: false,
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/agent-card.json",
+        destination: "/api/a2a/agent-card",
+      },
+    ];
+  },
   outputFileTracingExcludes: {
     "*": [
       "src-tauri/**",

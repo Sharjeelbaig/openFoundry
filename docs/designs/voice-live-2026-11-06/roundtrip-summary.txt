@@ -1,0 +1,9 @@
+VOICE LIVE ROUND TRIP
+=====================
+event types: session, transcript, assistant.done, audio.start, audio.done, done
+transcript: In one short sentence, say hello to the user.
+answer: Hello! How can I help you today?
+audio bytes: 109424
+audio header: RIFF
+audio mime: audio/wav
+done: {'type': 'done', 'sessionId': 'voice_mw4j9h8wy23rna', 'sequence': 18}

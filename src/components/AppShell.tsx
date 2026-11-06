@@ -76,7 +76,7 @@ export default function AppShell({
             access={user?.access}
             initialTheme={theme}
           />
-          <div className="app-body">
+          <div className={`app-body${surface ? " surface-body" : ""}`}>
             <Sidebar />
             <main
               className={`app-main${noScroll ? " no-scroll" : ""}${

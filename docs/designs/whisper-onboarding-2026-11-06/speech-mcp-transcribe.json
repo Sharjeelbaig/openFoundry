@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "The quick brown fox jumps over the lazy dog.\nThe vault code is 4417."
+      }
+    ],
+    "structuredContent": {
+      "text": "The quick brown fox jumps over the lazy dog.\nThe vault code is 4417.",
+      "engine": "whisper.cpp"
+    }
+  }
+}

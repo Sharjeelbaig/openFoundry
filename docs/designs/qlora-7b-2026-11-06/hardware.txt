@@ -1,0 +1,25 @@
+7B 4-BIT QLoRA HARDWARE AND RUN
+===============================
+Machine: MacBookPro17,1, Apple M1, 8 GB unified memory
+Disk free at preflight: 17.65 GB
+Model: mlx-community/Qwen2.5-7B-Instruct-4bit (4.30 GB, 4-bit)
+Required disk (no fused copy): 5.80 GB
+Required memory: 6.80 GB
+Preflight: fitsDisk=True fitsMemory=True ok=True
+
+CLI 40-iteration probe (same configuration): peak memory footprint 5.389 GB,
+training time 152.71 s. The MLX process reached 5.39 GB, below the 8 GB ceiling.
+
+App training time: 5m46s (includes base evaluation, 40 iterations and tuned evaluation).
+Examples: 16 train / 3 valid / 5 test
+Base accuracy: 75% (15/20)
+Tuned accuracy: 100% (20/20)
+vendor_code: 0/5 base -> 5/5 tuned
+Defaults: lr 5e-06, 40 iters, 8 layers, rank 8
+
+7B bf16 refusal: the Qwen2.5-7B-Instruct entry is 15 GB of weights, requiring
+31.5 GB of disk (weights + fused copy + headroom) and 17 GB of memory. With 23 GB
+free and 8 GB RAM it fails the preflight and is never attempted.
+
+Adapter-only inference (base 4-bit checkpoint + adapter) is correct; mlx_lm.fuse
+on the pre-quantized model loses the adapter (see fuse-bug.txt vs adapter-inference.txt).

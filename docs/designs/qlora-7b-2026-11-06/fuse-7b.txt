@@ -1,0 +1,20 @@
+Loading pretrained model
+Fetching 9 files:   0%|          | 0/9 [00:00<?, ?it/s]Fetching 9 files: 100%|██████████| 9/9 [00:00<00:00, 1271.60it/s]
+       52.00 real         1.44 user         8.32 sys
+          1182941184  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              579636  page reclaims
+                1440  page faults
+                   0  swaps
+                   0  block input operations
+                   1  block output operations
+                  28  messages sent
+                  71  messages received
+                   0  signals received
+              166321  voluntary context switches
+               81111  involuntary context switches
+         56363957318  instructions retired
+         27866805262  cycles elapsed
+          5929603008  peak memory footprint

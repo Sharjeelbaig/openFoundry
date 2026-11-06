@@ -69,6 +69,16 @@ describe("route table", () => {
       resolveApiRoute("POST", "/api/projects/sample/openai/v1/chat/completions")
         .visibility
     ).toBe("public");
+    // The Azure AI Projects SDK authenticates agent versions with the project
+    // key, not a browser session.
+    expect(
+      resolveApiRoute("POST", "/api/projects/sample/agents/demo/versions")
+        .visibility
+    ).toBe("public");
+    expect(
+      resolveApiRoute("GET", "/api/projects/sample/agents/demo/versions/1")
+        .visibility
+    ).toBe("public");
     expect(resolveApiRoute("POST", "/api/auth/sign-in").visibility).toBe("public");
   });
 

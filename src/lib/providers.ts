@@ -178,19 +178,41 @@ export function publisherFor(name: string): string {
 export function taskFor(name: string): ModelTask {
   const n = name.toLowerCase();
   if (n.includes("embed")) return "embedding";
+  // Image generation is checked before vision: "image" appears in both names.
+  if (
+    n.includes("sdxl") ||
+    n.includes("stable-diffusion") ||
+    n.includes("diffusion") ||
+    n.includes("flux") ||
+    n.includes("dall-e") ||
+    n.includes("sd3") ||
+    n.includes("kandinsky") ||
+    n.includes("playground-v2")
+  )
+    return "image";
   if (
     n.includes("whisper") ||
     n.includes("speech") ||
     n.includes("asr") ||
     n.includes("tts") ||
     n.includes("parakeet") ||
-    n.includes("moonshine")
+    n.includes("moonshine") ||
+    n.includes("wav2vec") ||
+    n.includes("piper") ||
+    n.includes("kokoro") ||
+    n.includes("bark")
   )
     return "speech";
   if (
     n.includes("vision") ||
     n.includes("vl-") ||
     n.includes("multimodal") ||
+    n.includes("llava") ||
+    n.includes("moondream") ||
+    n.includes("pixtral") ||
+    n.includes("idefics") ||
+    n.includes("internvl") ||
+    n.includes("minicpm-v") ||
     n.includes("image") ||
     n.includes("sam") ||
     n.includes("florence")
@@ -813,7 +835,9 @@ export async function unloadOllama(modelId: string): Promise<void> {
 }
 
 export async function embedTexts(
-  texts: string[]
+  texts: string[],
+  /** Pin the model so an index is never re-embedded with a different one. */
+  pinnedModel?: string
 ): Promise<{
   vectors: number[][];
   model: string;
@@ -829,6 +853,9 @@ export async function embedTexts(
       1500
     );
     const preferred =
+      (pinnedModel
+        ? (tags.models || []).find((m) => m.name === pinnedModel)
+        : undefined) ||
       (tags.models || []).find((m) => /nomic-embed/i.test(m.name)) ||
       (tags.models || []).find((m) => /embed/i.test(m.name));
     if (preferred) {

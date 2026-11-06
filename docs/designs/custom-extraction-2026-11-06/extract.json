@@ -1,0 +1,1 @@
+{"kind":"text","modelId":"xmdl_mw4kgc2n0l8pcn","fields":{"vendor":{"value":"Northwind Traders","confidence":0.95,"grounded":true},"invoice":{"value":"INV-2001","confidence":0.95,"grounded":true},"total":{"value":440,"confidence":0.95,"grounded":true}},"missing":[],"warnings":[]}

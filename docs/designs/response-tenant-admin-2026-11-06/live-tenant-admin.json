@@ -1,0 +1,362 @@
+{
+  "final_list": {
+    "storeHost": true,
+    "backend": "sqlite",
+    "tenants": [
+      {
+        "tenant": "acme",
+        "tokenPrefix": "ofst_lbst0Aq",
+        "quotaResponses": 5,
+        "quotaBytes": 100000,
+        "createdAt": "2026-11-06T12:02:50.299Z",
+        "updatedAt": "2026-11-06T12:06:18.110Z",
+        "lastUsedAt": "2026-11-06T12:09:25.777Z",
+        "disabledAt": null,
+        "usage": {
+          "total": 4,
+          "bytes": 1668,
+          "owners": 1,
+          "oldest": "2026-11-06T12:03:11.469Z",
+          "newest": "2026-11-06T12:09:25.780Z",
+          "responsePercent": 80,
+          "bytePercent": 1.7,
+          "status": "near-quota"
+        }
+      },
+      {
+        "tenant": "globex",
+        "tokenPrefix": "ofst_DAKmv95",
+        "quotaResponses": 10,
+        "quotaBytes": 100000,
+        "createdAt": "2026-11-06T12:02:50.311Z",
+        "updatedAt": "2026-11-06T12:06:18.099Z",
+        "lastUsedAt": "2026-11-06T12:06:18.101Z",
+        "disabledAt": null,
+        "usage": {
+          "total": 0,
+          "bytes": 0,
+          "owners": 0,
+          "oldest": null,
+          "newest": null,
+          "responsePercent": 0,
+          "bytePercent": 0,
+          "status": "active"
+        }
+      }
+    ],
+    "totals": {
+      "tenants": 2,
+      "active": 2,
+      "disabled": 0,
+      "overQuota": 0,
+      "responses": 4,
+      "bytes": 1668
+    }
+  },
+  "audit_all": {
+    "storeHost": true,
+    "entries": [
+      {
+        "id": 12,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xm1vgaodkop",
+        "ownerId": "project",
+        "bytes": 421,
+        "at": "2026-11-06T12:09:25.781Z",
+        "detail": null
+      },
+      {
+        "id": 11,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xiexwjpojqr",
+        "ownerId": "project",
+        "bytes": 421,
+        "at": "2026-11-06T12:06:36.076Z",
+        "detail": null
+      },
+      {
+        "id": 10,
+        "tenantId": "acme",
+        "action": "tenant.update",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.111Z",
+        "detail": {
+          "quotaResponses": 5,
+          "quotaBytes": 100000
+        }
+      },
+      {
+        "id": 9,
+        "tenantId": "acme",
+        "action": "tenant.update",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.105Z",
+        "detail": {
+          "quotaResponses": 1,
+          "quotaBytes": 100000
+        }
+      },
+      {
+        "id": 8,
+        "tenantId": "globex",
+        "action": "tenant.enable",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.099Z",
+        "detail": null
+      },
+      {
+        "id": 7,
+        "tenantId": "globex",
+        "action": "tenant.disable",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.094Z",
+        "detail": null
+      },
+      {
+        "id": 6,
+        "tenantId": "acme",
+        "action": "tenant.rotate",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.084Z",
+        "detail": {
+          "tokenPrefix": "ofst_lbst0Aq"
+        }
+      },
+      {
+        "id": 5,
+        "tenantId": "acme",
+        "action": "tenant.update",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.080Z",
+        "detail": {
+          "quotaResponses": 5,
+          "quotaBytes": 100000
+        }
+      },
+      {
+        "id": 4,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xe926uorm6t",
+        "ownerId": "project",
+        "bytes": 407,
+        "at": "2026-11-06T12:03:21.837Z",
+        "detail": null
+      },
+      {
+        "id": 3,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xe11yqvz7cv",
+        "ownerId": "project",
+        "bytes": 419,
+        "at": "2026-11-06T12:03:11.469Z",
+        "detail": null
+      },
+      {
+        "id": 2,
+        "tenantId": "globex",
+        "action": "tenant.create",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:02:50.311Z",
+        "detail": {
+          "quotaResponses": 10,
+          "quotaBytes": 100000,
+          "tokenPrefix": "ofst_DAKmv95"
+        }
+      },
+      {
+        "id": 1,
+        "tenantId": "acme",
+        "action": "tenant.create",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:02:50.300Z",
+        "detail": {
+          "quotaResponses": 2,
+          "quotaBytes": 100000,
+          "tokenPrefix": "ofst_yzIpY2r"
+        }
+      }
+    ]
+  },
+  "audit_acme": {
+    "storeHost": true,
+    "entries": [
+      {
+        "id": 12,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xm1vgaodkop",
+        "ownerId": "project",
+        "bytes": 421,
+        "at": "2026-11-06T12:09:25.781Z",
+        "detail": null
+      },
+      {
+        "id": 11,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xiexwjpojqr",
+        "ownerId": "project",
+        "bytes": 421,
+        "at": "2026-11-06T12:06:36.076Z",
+        "detail": null
+      },
+      {
+        "id": 10,
+        "tenantId": "acme",
+        "action": "tenant.update",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.111Z",
+        "detail": {
+          "quotaResponses": 5,
+          "quotaBytes": 100000
+        }
+      },
+      {
+        "id": 9,
+        "tenantId": "acme",
+        "action": "tenant.update",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.105Z",
+        "detail": {
+          "quotaResponses": 1,
+          "quotaBytes": 100000
+        }
+      },
+      {
+        "id": 6,
+        "tenantId": "acme",
+        "action": "tenant.rotate",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.084Z",
+        "detail": {
+          "tokenPrefix": "ofst_lbst0Aq"
+        }
+      },
+      {
+        "id": 5,
+        "tenantId": "acme",
+        "action": "tenant.update",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.080Z",
+        "detail": {
+          "quotaResponses": 5,
+          "quotaBytes": 100000
+        }
+      },
+      {
+        "id": 4,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xe926uorm6t",
+        "ownerId": "project",
+        "bytes": 407,
+        "at": "2026-11-06T12:03:21.837Z",
+        "detail": null
+      },
+      {
+        "id": 3,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4xe11yqvz7cv",
+        "ownerId": "project",
+        "bytes": 419,
+        "at": "2026-11-06T12:03:11.469Z",
+        "detail": null
+      },
+      {
+        "id": 1,
+        "tenantId": "acme",
+        "action": "tenant.create",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:02:50.300Z",
+        "detail": {
+          "quotaResponses": 2,
+          "quotaBytes": 100000,
+          "tokenPrefix": "ofst_yzIpY2r"
+        }
+      }
+    ]
+  },
+  "audit_globex": {
+    "storeHost": true,
+    "entries": [
+      {
+        "id": 8,
+        "tenantId": "globex",
+        "action": "tenant.enable",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.099Z",
+        "detail": null
+      },
+      {
+        "id": 7,
+        "tenantId": "globex",
+        "action": "tenant.disable",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:06:18.094Z",
+        "detail": null
+      },
+      {
+        "id": 2,
+        "tenantId": "globex",
+        "action": "tenant.create",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T12:02:50.311Z",
+        "detail": {
+          "quotaResponses": 10,
+          "quotaBytes": 100000,
+          "tokenPrefix": "ofst_DAKmv95"
+        }
+      }
+    ]
+  },
+  "old_token_client_response": {
+    "status": 401,
+    "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"authentication_error\",\"code\":\"unauthorized\"}}"
+  },
+  "new_token_client_response": {
+    "status": 200,
+    "id": "resp_mw4xm1vgaodkop",
+    "text": "rotated token works."
+  },
+  "quota_rejection": {
+    "status": 429,
+    "body": "{\"error\":{\"message\":\"Tenant \\\"acme\\\" has reached its response quota (2).\",\"type\":\"quota_exceeded\",\"code\":\"quota_exceeded\"}}"
+  }
+}

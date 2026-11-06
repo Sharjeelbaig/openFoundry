@@ -1,0 +1,8 @@
+READY: {'type': 'ready', 'sampleRate': 16000, 'frameBytes': 640, 'vad': {'threshold': 0.01, 'speechFrames': 3, 'silenceFrames': 45}}
+FIRST_TRANSCRIPT: In one short sentence, say hello to the user.
+CANCELLED: {'type': 'cancelled', 'reason': 'barge-in', 'generation': 1}
+SECOND_TRANSCRIPT: What is 2 + 2? Answer with just the number.
+ANSWER: 4
+BARGE_IN: True
+AUDIO_BYTES: 29760 RIFF: bytearray(b'RIFF')
+EVENT_TYPES: ['speech.start', 'speech.end', 'transcript', 'cancelled', 'speech.start', 'speech.end', 'transcript', 'assistant.delta', 'assistant.done', 'audio.start', 'audio.chunk', 'audio.done', 'turn.done']

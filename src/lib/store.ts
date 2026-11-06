@@ -9,7 +9,6 @@ import os from "os";
 import {
   Agent,
   Blocklist,
-  Connection,
   Deployment,
   Guardrail,
   GuardrailControl,
@@ -208,18 +207,6 @@ export async function saveKnowledgeBases(items: KnowledgeBase[]): Promise<void> 
   await writeJson("knowledge.json", items);
 }
 
-export async function getConnections(): Promise<Connection[]> {
-  const existing = await readJson<Connection[] | null>("connections.json", null);
-  if (existing) return existing;
-  const seeded = defaultConnections();
-  await writeJson("connections.json", seeded);
-  return seeded;
-}
-
-export async function saveConnections(items: Connection[]): Promise<void> {
-  await writeJson("connections.json", items);
-}
-
 export async function getMemoryStores(): Promise<MemoryStore[]> {
   return readJson<MemoryStore[]>("memory.json", []);
 }
@@ -273,19 +260,6 @@ export async function getBlocklists(): Promise<Blocklist[]> {
 
 export async function saveBlocklists(items: Blocklist[]): Promise<void> {
   await writeJson("blocklists.json", items);
-}
-
-function defaultConnections(): Connection[] {
-  return [
-    {
-      id: "connection-ai-search",
-      name: "ai-search",
-      kind: "Azure AI Search",
-      target: "https://localhost.search.local",
-      authType: "Local (no key required)",
-      createdAt: nowIso(),
-    },
-  ];
 }
 
 /**
@@ -541,6 +515,10 @@ export function buildDefaultSettings(): LocalSettings {
     lmStudioUrl: "http://127.0.0.1:1234",
     llamaCppUrl: "http://127.0.0.1:8080",
     huggingFacePath: "",
+    imageProvider: "auto",
+    imageUrl: "",
+    imageApiKey: "",
+    imageModel: "",
     defaultProviderId: "",
     defaultModel: "",
   };
@@ -564,6 +542,10 @@ export async function getSettings(): Promise<LocalSettings> {
           name: existing.userName || user.name,
           email: existing.userEmail || user.email,
         })),
+    imageProvider: existing.imageProvider || defaults.imageProvider,
+    imageUrl: existing.imageUrl ?? defaults.imageUrl,
+    imageApiKey: existing.imageApiKey ?? defaults.imageApiKey,
+    imageModel: existing.imageModel ?? defaults.imageModel,
     foundryUrl: existing.foundryUrl || defaults.foundryUrl,
     ollamaUrl: existing.ollamaUrl || defaults.ollamaUrl,
     lmStudioUrl: existing.lmStudioUrl || defaults.lmStudioUrl,

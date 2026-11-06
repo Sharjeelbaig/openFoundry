@@ -1,0 +1,5 @@
+CHAT_AGENT: The Microsoft Agent Framework is a set of tools and APIs used to create interactive, animated virtual characters that can communicate with users via text-to-speech and speech recognition.
+AGENT_VERSION: sdk-evidence-1793940420 1 AgentVersionStatus.ACTIVE
+FOUNDRY_AGENT: Hello from the Foundry Agent Service surface!
+DELETED_VERSION: sdk-evidence-1793940420 1
+SEQUENTIAL_OUTPUT: Local SDK compatibility prevents "works on my machine" bugs by ensuring development environments mirror production, thereby reducing deployment failures and integration errors.

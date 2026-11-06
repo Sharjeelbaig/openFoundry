@@ -345,16 +345,235 @@ class HttpSession {
   }
 }
 
-type Session = StdioSession | HttpSession;
+/**
+ * Legacy SSE transport: a GET opens an event stream, the server sends an
+ * `endpoint` event, and JSON-RPC requests are POSTed to that endpoint while
+ * responses arrive on the stream. This is what Atlassian's remote MCP server
+ * uses; the newer streamable HTTP transport would 404 on it.
+ */
+class SseSession {
+  private readonly url: string;
+  private readonly headers: Record<string, string>;
+  private controller = new AbortController();
+  private reader?: ReadableStreamDefaultReader<Uint8Array>;
+  private endpoint?: string;
+  private endpointWaiters: (() => void)[] = [];
+  private pending = new Map<
+    number,
+    {
+      resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
+      timer: NodeJS.Timeout;
+    }
+  >();
+  private nextId = 1;
+  private closed = false;
+
+  constructor(server: McpServer) {
+    const url = server.url?.trim();
+    if (!url) throw new Error("An SSE MCP server needs a URL.");
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("The MCP server URL must use http or https.");
+      }
+      this.url = parsed.toString();
+    } catch {
+      throw new Error("The MCP server URL is not valid.");
+    }
+    this.headers = server.headers || {};
+  }
+
+  private async start(): Promise<void> {
+    if (this.reader) return;
+    const authHeaders = await resolveOAuthHeaders(this.headers);
+    let response: Response;
+    try {
+      response = await fetch(this.url, {
+        headers: { ...authHeaders, Accept: "text/event-stream" },
+        signal: this.controller.signal,
+        cache: "no-store",
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not open the SSE stream: ${
+          error instanceof Error ? error.message : "network error"
+        }`
+      );
+    }
+    if (!response.ok || !response.body) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `SSE endpoint returned ${response.status}. ${body.slice(0, 400)}`.trim()
+      );
+    }
+    this.reader = response.body.getReader();
+    void this.pump();
+  }
+
+  private async pump(): Promise<void> {
+    if (!this.reader) return;
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      for (;;) {
+        const { done, value } = await this.reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || "";
+        for (const block of blocks) {
+          let event = "message";
+          const data: string[] = [];
+          for (const line of block.split(/\r?\n/)) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
+          }
+          if (data.length === 0) continue;
+          const payload = data.join("\n");
+          if (event === "endpoint") {
+            this.endpoint = new URL(payload, this.url).toString();
+            for (const notify of this.endpointWaiters.splice(0)) notify();
+            continue;
+          }
+          try {
+            const message = JSON.parse(payload) as RpcResponse;
+            if (message.id === undefined || message.id === null) continue;
+            const pending = this.pending.get(Number(message.id));
+            if (!pending) continue;
+            this.pending.delete(Number(message.id));
+            clearTimeout(pending.timer);
+            if (message.error) {
+              pending.reject(
+                new Error(
+                  `${message.error.message || "MCP request failed"}${
+                    message.error.code ? ` (${message.error.code})` : ""
+                  }`
+                )
+              );
+            } else {
+              pending.resolve(message.result);
+            }
+          } catch {
+            // Ignore non-JSON frames.
+          }
+        }
+      }
+    } catch {
+      // The stream was aborted or closed.
+    }
+    this.fail(new Error("The MCP SSE stream closed."));
+  }
+
+  private fail(error: Error): void {
+    if (this.closed) return;
+    this.closed = true;
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+    }
+    this.pending.clear();
+  }
+
+  private waitForEndpoint(): Promise<string> {
+    if (this.endpoint) return Promise.resolve(this.endpoint);
+    return new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("The MCP server did not send an endpoint event.")),
+        REQUEST_TIMEOUT_MS
+      );
+      this.endpointWaiters.push(() => {
+        clearTimeout(timer);
+        resolve(this.endpoint!);
+      });
+    });
+  }
+
+  private async post(message: JsonObject): Promise<void> {
+    const endpoint = await this.waitForEndpoint();
+    const authHeaders = await resolveOAuthHeaders(this.headers);
+    let response: Response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify(message),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        cache: "no-store",
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not POST to the MCP endpoint: ${
+          error instanceof Error ? error.message : "network error"
+        }`
+      );
+    }
+    if (!response.ok && response.status !== 202) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `MCP endpoint returned ${response.status}. ${body.slice(0, 400)}`.trim()
+      );
+    }
+  }
+
+  request(method: string, params: JsonObject): Promise<unknown> {
+    const id = this.nextId++;
+    return new Promise<unknown>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`${method} timed out after ${REQUEST_TIMEOUT_MS / 1000}s`));
+      }, REQUEST_TIMEOUT_MS);
+      this.pending.set(id, { resolve, reject, timer });
+      this.post({ jsonrpc: "2.0", id, method, params }).catch((error) => {
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      });
+    });
+  }
+
+  async initialize(): Promise<void> {
+    await this.start();
+    await this.request("initialize", {
+      protocolVersion: PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: "openFoundry", version: "0.1.0" },
+    });
+    await this.post({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
+  }
+
+  close(): void {
+    this.closed = true;
+    this.controller.abort();
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error("MCP connection closed."));
+    }
+    this.pending.clear();
+  }
+}
+
+type Session = StdioSession | HttpSession | SseSession;
 
 async function withSession<T>(
   server: McpServer,
   run: (session: Session) => Promise<T>
 ): Promise<T> {
+  const legacySse =
+    server.transport === "sse" ||
+    (server.transport !== "stdio" && /\/sse(\?|$)/i.test(server.url || ""));
   const session: Session =
-    server.transport === "stdio" ? new StdioSession(server) : new HttpSession(server);
+    server.transport === "stdio"
+      ? new StdioSession(server)
+      : legacySse
+      ? new SseSession(server)
+      : new HttpSession(server);
   try {
-    await timeout(session.initialize(), REQUEST_TIMEOUT_MS, "MCP initialize");
+    await timeout(session.initialize(), REQUEST_TIMEOUT_MS * 2, "MCP initialize");
     return await timeout(run(session), REQUEST_TIMEOUT_MS * 2, "MCP tool call");
   } finally {
     session.close();

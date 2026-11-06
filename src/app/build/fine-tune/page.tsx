@@ -20,7 +20,7 @@ import {
 import { formatDate, useApi } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { DottedObject, Spinner } from "@/components/ui";
-import type { Agent, Trace } from "@/lib/types";
+import type { Agent, FineTuneDataset, Trace } from "@/lib/types";
 
 type Tab = "Datasets" | "Jobs";
 type Source = "traces" | "agents" | "custom";
@@ -32,9 +32,13 @@ export default function FineTunePage() {
   const { toast } = useToast();
   const { data: traceData } = useApi<{ traces: Trace[] }>("/api/traces", 10000);
   const { data: agentData } = useApi<{ agents: Agent[] }>("/api/agents");
+  const { data: datasetData, refresh: refreshDatasets } = useApi<{
+    datasets: FineTuneDataset[];
+  }>("/api/fine-tune");
 
   const traces = traceData?.traces ?? [];
   const agents = agentData?.agents ?? [];
+  const datasets = datasetData?.datasets ?? [];
 
   const [tab, setTab] = useState<Tab>("Datasets");
   const [createOpen, setCreateOpen] = useState(false);
@@ -106,7 +110,38 @@ export default function FineTunePage() {
     anchor.click();
     URL.revokeObjectURL(url);
     toast(`Exported ${rows.length} rows to ${anchor.download}`, "success");
+  };
+
+  const saveDataset = async () => {
+    if (!rows.length) {
+      toast("No rows to save. Adjust the source or filters.", "error");
+      return;
+    }
+    const res = await fetch("/api/fine-tune", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, source, rows }),
+    });
+    const json = (await res.json()) as { dataset?: FineTuneDataset; error?: string };
+    if (!res.ok || !json.dataset) {
+      toast(json.error || "Could not save the dataset", "error");
+      return;
+    }
+    toast(`Saved ${json.dataset.rowCount} rows as ${json.dataset.name}`, "success");
     setCreateOpen(false);
+    refreshDatasets();
+  };
+
+  const removeDataset = async (dataset: FineTuneDataset) => {
+    const res = await fetch(`/api/fine-tune?id=${encodeURIComponent(dataset.id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      toast("Could not delete the dataset", "error");
+      return;
+    }
+    toast(`${dataset.name} deleted`, "success");
+    refreshDatasets();
   };
 
   return (
@@ -223,6 +258,59 @@ export default function FineTunePage() {
               </div>
             ))}
           </div>
+
+          <div className="manage-section-title">Saved datasets</div>
+          {datasets.length === 0 ? (
+            <p className="muted text-12">
+              No datasets saved yet. Build one above; it is stored in this
+              workspace so you can export it later.
+            </p>
+          ) : (
+            <div className="table-card">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th style={{ width: 120 }}>Source</th>
+                    <th style={{ width: 100 }}>Rows</th>
+                    <th style={{ width: 120 }}>Characters</th>
+                    <th style={{ width: 150 }}>Created</th>
+                    <th style={{ width: 170 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datasets.map((dataset) => (
+                    <tr key={dataset.id}>
+                      <td className="cell-strong">{dataset.name}</td>
+                      <td className="cell-muted">{dataset.source}</td>
+                      <td>{dataset.rowCount}</td>
+                      <td className="cell-muted">
+                        {dataset.characters.toLocaleString()}
+                      </td>
+                      <td className="cell-muted">{formatDate(dataset.createdAt)}</td>
+                      <td>
+                        <div className="row" style={{ gap: 6 }}>
+                          <a
+                            className="btn btn-sm btn-secondary"
+                            href={`/api/fine-tune/${dataset.id}/export`}
+                          >
+                            <ArrowDownload20Regular /> JSONL
+                          </a>
+                          <button
+                            className="icon-button small"
+                            aria-label={`Delete ${dataset.name}`}
+                            onClick={() => removeDataset(dataset)}
+                          >
+                            <Dismiss20Regular />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
 
@@ -384,8 +472,19 @@ ollama create my-tuned-model -f Modelfile`}</pre>
               <button className="btn btn-secondary" onClick={() => setCreateOpen(false)}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={download} disabled={rows.length === 0}>
-                <ArrowDownload20Regular /> Download JSONL
+              <button
+                className="btn btn-secondary"
+                onClick={download}
+                disabled={rows.length === 0}
+              >
+                <ArrowDownload20Regular /> Download
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={saveDataset}
+                disabled={rows.length === 0}
+              >
+                Save dataset
               </button>
             </div>
           </div>
@@ -394,7 +493,7 @@ ollama create my-tuned-model -f Modelfile`}</pre>
 
       <div className="table-footer">
         <span className="row" style={{ gap: 6 }}>
-          <DocumentText20Regular /> Datasets are generated in your browser
+          <DocumentText20Regular /> Datasets are stored in this workspace
         </span>
         <span className="muted">
           Last trace {traces[0] ? formatDate(traces[0].at) : "—"}

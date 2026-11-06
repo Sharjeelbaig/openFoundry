@@ -1,0 +1,1 @@
+{"status":{"available":true,"python":"/tmp/mlx-venv313/bin/python","mlxLmVersion":"0.32.2","baseModel":"Qwen/Qwen2.5-0.5B-Instruct","baseModelCached":true,"installCommand":"python3.13 -m venv data/foundation/venv && data/foundation/venv/bin/pip install mlx-lm","setupHint":"MLX LoRA runs locally. The base model downloads once on first training; inference stays on this computer."}}

@@ -1,0 +1,9 @@
+
+ RUN  v3.2.4 /Users/shazi/Projects/openFoundry
+
+ ✓ tests/aec.test.ts (3 tests) 139ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  14:43:04
+   Duration  499ms (transform 31ms, setup 0ms, collect 27ms, tests 139ms, environment 0ms, prepare 56ms)

@@ -1,0 +1,23 @@
+PER-TENANT SHARED RESPONSES STORE
+=================================
+Store server A: 127.0.0.1:3010, tenants acme and globex,
+  shared SQLite /tmp/of-tenant-store-data/responses.db
+Client B: 127.0.0.1:3011, data dir /tmp/of-tenant-store-b,
+  OPENFOUNDRY_RESPONSE_STORE=http, token acme-token
+
+Unauthorized stats: 401
+Acme initial: {"tenantId": "acme", "total": 0, "bytes": 0, "quotaResponses": 2, "quotaBytes": 100000, "owners": [], "oldest": null, "newest": null}
+Globex initial: {"tenantId": "globex", "total": 0, "bytes": 0, "quotaResponses": 10, "quotaBytes": 100000, "owners": [], "oldest": null, "newest": null}
+Acme response via B: resp_mw4tm4rpc2528h -> tenant acme works.
+Acme stats after B: {"tenantId": "acme", "total": 1, "bytes": 417, "quotaResponses": 2, "quotaBytes": 100000, "owners": [{"ownerId": "project", "count": 1}], "oldest": "2026-11-06T10:17:31.060Z", "newest": "2026-11-06T10:17:31.060Z"}
+Globex stats after B: {"tenantId": "globex", "total": 0, "bytes": 0, "quotaResponses": 10, "quotaBytes": 100000, "owners": [], "oldest": null, "newest": null}
+Globex load of acme response: {"response": null}
+Acme second save status: 200
+Acme third save: 429 {"error": "Tenant \"acme\" has reached its response quota (2).", "code": "quota_exceeded"}
+Acme policy: {"maxResponsesPerOwner": 1, "ttlDays": 30}
+Globex policy: {"maxResponsesPerOwner": 200, "ttlDays": 7}
+Acme stats after policy: {"tenantId": "acme", "total": 1, "bytes": 93, "quotaResponses": 2, "quotaBytes": 100000, "owners": [{"ownerId": "project", "count": 1}], "oldest": "2026-11-06T10:17:31.085Z", "newest": "2026-11-06T10:17:31.085Z"}
+Acme audit actions: ['prune', 'policy', 'save', 'save']
+Globex audit: {"entries": []}
+B responses.db exists: False
+A shared DB exists: True

@@ -49,9 +49,9 @@ export async function POST(req: NextRequest) {
   const name = body.name?.trim();
   const transport = body.transport;
   if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
-  if (transport !== "stdio" && transport !== "http")
+  if (transport !== "stdio" && transport !== "http" && transport !== "sse")
     return NextResponse.json(
-      { error: 'transport must be "stdio" or "http"' },
+      { error: 'transport must be "stdio", "http" or "sse"' },
       { status: 400 }
     );
   if (transport === "stdio" && !body.command?.trim())
@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
       { error: "A stdio server needs a command." },
       { status: 400 }
     );
-  if (transport === "http" && !body.url?.trim())
+  if (transport !== "stdio" && !body.url?.trim())
     return NextResponse.json(
-      { error: "An HTTP server needs a URL." },
+      { error: "An HTTP or SSE server needs a URL." },
       { status: 400 }
     );
 
@@ -88,8 +88,8 @@ export async function POST(req: NextRequest) {
     command: transport === "stdio" ? body.command?.trim() : undefined,
     args: transport === "stdio" ? args : undefined,
     env: transport === "stdio" ? cleanRecord(body.env) : undefined,
-    url: transport === "http" ? body.url?.trim() : undefined,
-    headers: transport === "http" ? cleanRecord(body.headers) : undefined,
+    url: transport === "stdio" ? undefined : body.url?.trim(),
+    headers: transport === "stdio" ? undefined : cleanRecord(body.headers),
     status: "Unknown",
     tools: [],
     createdAt: nowIso(),

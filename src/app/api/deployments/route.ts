@@ -3,6 +3,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import {
+  startModelDownload,
+  waitForDownload,
+} from "@/lib/downloads";
+import {
   downloadFoundryModel,
   findModel,
   getProviders,
@@ -82,15 +86,24 @@ export async function POST(req: NextRequest) {
   const model = await findModel(body.modelKey);
   if (!model)
     return NextResponse.json({ error: "Model not found" }, { status: 404 });
-  if (model.provider === "huggingface") {
+  // Only GGUF repositories can be pulled and served by Ollama. A cached
+  // diffusers or speech repository has no local runtime, so it is refused
+  // rather than deployed into a broken state.
+  const pullableHf =
+    model.provider === "huggingface" &&
+    (model.tags?.includes("Downloadable") || /gguf/i.test(model.id));
+  if (model.provider === "huggingface" && !pullableHf) {
     return NextResponse.json(
       {
         error:
-          "This repository is cached but has no local serving runtime. Pick the same model from Foundry Local or Ollama, or pull it into Ollama first.",
+          "This repository is cached but has no local serving runtime. Use a GGUF model (Ollama can pull it) or a model already served by Ollama, LM Studio or llama.cpp.",
       },
       { status: 400 }
     );
   }
+  const pullTag = pullableHf ? `hf.co/${model.id}` : null;
+  const runtimeProvider = pullTag ? "ollama" : model.provider;
+  const runtimeLabel = pullTag ? "Ollama" : model.providerLabel;
 
   const servingMode = deploymentType.servingMode;
   const scope = deploymentType.scope;
@@ -135,10 +148,10 @@ export async function POST(req: NextRequest) {
   const deployment: Deployment = {
     id,
     name,
-    modelId: model.id,
+    modelId: pullTag || model.id,
     modelName: model.displayName,
-    provider: model.provider,
-    providerLabel: model.providerLabel,
+    provider: runtimeProvider,
+    providerLabel: runtimeLabel,
     status: "Creating",
     kind: body.kind === "Adapter" ? "Adapter" : deploymentType.kind,
     sku: deploymentType.label,
@@ -178,6 +191,37 @@ export async function POST(req: NextRequest) {
         await saveDeployments(current);
       }
     })();
+  }
+
+  if (pullTag) {
+    // Fetch through Ollama, then flip the deployment to Running. The row exists
+    // as "Creating" immediately so the UI can show progress.
+    void (async () => {
+      try {
+        const { job } = await startModelDownload(model.key, { force: true });
+        const finished = await waitForDownload(job.id);
+        if (finished.status !== "complete") {
+          throw new Error(finished.error || "Model download failed.");
+        }
+        await warmOllama(pullTag);
+        const current = await getDeployments();
+        const found = current.find((item) => item.id === id);
+        if (found) {
+          found.status = "Running";
+          found.updatedAt = nowIso();
+          await saveDeployments(current);
+        }
+      } catch {
+        const current = await getDeployments();
+        const found = current.find((item) => item.id === id);
+        if (found) {
+          found.status = "Failed";
+          found.updatedAt = nowIso();
+          await saveDeployments(current);
+        }
+      }
+    })();
+    return NextResponse.json({ deployment }, { status: 201 });
   }
 
   if (model.provider === "ollama") {

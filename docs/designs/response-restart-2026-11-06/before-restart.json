@@ -1,0 +1,16 @@
+{
+ "id": "resp_mw4krkp94fg628",
+ "output": [
+  {
+   "arguments": "{\"name\":\"vault\"}",
+   "call_id": "call_si40wll8",
+   "name": "lookup_code",
+   "type": "function_call",
+   "id": "fc_mw4krkp9po6n0v",
+   "async_": null,
+   "caller": null,
+   "namespace": null,
+   "status": "completed"
+  }
+ ]
+}

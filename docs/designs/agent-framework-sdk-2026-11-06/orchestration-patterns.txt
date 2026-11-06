@@ -1,0 +1,4 @@
+CONCURRENT: Local models provide enhanced data privacy and security by keeping information on your own hardware.Local models provide enhanced data privacy and security because your information never leaves your own hardware.
+GROUP_CHAT: The ocean covers more than 70% of Earth's surface. | The ocean covers more than 70% of Earth's surface. | The group chat has reached its termination condition.
+HANDOFF: True Our billing team can help you with that.
+MAGENTIC: One benefit of local speech recognition is enhanced privacy, as voice data is processed directly on the device rather than being sent to a cloud server.

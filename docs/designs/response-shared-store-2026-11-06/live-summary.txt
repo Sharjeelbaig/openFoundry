@@ -1,0 +1,17 @@
+CROSS-MACHINE SHARED RESPONSES STORE
+====================================
+Server A: next start on 127.0.0.1:3010, data dir /tmp/of-shared-store-a,
+          shared SQLite at /tmp/of-shared-store-data/responses.db
+Server B: next start on 127.0.0.1:3011, data dir /tmp/of-shared-store-b,
+          OPENFOUNDRY_RESPONSE_STORE=http -> A
+
+Unauthorized stats: 401
+Policy: {"maxResponsesPerOwner": 3, "ttlDays": 30}
+First response: resp_mw4sy17jmb5320 -> shared store works.
+Stats after first: {"total": 1, "owners": [{"ownerId": "project", "count": 1}], "oldest": "2026-11-06T09:58:46.693Z", "newest": "2026-11-06T09:58:46.693Z"}
+Loaded from A: resp_mw4sy17jmb5320 with
+  2 conversation items
+Follow-up on B with previous_response_id: resp_mw4sy1pt5j2e6z -> cross machine works.
+Final stats: {"total": 2, "owners": [{"ownerId": "project", "count": 2}], "oldest": "2026-11-06T09:58:46.693Z", "newest": "2026-11-06T09:58:47.352Z"}
+B responses.db exists: False
+A shared DB exists: True

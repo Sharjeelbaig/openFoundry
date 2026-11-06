@@ -3,6 +3,7 @@
 
 import "server-only";
 import { ChatTool, ProviderId, WireMessage, WireToolCall } from "./types";
+import { hasImageParts } from "./chat-content";
 import { getRuntimeUrls } from "./providers";
 
 export interface CompletionOptions {
@@ -202,6 +203,7 @@ export async function* streamCompletion({
   baseUrl,
 }: CompletionOptions): AsyncGenerator<CompletionEvent> {
   const urls = await getRuntimeUrls();
+  const vision = messages.some((message) => hasImageParts(message.content));
   if (provider === "foundry" || provider === "lmstudio" || provider === "llamacpp") {
     const base =
       baseUrl ||
@@ -228,8 +230,9 @@ export async function* streamCompletion({
   if (provider === "ollama") {
     const ollamaBase = baseUrl || urls.ollama;
     // Ollama serves the same OpenAI-compatible shape, and it is the only route
-    // that streams tool calls. Native /api/chat is kept for plain completions.
-    if (tools?.length) {
+    // that streams tool calls or accepts image parts. Native /api/chat is kept
+    // for plain text completions.
+    if (tools?.length || vision) {
       yield* streamOpenAiChat({
         base: ollamaBase,
         provider,

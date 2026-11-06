@@ -1,0 +1,13 @@
+{
+  offset: 19197,
+  erle_0_5_to_end: 5.87,
+  erle_1_to_4_5: 4.24,
+  erle_2_to_4: 1.71,
+  erle_2_to_5: 3.86,
+  maxLinear: 5.5,
+  maxTotal: 23.23,
+  maxResidual: 17.79,
+  delayMs: 2.75,
+  micRms: 0.020386683336213962,
+  outRms: 0.010374400424015289
+}

@@ -134,7 +134,8 @@ export function cancelDownloadJob(id: string): DownloadJob | undefined {
 }
 
 export async function startModelDownload(
-  modelKey: string
+  modelKey: string,
+  options: { force?: boolean } = {}
 ): Promise<{ job: DownloadJob; cached: boolean }> {
   const model = await findModel(modelKey);
   if (!model) throw new Error("Model not found");
@@ -143,7 +144,7 @@ export async function startModelDownload(
       `${model.providerLabel} already serves this model. There is nothing to download.`
     );
   }
-  if (model.cached) {
+  if (model.cached && !options.force) {
     const now = new Date().toISOString();
     const job: InternalJob = {
       id: `dl_${randomUUID().slice(0, 8)}`,
@@ -263,4 +264,24 @@ export async function startModelDownload(
   }
 
   return { job: publicJob(job), cached: false };
+}
+
+/**
+ * Waits for a download job to finish. Used by deployment creation so a model
+ * that exists only in a catalog is fetched, not left in a permanent "Creating".
+ */
+export async function waitForDownload(
+  jobId: string,
+  timeoutMs = 2 * 60 * 60 * 1000
+): Promise<DownloadJob> {
+  const started = Date.now();
+  for (;;) {
+    const job = getDownloadJob(jobId);
+    if (!job) throw new Error("Download job not found.");
+    if (["complete", "error", "cancelled"].includes(job.status)) return job;
+    if (Date.now() - started > timeoutMs) {
+      throw new Error("The model download timed out.");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
 }

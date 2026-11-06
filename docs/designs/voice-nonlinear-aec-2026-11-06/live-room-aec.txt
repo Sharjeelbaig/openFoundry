@@ -1,0 +1,20 @@
+READY: {"enabled": true, "echoSim": true, "echoGain": 0.7, "echoDelayMs": 120, "echoPath": "room"}
+FIRST_TRANSCRIPT: Say exactly, the vault code is 4417.
+AEC_REFERENCE_SAMPLES: 69667
+AEC_RELEASED_AT_FRAME: 242
+FALSE_STARTS_DURING_ROOM_ECHO: 0
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 6.05, "totalErleDb": 22.97, "residualSuppressionDb": 16.92, "suppressorGain": 0.161, "echoPath": "room", "delayMs": 120.2, "doubleTalk": false, "echoSim": true, "frames": 25}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 9.05, "totalErleDb": 27.33, "residualSuppressionDb": 18.28, "suppressorGain": 0.084, "echoPath": "room", "delayMs": 120.1, "doubleTalk": false, "echoSim": true, "frames": 50}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 5.37, "totalErleDb": 20.59, "residualSuppressionDb": 15.22, "suppressorGain": 0.163, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 75}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 6.78, "totalErleDb": 23.3, "residualSuppressionDb": 16.52, "suppressorGain": 0.157, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 100}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 8.87, "totalErleDb": 29.26, "residualSuppressionDb": 20.39, "suppressorGain": 0.09, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 125}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 8.87, "totalErleDb": 27.65, "residualSuppressionDb": 18.78, "suppressorGain": 0.102, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 150}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 12.84, "totalErleDb": 37.35, "residualSuppressionDb": 24.52, "suppressorGain": 0.067, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 175}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 10.78, "totalErleDb": 30.84, "residualSuppressionDb": 20.06, "suppressorGain": 0.085, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 200}
+AEC_STAT: {"type": "aec.stats", "generation": 1, "erleDb": 0.24, "totalErleDb": 16.54, "residualSuppressionDb": 16.3, "suppressorGain": 0.396, "echoPath": "room", "delayMs": 119.9, "doubleTalk": false, "echoSim": true, "frames": 225}
+MAX_TOTAL_ERLE_DB: 37.35
+MAX_LINEAR_ERLE_DB: 12.84
+MAX_RESIDUAL_SUPPRESSION_DB: 24.52
+DELAY_MS: 119.9
+SECOND_TRANSCRIPT: What is 2 + 2? Answer with just the number.
+SECOND_ANSWER: 4

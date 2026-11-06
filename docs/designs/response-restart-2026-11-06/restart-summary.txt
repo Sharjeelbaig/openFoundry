@@ -1,0 +1,7 @@
+CROSS-PROCESS RESPONSES RESTART TEST
+===================================
+before response id: resp_mw4krkp94fg628
+function call: call_si40wll8 lookup_code {"name":"vault"}
+server restarted (next dev stopped and started again)
+after response id: resp_mw4ksqns98a9m5
+follow-up answer: The code for "vault" is ZX-4417.

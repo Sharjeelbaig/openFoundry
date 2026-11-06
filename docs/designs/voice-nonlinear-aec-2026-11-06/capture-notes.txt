@@ -1,0 +1,31 @@
+# Physical acoustic capture notes — 2026-11-06
+
+The microphone became reachable in this session: the preflight captured
+57,514 bytes from `MacBook Pro Microphone` and the recording had real signal
+(RMS 192, peak 777 in PCM16 units). The earlier "0 bytes" blocker no longer
+applies.
+
+Two capture paths were tested:
+
+- `ffmpeg -f avfoundation -i :1 ...` produced audio, but the timeline was
+  compressed. A 4.0 s click train at 0.500 s intervals was recorded as
+  0.400 s intervals, while a steady 1 kHz tone still measured 996 Hz. That is
+  sample-drop distortion, not a sample-rate shift, and it destroys the
+  sample-accurate alignment an adaptive canceller needs. `ffmpeg` was not used
+  for the measurement.
+- `sounddevice`/CoreAudio with `latency="high"` preserved the click intervals
+  exactly (0.500 s, 0.500 s, 0.500 s, 0.500 s, 0.500 s, 0.495 s) and produced a
+  clean 10 s capture. This is the path in
+  `scripts/physical-aec-capture.py`.
+
+Capture used:
+
+- reference: `say -o ref.wav --data-format=LEI16@22050`, resampled to 16 kHz;
+- playback: `afplay` through the built-in speakers at system output volume 90;
+- microphone: built-in MacBook Pro Microphone, 48 kHz, then resampled to
+  16 kHz;
+- same desk, no headphones, no external microphone.
+
+The resulting fixture is `tests/fixtures/physical-aec/` (recording, reference,
+and measured alignment). The playback offset was 19,197 samples (1,199.8 ms);
+the acoustic delay measured by the canceller after alignment was 2.75 ms.

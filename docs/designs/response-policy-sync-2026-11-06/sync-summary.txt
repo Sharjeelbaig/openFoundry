@@ -1,0 +1,13 @@
+MULTI-PROCESS RETENTION POLICY SYNC
+===================================
+Process A: next dev  -> http://127.0.0.1:3000
+Process B: next start -> http://127.0.0.1:3001 (same OPENFOUNDRY_DATA_DIR)
+
+SET on 3000: {"maxResponsesPerOwner":7,"ttlDays":11}
+READ on 3001: {"maxResponsesPerOwner":7,"ttlDays":11}
+
+SET on 3001: {"maxResponsesPerOwner":5,"ttlDays":9}
+READ on 3000: {"maxResponsesPerOwner":5,"ttlDays":9}
+
+Policy table: data/responses.db -> response_policy (id=1)
+response-retention.json exists: false

@@ -8,10 +8,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-  Add20Regular,
   ArrowLeft20Regular,
+  ArrowUpload20Regular,
   Book20Regular,
-  Building20Regular,
   ChevronDown20Regular,
   Cloud20Regular,
   Database20Regular,
@@ -25,13 +24,18 @@ import { useApi, useDeployments } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { Field, Spinner } from "@/components/ui";
 import type {
-  Connection,
   KnowledgeBase,
   KnowledgeSource,
   KnowledgeSourceKind,
   OutputMode,
   ReasoningEffort,
 } from "@/lib/types";
+import {
+  SOURCE_CATALOG,
+  catalogEntry,
+  type CatalogEntry,
+} from "@/lib/knowledge/catalog";
+import type { SourceKind } from "@/lib/knowledge/types";
 
 const REASONING: { id: ReasoningEffort; label: string; description: string }[] = [
   {
@@ -61,58 +65,93 @@ const OUTPUT_MODES: { id: OutputMode; hint: string }[] = [
 
 interface SourceOption {
   kind: KnowledgeSourceKind;
+  catalogKind: SourceKind;
   label: string;
   description: string;
+  available: boolean;
+  reason?: string;
   icon: React.ReactNode;
+  /** Existing source to clone instead of opening a new-source dialog. */
+  reuseOf?: string;
 }
 
-const SOURCE_OPTIONS: SourceOption[] = [
-  {
-    kind: "work-iq",
-    label: "Work IQ",
-    description:
-      "Ground responses with live, permission-aware organizational context from Microsoft 365 through Work IQ.",
-    icon: <Building20Regular />,
-  },
-  {
-    kind: "fabric-iq",
-    label: "Fabric IQ (OneLake Catalog)",
-    description:
-      "Ground responses on an ontology or lakehouse from your Microsoft Fabric workspaces.",
-    icon: <Layer20Regular />,
-  },
-  {
-    kind: "azure-blob",
-    label: "Azure Blob Storage",
-    description: "Retrieve documents and files from Azure Blob Storage",
-    icon: <Cloud20Regular />,
-  },
-  {
-    kind: "web",
-    label: "Web",
-    description: "Ground with real-time web content via Bing",
-    icon: <Globe20Regular />,
-  },
-  {
-    kind: "azure-ai-search",
-    label: "Azure AI Search Index",
-    description: "Enterprise scale search for app development",
-    icon: <Database20Regular />,
-  },
+interface ReusableSource {
+  id: string;
+  baseId: string;
+  baseName: string;
+  name: string;
+  description: string;
+  kind: SourceKind;
+  mode: "indexed" | "remote" | "unavailable";
+  status: string;
+  connectionId: string | null;
+  config: Record<string, unknown>;
+  documentCount: number;
+  lastSyncedAt: string | null;
+}
+
+/** The five types Foundry shows before "Browse more". */
+const PRIMARY_KINDS: SourceKind[] = [
+  "work-iq",
+  "fabric-data-agent",
+  "azure-blob",
+  "web",
+  "azure-ai-search",
 ];
+
+function iconFor(kind: SourceKind): React.ReactNode {
+  if (kind === "web") return <Globe20Regular />;
+  if (kind === "s3" || kind === "azure-blob" || kind === "gcs") return <Cloud20Regular />;
+  if (kind === "sqlite" || kind === "csv" || kind === "azure-ai-search")
+    return <Database20Regular />;
+  if (kind === "file") return <ArrowUpload20Regular />;
+  return <Layer20Regular />;
+}
+
+const LEGACY_KIND: Partial<Record<SourceKind, KnowledgeSourceKind>> = {
+  file: "upload",
+  folder: "upload",
+  git: "upload",
+  csv: "upload",
+  sqlite: "azure-blob",
+  s3: "azure-blob",
+  gcs: "azure-blob",
+  "fabric-data-agent": "fabric-iq",
+  "fabric-ontology": "fabric-iq",
+};
+
+function optionFor(entry: CatalogEntry): SourceOption {
+  return {
+    kind: LEGACY_KIND[entry.kind] || (entry.kind as KnowledgeSourceKind),
+    catalogKind: entry.kind,
+    label: entry.label,
+    description: entry.description,
+    available: entry.available,
+    reason: entry.reason,
+    icon: iconFor(entry.kind),
+  };
+}
+
+const SOURCE_OPTIONS: SourceOption[] = PRIMARY_KINDS.map((kind) => catalogEntry(kind))
+  .filter((entry): entry is CatalogEntry => Boolean(entry))
+  .map(optionFor);
+
 
 export default function KnowledgeCreatePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: connectionsData } = useApi<{ connections: Connection[] }>(
-    "/api/connections"
-  );
   const { data: deploymentsData } = useDeployments(0);
-  const connections = connectionsData?.connections ?? [];
-  const deployments = deploymentsData?.deployments ?? [];
+  const { data: reusableData } = useApi<{ sources: ReusableSource[] }>(
+    "/api/knowledge/reusable-sources",
+    0
+  );
+  const reusableSources = reusableData?.sources ?? [];
   const chatDeployments = useMemo(
-    () => deployments.filter((deployment) => deployment.status === "Running"),
-    [deployments]
+    () =>
+      (deploymentsData?.deployments ?? []).filter(
+        (deployment) => deployment.status === "Running"
+      ),
+    [deploymentsData]
   );
 
   const [name, setName] = useState("");
@@ -121,14 +160,31 @@ export default function KnowledgeCreatePage() {
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>("Minimal");
   const [outputMode, setOutputMode] = useState<OutputMode>("Extractive data");
   const [retrievalInstructions, setRetrievalInstructions] = useState("");
-  const [connectionId, setConnectionId] = useState("");
-  const [sources, setSources] = useState<KnowledgeSource[]>([]);
-  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [sources, setSources] = useState<
+    (KnowledgeSource & { catalogKind?: SourceKind; reuseOf?: string })[]
+  >([]);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [browseOpen, setBrowseOpen] = useState(false);
+  const [browseMode, setBrowseMode] = useState<"all" | "existing">("all");
+
   const [encryptionOpen, setEncryptionOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const addSource = (option: SourceOption) => {
+    if (!option.available) {
+      toast(option.reason || "This source needs extra setup.", "error");
+      return;
+    }
+    const duplicate = option.reuseOf
+      ? sources.some((source) => source.reuseOf === option.reuseOf)
+      : sources.some(
+          (source) =>
+            !source.reuseOf && source.catalogKind === option.catalogKind
+        );
+    if (duplicate) {
+      toast("That source is already added.", "info");
+      return;
+    }
     setSources((current) => [
       ...current,
       {
@@ -136,10 +192,40 @@ export default function KnowledgeCreatePage() {
         kind: option.kind,
         name: option.label,
         detail: option.description,
-        status: "Connected",
+        status: "Ready",
+        reuseOf: option.reuseOf,
       },
     ]);
     setSourcesOpen(false);
+  };
+
+  const addExistingSource = (source: ReusableSource) => {
+    if (sources.some((item) => item.reuseOf === source.id)) {
+      toast("That source is already added.", "info");
+      return;
+    }
+    setSources((current) => [
+      ...current,
+      {
+        id: `src-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        kind:
+          LEGACY_KIND[source.kind] ||
+          (source.kind as KnowledgeSourceKind),
+        catalogKind: source.kind,
+        name: source.name,
+        detail: `${source.baseName} · ${
+          source.mode === "remote"
+            ? "queried live"
+            : `${source.documentCount} document${
+                source.documentCount === 1 ? "" : "s"
+              }`
+        }`,
+        status: "Ready",
+        reuseOf: source.id,
+      },
+    ]);
+    setSourcesOpen(false);
+    setBrowseOpen(false);
   };
 
   const addUploadSource = () => {
@@ -177,20 +263,34 @@ export default function KnowledgeCreatePage() {
           action: "create",
           name: name.trim(),
           description: description.trim(),
-          connectionId: connectionId || undefined,
           chatModel,
           reasoningEffort,
           outputMode,
           retrievalInstructions: retrievalInstructions.trim(),
           sources,
-          encryption: { enabled: encryptionEnabled },
         }),
       });
       const json = (await res.json()) as { knowledgeBase?: KnowledgeBase; error?: string };
       if (!res.ok || !json.knowledgeBase)
         throw new Error(json.error || "Could not create the knowledge base");
       toast("Knowledge base created", "success");
-      router.push(`/build/knowledge/${encodeURIComponent(json.knowledgeBase.id)}`);
+      const chosen = sources
+        .filter((source) => !source.reuseOf)
+        .map((source) => source.catalogKind)
+        .filter(Boolean)
+        .join(",");
+      const reuse = sources
+        .map((source) => source.reuseOf)
+        .filter(Boolean)
+        .join(",");
+      const params = new URLSearchParams();
+      if (chosen) params.set("add", chosen);
+      if (reuse) params.set("reuse", reuse);
+      router.push(
+        `/build/knowledge/${encodeURIComponent(json.knowledgeBase.id)}${
+          params.size ? `?${params.toString()}` : ""
+        }`
+      );
     } catch (error) {
       toast(error instanceof Error ? error.message : "Create failed", "error");
     } finally {
@@ -319,24 +419,6 @@ export default function KnowledgeCreatePage() {
             Knowledge sources (Foundry IQ) <span className="required">*</span>
           </h2>
 
-          {connections.length > 0 && (
-            <label className="field">
-              <span className="field-label">Connection</span>
-              <Select
-                className="select"
-                value={connectionId}
-                onChange={(event) => setConnectionId(event.target.value)}
-              >
-                <option value="">Select a connection</option>
-                {connections.map((connection) => (
-                  <option key={connection.id} value={connection.id}>
-                    {connection.name} — {connection.kind}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          )}
-
           {sources.length > 0 && (
             <ul className="kb-source-list">
               {sources.map((source) => (
@@ -387,14 +469,21 @@ export default function KnowledgeCreatePage() {
                     <div className="menu-popover kb-source-menu">
                       {SOURCE_OPTIONS.map((option) => (
                         <button
-                          key={option.kind}
+                          key={option.catalogKind}
                           className="menu-item kb-source-option"
                           onClick={() => addSource(option)}
                         >
                           <span className="kb-source-icon">{option.icon}</span>
                           <span>
-                            <strong>{option.label}</strong>
-                            <span className="muted text-12">{option.description}</span>
+                            <strong>
+                              {option.label}
+                              {option.available ? null : (
+                                <span className="kb-type-tag">Requires setup</span>
+                              )}
+                            </strong>
+                            <span className="muted text-12">
+                              {option.available ? option.description : option.reason}
+                            </span>
                           </span>
                         </button>
                       ))}
@@ -402,12 +491,8 @@ export default function KnowledgeCreatePage() {
                         className="menu-item"
                         onClick={() => {
                           setSourcesOpen(false);
-                          toast(
-                            connections.length
-                              ? "Pick a connection above to reuse it"
-                              : "No existing sources found",
-                            "info"
-                          );
+                          setBrowseMode("existing");
+                          setBrowseOpen(true);
                         }}
                       >
                         Use existing sources
@@ -416,7 +501,8 @@ export default function KnowledgeCreatePage() {
                         className="menu-item"
                         onClick={() => {
                           setSourcesOpen(false);
-                          toast("More source types are not available locally", "info");
+                          setBrowseMode("all");
+                          setBrowseOpen(true);
                         }}
                       >
                         Browse more
@@ -446,21 +532,131 @@ export default function KnowledgeCreatePage() {
           {encryptionOpen && (
             <div className="kb-encryption">
               <p className="muted">
-                Use an encryption key you control. Locally, documents are stored
-                under data/ and encrypted with your operating system&apos;s disk
-                encryption.
+                Customer-managed keys are not available in this build. Knowledge
+                data lives in <span className="mono">data/knowledge/knowledge.db</span>{" "}
+                and is protected by whatever disk encryption the operating system
+                has enabled (FileVault on macOS). Encrypting the database contents
+                would break full-text search, so it is not offered rather than
+                faked.
               </p>
-              <label className="row" style={{ gap: 8, alignItems: "center" }}>
-                <input
-                  type="checkbox"
-                  checked={encryptionEnabled}
-                  onChange={(event) => setEncryptionEnabled(event.target.checked)}
-                />
-                <span>Encrypt the knowledge base with a customer-managed key</span>
-              </label>
             </div>
           )}
         </section>
+
+        {browseOpen && (
+          <div
+            className="dialog-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setBrowseOpen(false);
+            }}
+          >
+            <div className="dialog wide" role="dialog" aria-modal="true" aria-label="Choose a knowledge type">
+              <div className="dialog-head">
+                <div>
+                  <h2 className="dialog-title">Choose a knowledge type</h2>
+                  <p className="dialog-sub">
+                    {browseMode === "existing"
+                      ? "Sources already configured in another knowledge base. Reusing one copies its settings and indexed content."
+                      : "Every connector this build can host, including local and third-party products."}
+                  </p>
+                </div>
+                <button className="icon-button" onClick={() => setBrowseOpen(false)} aria-label="Close">
+                  <Dismiss20Regular />
+                </button>
+              </div>
+              <div className="dialog-body">
+                {browseMode === "existing" ? (
+                  reusableSources.length === 0 ? (
+                    <p className="muted text-12">
+                      No sources exist in other knowledge bases yet.
+                    </p>
+                  ) : (
+                    <div className="kb-type-grid">
+                      {reusableSources.map((source) => {
+                        const added = sources.some(
+                          (item) => item.reuseOf === source.id
+                        );
+                        return (
+                          <button
+                            key={source.id}
+                            className={`kb-type-card${added ? " added" : ""}`}
+                            onClick={() => addExistingSource(source)}
+                          >
+                            <span className="kb-source-icon">
+                              {iconFor(source.kind)}
+                            </span>
+                            <span className="kb-type-body">
+                              <strong>{source.name}</strong>
+                              <span className="muted text-12">
+                                {source.baseName} ·{" "}
+                                {source.mode === "remote"
+                                  ? "queried live"
+                                  : `${source.documentCount} document${
+                                      source.documentCount === 1 ? "" : "s"
+                                    }`}
+                              </span>
+                            </span>
+                            <span className="kb-type-tag">
+                              {added ? "Added" : source.kind}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  <div className="kb-type-grid">
+                    {SOURCE_CATALOG.map((entry) => {
+                      const added = sources.some(
+                        (source) =>
+                          !source.reuseOf && source.catalogKind === entry.kind
+                      );
+                      return (
+                        <button
+                          key={entry.kind}
+                          className={`kb-type-card${
+                            entry.available ? "" : " disabled"
+                          }${added ? " added" : ""}`}
+                          onClick={() => {
+                            if (!entry.available) {
+                              toast(
+                                entry.reason || "This source needs extra setup.",
+                                "error"
+                              );
+                              return;
+                            }
+                            addSource(optionFor(entry));
+                            setBrowseOpen(false);
+                          }}
+                        >
+                          <span className="kb-source-icon">
+                            {iconFor(entry.kind)}
+                          </span>
+                          <span className="kb-type-body">
+                            <strong>{entry.label}</strong>
+                            <span className="muted text-12">
+                              {entry.available ? entry.description : entry.reason}
+                            </span>
+                          </span>
+                          {added ? (
+                            <span className="kb-type-tag">Added</span>
+                          ) : entry.available ? null : (
+                            <span className="kb-type-tag">Requires setup</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="dialog-footer">
+                <button className="btn btn-secondary" onClick={() => setBrowseOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="kb-form-footer">
           <Book20Regular />

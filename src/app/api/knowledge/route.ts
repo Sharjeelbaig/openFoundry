@@ -3,168 +3,77 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getAgents,
-  getKnowledgeBases,
-  newId,
-  nowIso,
-  saveAgents,
-  saveKnowledgeBases,
-} from "@/lib/store";
-import { chunkText, indexKnowledgeBase } from "@/lib/rag";
-import { KnowledgeBase, KnowledgeDocument, KnowledgeSource, SearchIndex } from "@/lib/types";
-import { execFile } from "child_process";
-import { promises as fs } from "fs";
-import os from "os";
-import path from "path";
-import { promisify } from "util";
+  addSource,
+  cloneSourceIntoBase,
+  createBase,
+  deleteBase,
+  deleteDocument,
+  deleteSource,
+  getBaseRecord,
+  ingestPastedText,
+  ingestUploads,
+  legacyKnowledge,
+  listSourceRecords,
+  syncSource,
+  updateBase,
+} from "@/lib/knowledge/service";
+import type {
+  OutputMode,
+  ReasoningEffort,
+  SourceKind,
+} from "@/lib/knowledge/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const execFileAsync = promisify(execFile);
-
-/** Default display label for a Foundry IQ knowledge source kind. */
-function sourceLabel(kind: KnowledgeSource["kind"]): string {
-  switch (kind) {
-    case "work-iq":
-      return "Work IQ";
-    case "fabric-iq":
-      return "Fabric IQ (OneLake Catalog)";
-    case "azure-blob":
-      return "Azure Blob Storage";
-    case "web":
-      return "Web";
-    case "azure-ai-search":
-      return "Azure AI Search Index";
-    default:
-      return "Files";
-  }
+function legacyBase(knowledgeBases: Awaited<ReturnType<typeof legacyKnowledge>>["knowledgeBases"], id: string) {
+  return knowledgeBases.find((base) => base.id === id);
 }
 
-async function extractText(file: File): Promise<string> {
-  const name = file.name.toLowerCase();
-  const buffer = Buffer.from(await file.arrayBuffer());
-  if (name.endsWith(".pdf")) {
-    const temp = path.join(os.tmpdir(), `foundry-local-${Date.now()}.pdf`);
-    await fs.writeFile(temp, buffer);
-    try {
-      const { stdout } = await execFileAsync("pdftotext", [temp, "-"], {
-        maxBuffer: 16 * 1024 * 1024,
-      });
-      return stdout;
-    } catch {
-      throw new Error(
-        "PDF text extraction needs the `pdftotext` utility (brew install poppler). Text, Markdown, CSV, JSON and HTML files work out of the box."
-      );
-    } finally {
-      await fs.unlink(temp).catch(() => undefined);
-    }
-  }
-  if (name.endsWith(".docx")) {
-    throw new Error(
-      "DOCX upload is not supported yet. Save the document as .txt, .md or .pdf and upload it again."
-    );
-  }
-  if (
-    name.endsWith(".png") ||
-    name.endsWith(".jpg") ||
-    name.endsWith(".jpeg") ||
-    name.endsWith(".gif") ||
-    name.endsWith(".webp") ||
-    name.endsWith(".zip") ||
-    name.endsWith(".bin")
-  ) {
-    throw new Error("Upload a text-bearing document (txt, md, csv, json, html, pdf).");
-  }
-  return buffer.toString("utf8");
+async function stateFor(id: string) {
+  const state = await legacyKnowledge();
+  return { ...state, knowledgeBase: legacyBase(state.knowledgeBases, id) };
 }
 
 export async function GET() {
-  const knowledgeBases = await getKnowledgeBases();
-  const indexes: SearchIndex[] = knowledgeBases.flatMap((base) => {
-    const indexed = (base.sources || []).filter((source) => source.indexName);
-    const chunkCount = base.documents.reduce(
-      (sum, doc) => sum + doc.chunks.length,
-      0
-    );
-    if (indexed.length === 0) {
-      // Legacy base (or one with only non-index sources): still expose the
-      // base's own local index so Knowledge → Indexes mirrors Foundry IQ.
-      if (base.documents.length === 0 && (base.sources || []).length === 0)
-        return [];
-      return [
-        {
-          id: `${base.id}:local`,
-          name: base.indexName,
-          version: 1,
-          type: base.sources?.some((source) => source.kind !== "upload")
-            ? "Agentic retrieval"
-            : "File search",
-          documents: base.documents.length,
-          chunks: chunkCount,
-          status: base.status === "Indexing" ? "Indexing" : "Ready",
-          createdAt: base.createdAt,
-          updatedAt: base.updatedAt,
-        },
-      ];
-    }
-    return indexed.map((source) => ({
-      id: `${base.id}:${source.id}`,
-      name: source.indexName || base.indexName,
-      version: 1,
-      type: source.kind === "upload" ? "File search" : "Agentic retrieval",
-      documents: source.documentCount || base.documents.length,
-      chunks: chunkCount,
-      status: base.status === "Indexing" ? "Indexing" : "Ready",
-      createdAt: base.createdAt,
-      updatedAt: base.updatedAt,
-    }));
-  });
-  return NextResponse.json({ knowledgeBases, indexes });
+  return NextResponse.json(await legacyKnowledge());
 }
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get("content-type") || "";
-  const bases = await getKnowledgeBases();
 
+  // Uploads keep the existing multipart contract used by the UI.
   if (contentType.includes("multipart/form-data")) {
     const form = await req.formData();
     const baseId = String(form.get("knowledgeBaseId") || "");
-    const base = bases.find((item) => item.id === baseId);
-    if (!base)
-      return NextResponse.json(
-        { error: "Knowledge base not found" },
-        { status: 404 }
-      );
-    const files = form.getAll("files").filter((f): f is File => f instanceof File);
-    if (files.length === 0)
-      return NextResponse.json({ error: "No files supplied" }, { status: 400 });
-    const documents: KnowledgeDocument[] = [];
-    for (const file of files) {
-      const text = await extractText(file);
-      const chunks = chunkText(text);
-      if (chunks.length === 0) continue;
-      documents.push({
-        id: newId("doc"),
-        name: file.name,
-        size: file.size,
-        type: file.type || "text/plain",
-        text,
-        chunks,
-        addedAt: nowIso(),
-      });
+    if (!(await getBaseRecord(baseId))) {
+      return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
     }
-    if (documents.length === 0)
+    const files = form.getAll("files").filter((file): file is File => file instanceof File);
+    if (files.length === 0) {
+      return NextResponse.json({ error: "No files supplied" }, { status: 400 });
+    }
+    const payload = await Promise.all(
+      files.map(async (file) => ({
+        name: file.name,
+        mime: file.type || "text/plain",
+        buffer: Buffer.from(await file.arrayBuffer()),
+      }))
+    );
+    const outcome = await ingestUploads(baseId, payload);
+    const state = await stateFor(baseId);
+    if (outcome.errors.length && outcome.documents === 0) {
       return NextResponse.json(
-        { error: "No readable text found in those files" },
+        { error: outcome.errors[0], job: outcome.job, knowledgeBase: state.knowledgeBase },
         { status: 400 }
       );
-    base.documents.push(...documents);
-    base.status = "Indexing";
-    await saveKnowledgeBases(bases);
-    await indexKnowledgeBase(base);
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base, documents });
+    }
+    return NextResponse.json({
+      knowledgeBase: state.knowledgeBase,
+      job: outcome.job,
+      errors: outcome.errors,
+      documents: outcome.documents,
+    });
   }
 
   const body = (await req.json().catch(() => ({}))) as {
@@ -176,155 +85,172 @@ export async function POST(req: NextRequest) {
     documentId?: string;
     connectionId?: string;
     chatModel?: string;
-    reasoningEffort?: KnowledgeBase["reasoningEffort"];
-    outputMode?: KnowledgeBase["outputMode"];
+    reasoningEffort?: ReasoningEffort;
+    outputMode?: OutputMode;
     retrievalInstructions?: string;
-    sources?: KnowledgeBase["sources"];
-    encryption?: KnowledgeBase["encryption"];
-    sourceKind?: string;
+    answerInstructions?: string;
+    encryption?: { enabled: boolean; keyVault?: string; keyName?: string };
+    sourceKind?: SourceKind;
     sourceId?: string;
     sourceName?: string;
     sourceDetail?: string;
+    sourceConfig?: Record<string, unknown>;
   };
 
-  if (body.action === "create" || (!body.action && body.name)) {
-    const base: KnowledgeBase = {
-      id: newId("kb"),
-      name: body.name || "knowledge-base",
-      description:
-        body.description ||
-        "Local knowledge base indexed on this computer with vector search.",
-      connectionId: body.connectionId,
-      chatModel: body.chatModel,
-      reasoningEffort: body.reasoningEffort || "Minimal",
-      outputMode: body.outputMode || "Extractive data",
-      retrievalInstructions: body.retrievalInstructions || "",
-      sources: body.sources || [],
-      encryption: body.encryption || { enabled: false },
-      indexName: `${(body.name || "knowledge-base")
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, "-")}-index`,
-      embeddingModel: "detecting…",
-      embeddingProvider: "lexical",
-      status: "Ready",
-      documents: [],
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-    };
-    bases.push(base);
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base }, { status: 201 });
+  try {
+    if (body.action === "create" || (!body.action && body.name)) {
+      if (!body.name?.trim()) {
+        return NextResponse.json({ error: "A name is required" }, { status: 400 });
+      }
+      const existing = (await legacyKnowledge()).knowledgeBases.find(
+        (base) => base.name.toLowerCase() === body.name!.trim().toLowerCase()
+      );
+      if (existing) {
+        return NextResponse.json(
+          { error: "A knowledge base with that name already exists" },
+          { status: 409 }
+        );
+      }
+      const base = await createBase({
+        name: body.name,
+        description: body.description,
+        chatModel: body.chatModel,
+        reasoningEffort: body.reasoningEffort,
+        outputMode: body.outputMode,
+        retrievalInstructions: body.retrievalInstructions,
+        answerInstructions: body.answerInstructions,
+        connectionId: body.connectionId,
+        encryption: body.encryption,
+      });
+      const state = await stateFor(base.id);
+      return NextResponse.json({ knowledgeBase: state.knowledgeBase }, { status: 201 });
+    }
+
+    const baseId = body.id || "";
+    if (!baseId || !(await getBaseRecord(baseId))) {
+      return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
+    }
+
+    if (body.action === "addText") {
+      if (!body.text?.trim()) {
+        return NextResponse.json({ error: "Text is required" }, { status: 400 });
+      }
+      const outcome = await ingestPastedText(baseId, body.name || "pasted-text.txt", body.text);
+      const state = await stateFor(baseId);
+      if (outcome.errors.length && outcome.documents === 0) {
+        return NextResponse.json(
+          { error: outcome.errors[0], knowledgeBase: state.knowledgeBase },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({
+        knowledgeBase: state.knowledgeBase,
+        document: state.knowledgeBase?.documents.find((doc) => doc.name === (body.name || "pasted-text.txt")),
+        job: outcome.job,
+      });
+    }
+
+    if (body.action === "deleteDocument") {
+      if (!body.documentId) {
+        return NextResponse.json({ error: "documentId is required" }, { status: 400 });
+      }
+      await deleteDocument(baseId, body.documentId);
+      const state = await stateFor(baseId);
+      return NextResponse.json({ knowledgeBase: state.knowledgeBase });
+    }
+
+    if (body.action === "reindex") {
+      const sources = await listSourceRecords(baseId);
+      const indexed = sources.filter((source) => source.mode === "indexed");
+      if (indexed.length === 0) {
+        return NextResponse.json(
+          { error: "This knowledge base has no indexed source to reindex." },
+          { status: 400 }
+        );
+      }
+      let last = null;
+      for (const source of indexed) {
+        last = await syncSource(baseId, source.id);
+      }
+      const state = await stateFor(baseId);
+      return NextResponse.json({ knowledgeBase: state.knowledgeBase, job: last?.job });
+    }
+
+    if (body.action === "rename") {
+      await updateBase(baseId, {
+        name: body.name,
+        description: body.description,
+        connectionId: body.connectionId,
+        chatModel: body.chatModel,
+        reasoningEffort: body.reasoningEffort,
+        outputMode: body.outputMode,
+        retrievalInstructions: body.retrievalInstructions,
+        answerInstructions: body.answerInstructions,
+        encryption: body.encryption,
+      });
+      const state = await stateFor(baseId);
+      return NextResponse.json({ knowledgeBase: state.knowledgeBase });
+    }
+
+    if (body.action === "addSource") {
+      const kind = (body.sourceKind || "web") as SourceKind;
+      const source = await addSource({
+        baseId,
+        kind,
+        name: body.sourceName || kind,
+        description: body.sourceDetail,
+        config: body.sourceConfig || {},
+        connectionId: body.connectionId,
+      });
+      const state = await stateFor(baseId);
+      return NextResponse.json({ knowledgeBase: state.knowledgeBase, source });
+    }
+
+    if (body.action === "reuseSource") {
+      if (!body.sourceId) {
+        return NextResponse.json(
+          { error: "sourceId is required" },
+          { status: 400 }
+        );
+      }
+      const source = await cloneSourceIntoBase(baseId, body.sourceId);
+      const state = await stateFor(baseId);
+      return NextResponse.json(
+        { knowledgeBase: state.knowledgeBase, source },
+        { status: 201 }
+      );
+    }
+
+    if (body.action === "deleteSource") {
+      if (!body.sourceId) {
+        return NextResponse.json({ error: "sourceId is required" }, { status: 400 });
+      }
+      await deleteSource(baseId, body.sourceId);
+      const state = await stateFor(baseId);
+      return NextResponse.json({ knowledgeBase: state.knowledgeBase });
+    }
+
+    if (body.action === "sync") {
+      if (!body.sourceId) {
+        return NextResponse.json({ error: "sourceId is required" }, { status: 400 });
+      }
+      const outcome = await syncSource(baseId, body.sourceId);
+      const state = await stateFor(baseId);
+      return NextResponse.json({
+        knowledgeBase: state.knowledgeBase,
+        job: outcome.job,
+        errors: outcome.errors,
+      });
+    }
+
+    if (body.action === "delete") {
+      await deleteBase(baseId);
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  const base = bases.find((item) => item.id === body.id);
-  if (!base)
-    return NextResponse.json(
-      { error: "Knowledge base not found" },
-      { status: 404 }
-    );
-
-  if (body.action === "addText") {
-    if (!body.text?.trim())
-      return NextResponse.json({ error: "Text is required" }, { status: 400 });
-    const doc: KnowledgeDocument = {
-      id: newId("doc"),
-      name: body.name || "pasted-text.txt",
-      size: Buffer.byteLength(body.text),
-      type: "text/plain",
-      text: body.text,
-      chunks: chunkText(body.text),
-      addedAt: nowIso(),
-    };
-    base.documents.push(doc);
-    base.status = "Indexing";
-    await saveKnowledgeBases(bases);
-    await indexKnowledgeBase(base);
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base, document: doc });
-  }
-
-  if (body.action === "deleteDocument") {
-    base.documents = base.documents.filter(
-      (doc) => doc.id !== body.documentId
-    );
-    base.updatedAt = nowIso();
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base });
-  }
-
-  if (body.action === "reindex") {
-    base.status = "Indexing";
-    await saveKnowledgeBases(bases);
-    await indexKnowledgeBase(base);
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base });
-  }
-
-  if (body.action === "rename") {
-    base.name = body.name || base.name;
-    base.description = body.description ?? base.description;
-    if (body.connectionId !== undefined) base.connectionId = body.connectionId;
-    if (body.chatModel !== undefined) base.chatModel = body.chatModel;
-    if (body.reasoningEffort !== undefined)
-      base.reasoningEffort = body.reasoningEffort;
-    if (body.outputMode !== undefined) base.outputMode = body.outputMode;
-    if (body.retrievalInstructions !== undefined)
-      base.retrievalInstructions = body.retrievalInstructions;
-    if (body.encryption !== undefined) base.encryption = body.encryption;
-    base.updatedAt = nowIso();
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base });
-  }
-
-  if (body.action === "addSource") {
-    const sourceId = newId("src");
-    const kind = (body.sourceKind || "web") as KnowledgeSource["kind"];
-    const source: KnowledgeSource = {
-      id: sourceId,
-      kind,
-      name: body.sourceName || sourceLabel(kind),
-      detail: body.sourceDetail || "",
-      status: "Connected",
-      indexName:
-        kind === "upload" || kind === "azure-blob"
-          ? `${base.name.toLowerCase().replace(/[^a-z0-9-]+/g, "-")}-${sourceId.slice(
-              -6
-            )}`
-          : undefined,
-      documentCount: 0,
-    };
-    base.sources = [...(base.sources || []), source];
-    base.updatedAt = nowIso();
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base, source });
-  }
-
-  if (body.action === "deleteSource") {
-    base.sources = (base.sources || []).filter(
-      (source) => source.id !== body.sourceId
-    );
-    base.updatedAt = nowIso();
-    await saveKnowledgeBases(bases);
-    return NextResponse.json({ knowledgeBase: base });
-  }
-
-  if (body.action === "delete") {
-    const next = bases.filter((item) => item.id !== base.id);
-    await saveKnowledgeBases(next);
-    const agents = await getAgents();
-    let changed = false;
-    const nextAgents = agents.map((agent) => {
-      if (!agent.knowledgeBaseIds.includes(base.id)) return agent;
-      changed = true;
-      return {
-        ...agent,
-        knowledgeBaseIds: agent.knowledgeBaseIds.filter((id) => id !== base.id),
-        updatedAt: nowIso(),
-      };
-    });
-    if (changed) await saveAgents(nextAgents);
-    return NextResponse.json({ ok: true });
-  }
-
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }

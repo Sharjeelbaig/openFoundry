@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Add20Regular,
   ArrowClockwise20Regular,
@@ -17,6 +17,7 @@ import {
   Delete20Regular,
   Dismiss20Regular,
   DocumentText20Regular,
+  Folder20Regular,
   Globe20Regular,
   Layer20Regular,
   MoreHorizontal20Regular,
@@ -28,19 +29,98 @@ import { useToast } from "@/components/Toast";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import type {
   Citation,
+  Connection,
   KnowledgeBase,
   KnowledgeDocument,
   KnowledgeSource,
-  KnowledgeSourceKind,
 } from "@/lib/types";
+import { SOURCE_CATALOG, type CatalogEntry } from "@/lib/knowledge/catalog";
+import { CONNECTION_PROVIDERS } from "@/lib/connections/catalog";
+import type { ActivityEntry, SourceKind } from "@/lib/knowledge/types";
 
-const ADD_SOURCE_OPTIONS: { kind: KnowledgeSourceKind; label: string; detail: string }[] = [
-  { kind: "work-iq", label: "Work IQ (Preview)", detail: "Microsoft 365 organizational context" },
-  { kind: "fabric-iq", label: "Fabric IQ (OneLake Catalog) (Preview)", detail: "Fabric ontology or lakehouse" },
-  { kind: "azure-blob", label: "Azure Blob Storage", detail: "Documents and files from a container" },
-  { kind: "web", label: "Web", detail: "Real-time web content" },
-  { kind: "azure-ai-search", label: "Azure AI Search Index", detail: "Existing enterprise search index" },
-];
+const MODEL_ACTIVITY_TYPES = new Set([
+  "modelQueryPlanning",
+  "modelAnswerSynthesis",
+  "modelWebSummarization",
+  "agenticReasoning",
+  "heuristicQueryPlanning",
+]);
+
+type RetrievalCitation = Citation & {
+  refId?: string;
+  rerankerScore?: number | null;
+};
+
+interface ApiCitation {
+  refId?: string;
+  documentId: string;
+  title: string;
+  excerpt: string;
+  score: number;
+  rerankerScore?: number | null;
+  page?: number | null;
+  section?: string | null;
+  uri?: string | null;
+}
+
+interface McpServerLite {
+  id: string;
+  name: string;
+  status: string;
+  url?: string;
+  tools: { name: string; description?: string }[];
+}
+
+function activityLabel(entry: ActivityEntry): string {
+  switch (entry.type) {
+    case "modelQueryPlanning":
+      return "Query planning";
+    case "modelAnswerSynthesis":
+      return "Answer synthesis";
+    case "modelWebSummarization":
+      return "Web summarization";
+    case "agenticReasoning":
+      return "Agentic reasoning";
+    case "heuristicQueryPlanning":
+      return "Deterministic planning";
+    default:
+      return entry.knowledgeSourceName || entry.type;
+  }
+}
+
+function activityDetail(entry: ActivityEntry): string {
+  if (entry.type === "agenticReasoning") {
+    return `${entry.reasoningTokens ?? 0} reasoning tokens${
+      entry.retrievalReasoningEffort?.kind
+        ? ` · ${entry.retrievalReasoningEffort.kind} effort`
+        : ""
+    }`;
+  }
+  if (
+    entry.type === "modelQueryPlanning" ||
+    entry.type === "modelAnswerSynthesis" ||
+    entry.type === "modelWebSummarization"
+  ) {
+    return `${entry.inputTokens ?? 0} in · ${entry.outputTokens ?? 0} out${
+      entry.model?.modelName ? ` · ${entry.model.modelName}` : ""
+    }`;
+  }
+  if (entry.type === "heuristicQueryPlanning") {
+    return "no model call";
+  }
+  const query =
+    entry.fileArguments?.search ||
+    entry.searchIndexArguments?.search ||
+    (() => {
+      const args = entry.mcpServerArguments?.toolArguments || {};
+      const first = Object.values(args)[0];
+      if (Array.isArray(first)) return first.join(" | ");
+      return typeof first === "string" ? first : "";
+    })();
+  return [`${entry.count ?? 0} result${entry.count === 1 ? "" : "s"}`, query]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 export default function KnowledgeDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -51,6 +131,7 @@ export default function KnowledgeDetail({ id }: { id: string }) {
   );
   const bases = data?.knowledgeBases ?? [];
   const base = bases.find((item) => item.id === id);
+  const { data: mcpData } = useApi<{ servers: McpServerLite[] }>("/api/mcp", 15_000);
 
   const [drag, setDrag] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -66,33 +147,346 @@ export default function KnowledgeDetail({ id }: { id: string }) {
   const [reindexing, setReindexing] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<Citation[] | null>(null);
+  const [results, setResults] = useState<RetrievalCitation[] | null>(null);
   const [embeddingModel, setEmbeddingModel] = useState("");
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [answer, setAnswer] = useState<string | null>(null);
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+  const [sourceDialog, setSourceDialog] = useState<CatalogEntry | null>(null);
+  const [sourceName, setSourceName] = useState("");
+  const [sourceConfig, setSourceConfig] = useState<Record<string, unknown>>({});
+  const [sourceBusy, setSourceBusy] = useState(false);
+  const [sourceConnectionId, setSourceConnectionId] = useState("");
+  const [pendingAdds, setPendingAdds] = useState<SourceKind[]>([]);
+  const [connectionMode, setConnectionMode] = useState<"new" | "saved">("new");
+  const [connectionTarget, setConnectionTarget] = useState("");
+  const [connectionConfig, setConnectionConfig] = useState<Record<string, unknown>>({});
+  const [connectionSecret, setConnectionSecret] = useState<Record<string, unknown>>({});
+  const [lastJob, setLastJob] = useState<string>("");
+  const [mcpToken, setMcpToken] = useState("");
+  const mcpServers = mcpData?.servers ?? [];
+  const selectedMcpServer = mcpServers.find(
+    (server) => server.id === String(sourceConfig.serverId || "")
+  );
+  const [mcpBusy, setMcpBusy] = useState(false);
+  const { data: connectionsData, refresh: refreshConnections } = useApi<{
+    connections: Connection[];
+  }>("/api/connections", 0);
+  const connections = connectionsData?.connections ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
+  const openedFromQuery = useRef(false);
+  const reusedFromQuery = useRef(false);
 
   const sources = base?.sources ?? [];
+  const connectionSpec = sourceDialog?.connectionProvider
+    ? CONNECTION_PROVIDERS[sourceDialog.connectionProvider]
+    : null;
 
-  const addSource = async (kind: KnowledgeSourceKind, label: string, detail: string) => {
-    if (!base) return;
+  const dismissSourceDialog = () => {
+    setSourceDialog(null);
+    setPendingAdds([]);
+    window.history.replaceState({}, "", window.location.pathname);
+  };
+
+  const openSource = (entry: CatalogEntry) => {
     setSourceMenuOpen(false);
-    const res = await fetch("/api/knowledge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "addSource",
-        id: base.id,
-        sourceKind: kind,
-        sourceName: label,
-        sourceDetail: detail,
-      }),
-    });
-    if (!res.ok) {
-      toast("Could not add the source", "error");
+    if (!entry.available) {
+      toast(entry.reason || "This source is not available yet.", "error");
       return;
     }
-    toast(`${label} added to ${base.name}`, "success");
+    setSourceDialog(entry);
+    setSourceName(entry.label);
+    setSourceConfig({});
+    setSourceConnectionId("");
+    setConnectionMode("new");
+    setConnectionTarget("");
+    setConnectionConfig({});
+    setConnectionSecret({});
+    setLastJob("");
+  };
+
+  // The create page hands off every chosen source type. The first dialog opens
+  // immediately and the rest follow after each successful save.
+  useEffect(() => {
+    if (openedFromQuery.current || !base) return;
+    openedFromQuery.current = true;
+    const raw = new URLSearchParams(window.location.search).get("add");
+    if (!raw) return;
+    const entries = raw
+      .split(",")
+      .map((kind) => kind.trim())
+      .map((kind) => SOURCE_CATALOG.find((item) => item.kind === kind))
+      .filter((entry): entry is CatalogEntry => Boolean(entry?.available));
+    if (entries.length === 0) return;
+    setPendingAdds(entries.slice(1).map((entry) => entry.kind));
+    openSource(entries[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base?.id]);
+
+  // "Use existing sources" on the create page hands off source ids. Clone each
+  // one into this base; its config, connection and indexed content come along.
+  useEffect(() => {
+    if (reusedFromQuery.current || !base) return;
+    reusedFromQuery.current = true;
+    const raw = new URLSearchParams(window.location.search).get("reuse");
+    if (!raw) return;
+    const sourceIds = raw
+      .split(",")
+      .map((sourceId) => sourceId.trim())
+      .filter(Boolean);
+    if (sourceIds.length === 0) return;
+    void (async () => {
+      let attached = 0;
+      for (const sourceId of sourceIds) {
+        try {
+          const res = await fetch("/api/knowledge", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "reuseSource",
+              id: base.id,
+              sourceId,
+            }),
+          });
+          const json = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          if (!res.ok) {
+            throw new Error(json.error || "Could not reuse that source.");
+          }
+          attached += 1;
+        } catch (error) {
+          toast(
+            error instanceof Error ? error.message : "Could not reuse that source.",
+            "error"
+          );
+        }
+      }
+      if (attached > 0) {
+        toast(
+          `${attached} existing source${attached === 1 ? "" : "s"} attached`,
+          "success"
+        );
+        refresh();
+      }
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${window.location.search
+          .replace(/([?&])reuse=[^&]*&?/, "$1")
+          .replace(/[?&]$/, "")}`
+      );
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base?.id]);
+
+  const submitSource = async () => {
+    if (!base || !sourceDialog) return;
+    setSourceBusy(true);
+    try {
+      let resolvedConnectionId: string | undefined;
+      if (sourceDialog.connectionProvider && connectionSpec) {
+        if (connectionSpec.oauth || connectionMode === "saved") {
+          if (!sourceConnectionId) throw new Error("Choose a connection first.");
+          resolvedConnectionId = sourceConnectionId;
+        } else {
+          const target = connectionTarget.trim().replace(/\/+$/, "");
+          if (!target) throw new Error(`${connectionSpec.targetLabel} is required.`);
+          if (!/^https?:\/\//i.test(target)) {
+            throw new Error("Enter a full http(s) URL.");
+          }
+          for (const field of connectionSpec.secretFields) {
+            const value = connectionSecret[field.key];
+            if (
+              field.required &&
+              (typeof value !== "string" || !value.trim())
+            ) {
+              throw new Error(`${field.label} is required.`);
+            }
+          }
+          const existing = connections.find(
+            (item) =>
+              item.provider === connectionSpec.id &&
+              item.target.replace(/\/+$/, "") === target
+          );
+          if (existing) {
+            resolvedConnectionId = existing.id;
+          } else {
+            let host = connectionSpec.label;
+            try {
+              host = new URL(target).host;
+            } catch {
+              // keep the provider label
+            }
+            let connectionName = `${connectionSpec.label} · ${host}`;
+            if (connections.some((item) => item.name === connectionName)) {
+              connectionName = `${connectionName} ${connections.length + 1}`;
+            }
+            const created = await fetch("/api/connections", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: connectionName,
+                provider: connectionSpec.id,
+                target,
+                authType: connectionSpec.authTypes[0].id,
+                config: connectionConfig,
+                secret: connectionSecret,
+              }),
+            });
+            const createdJson = (await created.json()) as {
+              connection?: Connection;
+              error?: string;
+            };
+            if (!created.ok || !createdJson.connection) {
+              throw new Error(
+                createdJson.error || "Could not create the connection"
+              );
+            }
+            resolvedConnectionId = createdJson.connection.id;
+            const tested = await fetch(
+              `/api/connections/${resolvedConnectionId}/test`,
+              { method: "POST" }
+            );
+            const testedJson = (await tested.json()) as {
+              result?: { ok?: boolean; detail?: string };
+            };
+            if (!testedJson.result?.ok) {
+              await fetch(`/api/connections?id=${resolvedConnectionId}`, {
+                method: "DELETE",
+              });
+              throw new Error(
+                testedJson.result?.detail || "The connection test failed"
+              );
+            }
+            refreshConnections();
+          }
+        }
+      }
+
+      const cleanConfig: Record<string, unknown> = {};
+      for (const field of sourceDialog.fields) {
+        const raw = sourceConfig[field.key];
+        if (field.type === "boolean") {
+          cleanConfig[field.key] = raw === true;
+        } else if (field.type === "number") {
+          if (raw !== "" && raw != null) cleanConfig[field.key] = Number(raw);
+        } else if (field.type === "list") {
+          const text = typeof raw === "string" ? raw : "";
+          const list = text.split(/[\n,]/).map((value) => value.trim()).filter(Boolean);
+          if (list.length) cleanConfig[field.key] = list;
+        } else if (typeof raw === "string" && raw.trim()) {
+          cleanConfig[field.key] = raw.trim();
+        }
+      }
+      const added = await fetch("/api/knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "addSource",
+          id: base.id,
+          sourceKind: sourceDialog.kind,
+          sourceName: sourceName || sourceDialog.label,
+          sourceDetail: sourceDialog.description,
+          sourceConfig: cleanConfig,
+          connectionId: resolvedConnectionId,
+        }),
+      });
+      const addedJson = (await added.json()) as {
+        source?: KnowledgeSource;
+        error?: string;
+      };
+      if (!added.ok || !addedJson.source) {
+        throw new Error(addedJson.error || "Could not add the source");
+      }
+      // A source is only useful once it has content, so sync immediately.
+      if (sourceDialog.mode === "indexed" && sourceDialog.kind !== "file") {
+        const synced = await fetch(
+          `/api/knowledge/${base.id}/sources/${addedJson.source.id}/sync`,
+          { method: "POST" }
+        );
+        const syncedJson = (await synced.json()) as {
+          job?: { status?: string };
+          errors?: string[];
+          error?: string;
+        };
+        if (!synced.ok) throw new Error(syncedJson.error || "Sync failed");
+        const status = syncedJson.job?.status || "unknown";
+        setLastJob(
+          syncedJson.errors?.length
+            ? `${status}: ${syncedJson.errors[0]}`
+            : `${status}`
+        );
+        if (status === "failed") {
+          toast(`Source failed: ${syncedJson.errors?.[0] || "no items indexed"}`, "error");
+        } else if (status === "partial") {
+          toast("Indexed with errors — see the source row", "info");
+        } else {
+          toast(`${sourceName} indexed`, "success");
+        }
+      } else {
+        toast(`${sourceName} added`, "success");
+      }
+      refresh();
+      const [nextKind, ...rest] = pendingAdds;
+      if (nextKind) {
+        setPendingAdds(rest);
+        setSourceDialog(null);
+        const next = SOURCE_CATALOG.find((entry) => entry.kind === nextKind);
+        if (next) {
+          window.setTimeout(() => openSource(next), 150);
+        }
+      } else {
+        dismissSourceDialog();
+      }
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not add the source", "error");
+    } finally {
+      setSourceBusy(false);
+    }
+  };
+
+  const syncSource = async (source: KnowledgeSource) => {
+    if (!base) return;
+    const res = await fetch(`/api/knowledge/${base.id}/sources/${source.id}/sync`, {
+      method: "POST",
+    });
+    const json = (await res.json()) as {
+      job?: { status?: string };
+      errors?: string[];
+      error?: string;
+    };
+    if (!res.ok) {
+      toast(json.error || "Sync failed", "error");
+      return;
+    }
+    toast(
+      json.errors?.length
+        ? `Sync ${json.job?.status}: ${json.errors[0]}`
+        : `Sync ${json.job?.status}`,
+      json.errors?.length ? "error" : "success"
+    );
     refresh();
+  };
+
+  const generateMcpToken = async () => {
+    if (!base) return;
+    setMcpBusy(true);
+    try {
+      const res = await fetch(`/api/knowledge/${base.id}/mcp/token`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as { token?: string; error?: string };
+      if (!res.ok || !json.token) {
+        throw new Error(json.error || "Could not issue a token");
+      }
+      setMcpToken(json.token);
+      toast("MCP token created. Copy it now; it is shown once.", "success");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not issue a token", "error");
+    } finally {
+      setMcpBusy(false);
+    }
   };
 
   const removeSource = async (source: KnowledgeSource) => {
@@ -252,28 +646,57 @@ export default function KnowledgeDetail({ id }: { id: string }) {
     if (!base || !query.trim()) return;
     setSearching(true);
     try {
-      const res = await fetch("/api/knowledge/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          knowledgeBaseId: base.id,
-          query,
-          topK: 6,
-        }),
-      });
+      const res = await fetch(
+        `/api/knowledge/${encodeURIComponent(base.id)}/retrieve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: query }],
+            includeActivity: true,
+            maxOutputDocuments: 6,
+          }),
+        }
+      );
       const json = (await res.json()) as {
-        citations?: Citation[];
-        embeddingModel?: string;
+        citations?: ApiCitation[];
+        activity?: ActivityEntry[];
+        response?: { content?: { type: string; text?: string }[] }[];
+        meta?: { embeddingModel?: string };
         error?: string;
       };
       if (!res.ok) throw new Error(json.error || "Search failed");
-      setResults(json.citations || []);
-      setEmbeddingModel(json.embeddingModel || "");
+      setResults(
+        (json.citations || []).map((citation) => ({
+          documentId: citation.documentId,
+          documentName: citation.title,
+          chunk: citation.excerpt,
+          score: citation.score,
+          page: citation.page,
+          section: citation.section,
+          uri: citation.uri,
+          refId: citation.refId,
+          rerankerScore: citation.rerankerScore,
+        }))
+      );
+      setActivity(json.activity || []);
+      setEmbeddingModel(json.meta?.embeddingModel || "lexical");
+      setAnswer(
+        base.outputMode === "Answer synthesis"
+          ? json.response?.[0]?.content?.[0]?.text || null
+          : null
+      );
     } catch (error) {
       toast(error instanceof Error ? error.message : "Search failed", "error");
     } finally {
       setSearching(false);
     }
+  };
+
+  const clearSearch = () => {
+    setResults(null);
+    setActivity([]);
+    setAnswer(null);
   };
 
   if (!base) {
@@ -407,26 +830,38 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                 </button>
                 {sourceMenuOpen && (
                   <div className="menu-popover kb-source-menu" style={{ right: 0, top: 32 }}>
-                    {ADD_SOURCE_OPTIONS.map((option) => (
+                    {SOURCE_CATALOG.map((entry) => (
                       <button
-                        key={option.kind}
+                        key={entry.kind}
                         className="menu-item"
-                        onClick={() => addSource(option.kind, option.label, option.detail)}
+                        style={entry.available ? undefined : { opacity: 0.55 }}
+                        title={entry.available ? entry.description : entry.reason}
+                        onClick={() => openSource(entry)}
                       >
                         <span className="kb-source-icon">
-                          {option.kind === "web" ? (
+                          {entry.kind === "web" ? (
                             <Globe20Regular />
-                          ) : option.kind === "azure-blob" ? (
+                          ) : entry.kind === "s3" || entry.kind === "azure-blob" || entry.kind === "gcs" ? (
                             <Cloud20Regular />
-                          ) : option.kind === "azure-ai-search" ? (
+                          ) : entry.kind === "folder" || entry.kind === "git" ? (
+                            <Folder20Regular />
+                          ) : entry.kind === "sqlite" || entry.kind === "csv" || entry.kind === "azure-ai-search" ? (
                             <Database20Regular />
+                          ) : entry.kind === "file" ? (
+                            <ArrowUpload20Regular />
+                          ) : entry.kind === "mcp" || entry.kind === "http" ? (
+                            <Code20Regular />
                           ) : (
                             <Layer20Regular />
                           )}
                         </span>
                         <span>
-                          <strong>{option.label}</strong>
-                          <span className="muted text-12">{option.detail}</span>
+                          <strong>{entry.label}</strong>
+                          <span className="muted text-12">
+                            {entry.available
+                              ? `${entry.mode === "remote" ? "Queried live" : "Indexed"} · ${entry.description}`
+                              : entry.reason}
+                          </span>
                         </span>
                       </button>
                     ))}
@@ -460,6 +895,18 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                       <strong>{source.name}</strong>
                       <span className="muted text-12">{source.detail}</span>
                     </span>
+                    {source.kind !== "work-iq" &&
+                      source.kind !== "fabric-iq" &&
+                      source.kind !== "azure-ai-search" && (
+                        <button
+                          className="icon-button small"
+                          aria-label={`Sync ${source.name}`}
+                          title="Sync now"
+                          onClick={() => syncSource(source)}
+                        >
+                          <ArrowClockwise20Regular />
+                        </button>
+                      )}
                     <StatusBadge status={source.status} />
                     <button
                       className="icon-button small"
@@ -472,6 +919,33 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="operate-card mt-16">
+            <div className="row between mb-8">
+              <h3>MCP endpoint</h3>
+              <button
+                className="btn btn-sm btn-secondary"
+                disabled={mcpBusy}
+                onClick={generateMcpToken}
+              >
+                {mcpBusy ? <Spinner /> : null} Generate token
+              </button>
+            </div>
+            <p className="muted text-12">
+              Agents call this base through the{" "}
+              <span className="mono">knowledge_base_retrieve</span> tool. The
+              endpoint takes a bearer token; rotating it invalidates the old one.
+            </p>
+            <div className="mono text-12">
+              /api/knowledge/{base.id}/mcp
+            </div>
+            {mcpToken ? (
+              <div className="banner mt-8">
+                Token (shown once): <span className="mono">{mcpToken}</span>
+                <CopyButton value={mcpToken} label="Copy" className="btn btn-sm btn-secondary ml-8" />
+              </div>
+            ) : null}
           </div>
 
           <div className="operate-card">
@@ -491,7 +965,7 @@ export default function KnowledgeDetail({ id }: { id: string }) {
               type="file"
               multiple
               hidden
-              accept=".txt,.md,.csv,.json,.html,.pdf"
+              accept=".txt,.md,.csv,.json,.html,.pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp"
               onChange={(event) => upload(event.target.files)}
             />
             <div
@@ -520,8 +994,8 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                   : "Drop files here or click to upload"}
               </span>
               <span className="text-12 muted">
-                .txt, .md, .csv, .json, .html and .pdf · text is extracted on this
-                computer
+                .txt, .md, .csv, .json, .html, .pdf and images · text and OCR run
+                on this computer
               </span>
             </div>
 
@@ -599,7 +1073,7 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                 className="btn btn-primary btn-icon-only"
                 aria-label="Search knowledge"
                 onClick={search}
-                disabled={searching || !query.trim() || base.documents.length === 0}
+                disabled={searching || !query.trim() || (base.sources?.length ?? 0) === 0}
               >
                 {searching ? <Spinner /> : <Search20Regular />}
               </button>
@@ -610,17 +1084,22 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                   <span className="text-12 muted">
                     {results.length} chunks · {embeddingModel}
                   </span>
-                  <button className="btn btn-sm btn-ghost" onClick={() => setResults(null)}>
+                  <button className="btn btn-sm btn-ghost" onClick={clearSearch}>
                     Clear
                   </button>
                 </div>
+                {answer && <div className="retrieval-answer">{answer}</div>}
                 {results.map((citation, index) => (
                   <div className="retrieval-result" key={index}>
                     <div className="row between">
                       <span className="text-12 strong truncate" style={{ maxWidth: 180 }}>
-                        [{index + 1}] {citation.documentName}
+                        [ref_id:{citation.refId ?? index}] {citation.documentName}
                       </span>
-                      <span className="badge gray">{citation.score.toFixed(3)}</span>
+                      <span className="badge gray">
+                        {citation.rerankerScore != null
+                          ? `rerank ${citation.rerankerScore.toFixed(2)}`
+                          : citation.score.toFixed(3)}
+                      </span>
                     </div>
                     <p>{citation.chunk}</p>
                   </div>
@@ -629,6 +1108,38 @@ export default function KnowledgeDetail({ id }: { id: string }) {
                   <p className="muted text-12">
                     No chunks matched. Add more documents or try a broader query.
                   </p>
+                )}
+                {activity.length > 0 && (
+                  <div className="activity-log">
+                    <div className="row between">
+                      <span className="text-12 strong">Activity</span>
+                      <span className="text-12 muted">{activity.length} steps</span>
+                    </div>
+                    {activity.map((entry) => (
+                      <div className="activity-row" key={entry.id}>
+                        <span
+                          className={`activity-id${
+                            MODEL_ACTIVITY_TYPES.has(entry.type) ? " model" : ""
+                          }`}
+                        >
+                          {entry.id}
+                        </span>
+                        <div className="activity-copy">
+                          <div className="text-12 strong">{activityLabel(entry)}</div>
+                          <div className="text-12 muted">{activityDetail(entry)}</div>
+                          {entry.warning && (
+                            <div className="text-12 activity-warning">{entry.warning}</div>
+                          )}
+                          {entry.note && (
+                            <div className="text-12 muted">{entry.note}</div>
+                          )}
+                        </div>
+                        <span className="text-12 muted activity-time">
+                          {entry.elapsedMs != null ? `${entry.elapsedMs} ms` : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -683,6 +1194,331 @@ export default function KnowledgeDetail({ id }: { id: string }) {
           </div>
         </aside>
       </div>
+
+      {sourceDialog && (
+        <div
+          className="dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) dismissSourceDialog();
+          }}
+        >
+          <div className="dialog wide" role="dialog" aria-modal="true" aria-label="Create a knowledge source">
+            <div className="dialog-head">
+              <div>
+                <h2 className="dialog-title">Create a knowledge source</h2>
+                <p className="dialog-sub">{sourceDialog.description}</p>
+              </div>
+              <button className="icon-button" onClick={dismissSourceDialog} aria-label="Close">
+                <Dismiss20Regular />
+              </button>
+            </div>
+            <div className="dialog-body">
+              <label className="field">
+                <span className="field-label">Name</span>
+                <input
+                  className="input"
+                  value={sourceName}
+                  onChange={(event) => setSourceName(event.target.value)}
+                />
+              </label>
+              {sourceDialog.connectionProvider && connectionSpec ? (
+                <>
+                  {connectionSpec.oauth ? (
+                    <div className="banner">
+                      <span>
+                        Google Drive is authorized in{" "}
+                        <Link href="/build/knowledge/connections" className="link">
+                          Connections
+                        </Link>
+                        . Choose a connected account below.
+                      </span>
+                    </div>
+                  ) : (
+                    <label className="field">
+                      <span className="field-label">Authentication</span>
+                      <select
+                        className="select"
+                        value={connectionMode}
+                        onChange={(event) =>
+                          setConnectionMode(event.target.value as "new" | "saved")
+                        }
+                      >
+                        <option value="new">Enter connection details</option>
+                        <option value="saved">Use a saved connection</option>
+                      </select>
+                      <span className="field-hint">
+                        Enter the account once; it is stored encrypted and reused
+                        by every source that points at it.
+                      </span>
+                    </label>
+                  )}
+                  {connectionMode === "saved" || connectionSpec.oauth ? (
+                    <label className="field">
+                      <span className="field-label">
+                        Connection <span className="required">*</span>
+                      </span>
+                      <select
+                        className="select"
+                        value={sourceConnectionId}
+                        onChange={(event) => setSourceConnectionId(event.target.value)}
+                      >
+                        <option value="">Select a connection</option>
+                        {connections
+                          .filter(
+                            (connection) =>
+                              connection.provider === sourceDialog.connectionProvider
+                          )
+                          .map((connection) => (
+                            <option key={connection.id} value={connection.id}>
+                              {connection.name} · {connection.target}
+                            </option>
+                          ))}
+                      </select>
+                      <span className="field-hint">
+                        <Link href="/build/knowledge/connections" className="link">
+                          Manage connections
+                        </Link>
+                      </span>
+                    </label>
+                  ) : (
+                    <>
+                      <label className="field">
+                        <span className="field-label">
+                          {connectionSpec.targetLabel}{" "}
+                          <span className="required">*</span>
+                        </span>
+                        <input
+                          className="input"
+                          placeholder={connectionSpec.targetPlaceholder}
+                          value={connectionTarget}
+                          onChange={(event) => setConnectionTarget(event.target.value)}
+                        />
+                      </label>
+                      {connectionSpec.fields.map((field) => (
+                        <label className="field" key={`conn-${field.key}`}>
+                          <span className="field-label">
+                            {field.label}
+                            {field.required ? <span className="required"> *</span> : null}
+                          </span>
+                          <input
+                            className="input"
+                            placeholder={field.placeholder}
+                            value={String(connectionConfig[field.key] ?? "")}
+                            onChange={(event) =>
+                              setConnectionConfig((current) => ({
+                                ...current,
+                                [field.key]: event.target.value,
+                              }))
+                            }
+                          />
+                          {field.help ? (
+                            <span className="field-hint">{field.help}</span>
+                          ) : null}
+                        </label>
+                      ))}
+                      {connectionSpec.secretFields.map((field) => (
+                        <label className="field" key={`secret-${field.key}`}>
+                          <span className="field-label">
+                            {field.label}
+                            {field.required ? <span className="required"> *</span> : null}
+                          </span>
+                          <input
+                            className="input"
+                            type={field.type === "password" ? "password" : "text"}
+                            autoComplete="off"
+                            value={String(connectionSecret[field.key] ?? "")}
+                            onChange={(event) =>
+                              setConnectionSecret((current) => ({
+                                ...current,
+                                [field.key]: event.target.value,
+                              }))
+                            }
+                          />
+                          {field.help ? (
+                            <span className="field-hint">{field.help}</span>
+                          ) : null}
+                        </label>
+                      ))}
+                    </>
+                  )}
+                </>
+              ) : null}
+              {sourceDialog.kind === "mcp" ? (
+                <>
+                  <label className="field">
+                    <span className="field-label">
+                      MCP server <span className="required">*</span>
+                    </span>
+                    <select
+                      className="select"
+                      value={String(sourceConfig.serverId ?? "")}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          serverId: event.target.value,
+                          tool: "",
+                        }))
+                      }
+                    >
+                      <option value="">Select a saved MCP server</option>
+                      {mcpServers.map((server) => (
+                        <option key={server.id} value={server.id}>
+                          {server.name} · {server.status}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="field-hint">
+                      Manage servers under{" "}
+                      <Link href="/build/tools" className="link">
+                        Build → Tools
+                      </Link>
+                      .
+                    </span>
+                  </label>
+                  <label className="field">
+                    <span className="field-label">
+                      Tool <span className="required">*</span>
+                    </span>
+                    <select
+                      className="select"
+                      value={String(sourceConfig.tool ?? "")}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          tool: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Select a tool</option>
+                      {(selectedMcpServer?.tools || []).map((tool) => (
+                        <option key={tool.name} value={tool.name}>
+                          {tool.name}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedMcpServer && selectedMcpServer.tools.length === 0 ? (
+                      <span className="field-hint">
+                        This server advertises no tools. Test it under Build → Tools
+                        first.
+                      </span>
+                    ) : null}
+                  </label>
+                  <label className="field">
+                    <span className="field-label">Query argument</span>
+                    <input
+                      className="input"
+                      placeholder="query"
+                      value={String(sourceConfig.queryArgument ?? "query")}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          queryArgument: event.target.value,
+                        }))
+                      }
+                    />
+                    <span className="field-hint">
+                      The argument the tool expects for the search text.
+                    </span>
+                  </label>
+                  <label className="field">
+                    <span className="field-label">Query format</span>
+                    <select
+                      className="select"
+                      value={String(sourceConfig.queryFormat ?? "string")}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          queryFormat: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="string">string</option>
+                      <option value="query_variants">query_variants (string array)</option>
+                    </select>
+                  </label>
+                </>
+              ) : null}
+              {sourceDialog.kind === "mcp"
+                ? null
+                : sourceDialog.fields.map((field) => (
+                <label className="field" key={field.key}>
+                  <span className="field-label">
+                    {field.label}
+                    {field.required ? <span className="required"> *</span> : null}
+                  </span>
+                  {field.type === "boolean" ? (
+                    <input
+                      type="checkbox"
+                      checked={sourceConfig[field.key] === true}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          [field.key]: event.target.checked,
+                        }))
+                      }
+                    />
+                  ) : field.type === "list" ? (
+                    <textarea
+                      className="textarea"
+                      style={{ minHeight: 72 }}
+                      placeholder={field.placeholder}
+                      value={String(sourceConfig[field.key] ?? "")}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          [field.key]: event.target.value,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <input
+                      className="input"
+                      type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
+                      placeholder={field.placeholder}
+                      value={String(sourceConfig[field.key] ?? "")}
+                      onChange={(event) =>
+                        setSourceConfig((current) => ({
+                          ...current,
+                          [field.key]: event.target.value,
+                        }))
+                      }
+                    />
+                  )}
+                  {field.help ? <span className="field-hint">{field.help}</span> : null}
+                </label>
+              ))}
+              {lastJob ? <div className="banner">{lastJob}</div> : null}
+              <p className="muted text-12">
+                {sourceDialog.mode === "indexed"
+                  ? "Saving runs the first sync immediately. The source only shows Ready once content is indexed."
+                  : "This source is queried live and is never indexed."}
+              </p>
+            </div>
+            <div className="dialog-footer">
+              <button className="btn btn-secondary" onClick={dismissSourceDialog}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={
+                  sourceBusy ||
+                  Boolean(
+                    sourceDialog.connectionProvider &&
+                      (connectionMode === "saved" || connectionSpec?.oauth) &&
+                      !sourceConnectionId
+                  )
+                }
+                onClick={submitSource}
+              >
+                {sourceBusy ? <Spinner /> : null}
+                {sourceDialog.mode === "indexed" && sourceDialog.kind !== "file"
+                  ? "Create and index"
+                  : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pasteOpen && (
         <div

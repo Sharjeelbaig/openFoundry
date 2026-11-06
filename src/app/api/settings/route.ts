@@ -130,6 +130,27 @@ export async function PATCH(req: NextRequest) {
   if (body.huggingFacePath !== undefined) {
     next.huggingFacePath = body.huggingFacePath.trim();
   }
+  if (body.imageProvider !== undefined) {
+    if (!["auto", "automatic1111", "openai"].includes(body.imageProvider)) {
+      return NextResponse.json(
+        { error: "Image provider must be auto, automatic1111 or openai." },
+        { status: 400 }
+      );
+    }
+    next.imageProvider = body.imageProvider;
+  }
+  if (body.imageUrl !== undefined) {
+    const value = body.imageUrl.trim().replace(/\/+$/, "");
+    if (!validUrl(value))
+      return NextResponse.json({ error: "Image runtime URL is not valid." }, { status: 400 });
+    next.imageUrl = value;
+  }
+  if (body.imageApiKey !== undefined) {
+    next.imageApiKey = body.imageApiKey.trim();
+  }
+  if (body.imageModel !== undefined) {
+    next.imageModel = body.imageModel.trim();
+  }
   if (body.onboarded !== undefined) next.onboarded = Boolean(body.onboarded);
   if (body.termsAccepted !== undefined)
     next.termsAccepted = Boolean(body.termsAccepted);

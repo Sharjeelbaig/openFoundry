@@ -1,0 +1,6 @@
+{
+  "vendor": "Contoso Ltd.",
+  "invoice": "INV-9999",
+  "total": 777.0,
+  "vendor_code": null
+}

@@ -1,0 +1,176 @@
+{
+  "unauthorized_status": 401,
+  "acme_initial": {
+    "tenantId": "acme",
+    "total": 0,
+    "bytes": 0,
+    "quotaResponses": 2,
+    "quotaBytes": 100000,
+    "owners": [],
+    "oldest": null,
+    "newest": null
+  },
+  "globex_initial": {
+    "tenantId": "globex",
+    "total": 0,
+    "bytes": 0,
+    "quotaResponses": 10,
+    "quotaBytes": 100000,
+    "owners": [],
+    "oldest": null,
+    "newest": null
+  },
+  "first_response_id": "resp_mw4tm4rpc2528h",
+  "first_response": {
+    "id": "resp_mw4tm4rpc2528h",
+    "object": "response",
+    "created_at": 1793960251,
+    "status": "completed",
+    "model": "gemma4:31b-cloud",
+    "output": [
+      {
+        "id": "msg_mw4tm4rp3xkhyt",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "tenant acme works.",
+            "annotations": []
+          }
+        ]
+      }
+    ],
+    "parallel_tool_calls": true,
+    "tool_choice": "none",
+    "tools": [],
+    "instructions": null,
+    "metadata": {},
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "max_output_tokens": null,
+    "previous_response_id": null,
+    "error": null,
+    "incomplete_details": null,
+    "usage": {
+      "input_tokens": 22,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens": 6,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 28
+    }
+  },
+  "acme_after_b": {
+    "tenantId": "acme",
+    "total": 1,
+    "bytes": 417,
+    "quotaResponses": 2,
+    "quotaBytes": 100000,
+    "owners": [
+      {
+        "ownerId": "project",
+        "count": 1
+      }
+    ],
+    "oldest": "2026-11-06T10:17:31.060Z",
+    "newest": "2026-11-06T10:17:31.060Z"
+  },
+  "globex_after_b": {
+    "tenantId": "globex",
+    "total": 0,
+    "bytes": 0,
+    "quotaResponses": 10,
+    "quotaBytes": 100000,
+    "owners": [],
+    "oldest": null,
+    "newest": null
+  },
+  "globex_load_acme": {
+    "response": null
+  },
+  "acme_second_status": 200,
+  "acme_third": {
+    "error": "Tenant \"acme\" has reached its response quota (2).",
+    "code": "quota_exceeded"
+  },
+  "acme_policy": {
+    "maxResponsesPerOwner": 1,
+    "ttlDays": 30
+  },
+  "globex_policy": {
+    "maxResponsesPerOwner": 200,
+    "ttlDays": 7
+  },
+  "acme_after_policy": {
+    "tenantId": "acme",
+    "total": 1,
+    "bytes": 93,
+    "quotaResponses": 2,
+    "quotaBytes": 100000,
+    "owners": [
+      {
+        "ownerId": "project",
+        "count": 1
+      }
+    ],
+    "oldest": "2026-11-06T10:17:31.085Z",
+    "newest": "2026-11-06T10:17:31.085Z"
+  },
+  "acme_audit": {
+    "entries": [
+      {
+        "id": 4,
+        "tenantId": "acme",
+        "action": "prune",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T10:17:31.095Z",
+        "detail": {
+          "deleted": 1
+        }
+      },
+      {
+        "id": 3,
+        "tenantId": "acme",
+        "action": "policy",
+        "responseId": null,
+        "ownerId": null,
+        "bytes": 0,
+        "at": "2026-11-06T10:17:31.095Z",
+        "detail": {
+          "maxResponsesPerOwner": 1,
+          "ttlDays": 30
+        }
+      },
+      {
+        "id": 2,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_acme_second",
+        "ownerId": "project",
+        "bytes": 93,
+        "at": "2026-11-06T10:17:31.085Z",
+        "detail": null
+      },
+      {
+        "id": 1,
+        "tenantId": "acme",
+        "action": "save",
+        "responseId": "resp_mw4tm4rpc2528h",
+        "ownerId": "project",
+        "bytes": 417,
+        "at": "2026-11-06T10:17:31.061Z",
+        "detail": null
+      }
+    ]
+  },
+  "globex_audit": {
+    "entries": []
+  }
+}

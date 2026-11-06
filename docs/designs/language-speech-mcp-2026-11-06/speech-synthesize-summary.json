@@ -1,0 +1,21 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content_types": [
+      "audio",
+      "text"
+    ],
+    "audio": {
+      "mimeType": "audio/wav",
+      "bytes": 113484,
+      "riff": "RIFF"
+    },
+    "structuredContent": {
+      "engine": "macOS say (Samantha)",
+      "filename": "speech.wav",
+      "mime": "audio/wav",
+      "bytes": 113484
+    }
+  }
+}

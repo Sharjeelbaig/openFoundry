@@ -152,6 +152,10 @@ export default function ProjectDetailsPage() {
           lmStudioUrl: edit.lmStudioUrl,
           llamaCppUrl: edit.llamaCppUrl,
           huggingFacePath: edit.huggingFacePath,
+          imageProvider: edit.imageProvider,
+          imageUrl: edit.imageUrl,
+          imageApiKey: edit.imageApiKey,
+          imageModel: edit.imageModel,
         }),
       });
       const json = (await res.json()) as { settings?: LocalSettings; error?: string };
@@ -657,6 +661,77 @@ export default function ProjectDetailsPage() {
                   />
                   <span className="field-hint">Usually http://127.0.0.1:8080</span>
                 </label>
+                <label className="field">
+                  <span className="field-label">Image runtime</span>
+                  <select
+                    className="select"
+                    value={edit.imageProvider}
+                    onChange={(event) =>
+                      setEdit((current) =>
+                        current
+                          ? {
+                              ...current,
+                              imageProvider: event.target.value as LocalSettings["imageProvider"],
+                            }
+                          : current
+                      )
+                    }
+                  >
+                    <option value="auto">Auto-detect</option>
+                    <option value="automatic1111">AUTOMATIC1111 / Forge / SD.Next</option>
+                    <option value="openai">OpenAI-compatible image server</option>
+                  </select>
+                  <span className="field-hint">
+                    Auto probes 7860 (AUTOMATIC1111) and 8080 (OpenAI-compatible).
+                  </span>
+                </label>
+                <label className="field">
+                  <span className="field-label">Image runtime URL</span>
+                  <input
+                    className="input mono"
+                    value={edit.imageUrl}
+                    placeholder="http://127.0.0.1:7860"
+                    onChange={(event) =>
+                      setEdit((current) =>
+                        current ? { ...current, imageUrl: event.target.value } : current
+                      )
+                    }
+                  />
+                  <span className="field-hint">
+                    Leave blank to probe the default ports.
+                  </span>
+                </label>
+                <label className="field">
+                  <span className="field-label">Default image model</span>
+                  <input
+                    className="input mono"
+                    value={edit.imageModel}
+                    placeholder="Optional checkpoint or model id"
+                    onChange={(event) =>
+                      setEdit((current) =>
+                        current ? { ...current, imageModel: event.target.value } : current
+                      )
+                    }
+                  />
+                </label>
+                {edit.imageProvider === "openai" ? (
+                  <label className="field">
+                    <span className="field-label">Image runtime API key</span>
+                    <input
+                      className="input mono"
+                      type="password"
+                      value={edit.imageApiKey}
+                      onChange={(event) =>
+                        setEdit((current) =>
+                          current ? { ...current, imageApiKey: event.target.value } : current
+                        )
+                      }
+                    />
+                    <span className="field-hint">
+                      Only needed when the local image server requires a bearer token.
+                    </span>
+                  </label>
+                ) : null}
                 <label className="field">
                   <span className="field-label">Hugging Face cache path</span>
                   <input

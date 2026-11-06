@@ -1,0 +1,43 @@
+7B 4-BIT QLoRA — LIVE RESULT
+============================
+
+Model: mlx-community/Qwen2.5-7B-Instruct-4bit (4.28 GB, 4-bit)
+Method: QLoRA, rank 8, 8 adapted layers, lr 5e-6, 40 iterations,
+        max sequence 512, gradient checkpointing, seed 7.
+Machine: Apple M1, 8 GB unified memory, 17.65 GB free disk at preflight.
+Peak training footprint: 5.389 GB (CLI measurement of the same configuration).
+App training time: 5m46s including base and tuned evaluation.
+
+Held-out result (5 documents, 20 field checks):
+  base:  75% (15/20)
+  tuned: 100% (20/20)
+  vendor_code: 0/5 base -> 5/5 tuned
+
+Foundation extraction of a held-out invoice:
+  vendor        Contoso Ltd.  (grounded)
+  invoice       INV-9999      (grounded)
+  total         777           (grounded)
+  vendor_code   CTSO          (derived, confidence 0.70)
+
+Important implementation note:
+  mlx_lm.fuse on the pre-quantized checkpoint produced a 4.0 GB model that
+  returned vendor_code null. The app therefore keeps the 4-bit base checkpoint
+  and loads the adapter beside it for QLoRA inference. Adapter-only inference
+  returns CTSO correctly.
+
+Honest negative:
+  The first 40-iteration run at lr 1e-5 reached NaN at iterations 30 and 40.
+  The validated default for this 7B 4-bit model is lr 5e-6 for 40 iterations;
+  the 1e-5 log is kept in train-7b-lr1e-5-nan.txt.
+
+Evidence:
+  preflight.json          hardware check and exact requirements
+  app-train-result.json   app API training response and metrics
+  app-extract.json        app extraction with engine=foundation
+  app-metrics.png         UI showing the 7B QLoRA metrics
+  train-7b-lr5e6.txt      stable 40-iteration training log
+  train-7b-lr1e-5-nan.txt diverged 1e-5 run
+  fuse-bug.txt            fused quantized model loses the adapter
+  adapter-inference.txt   base + adapter returns CTSO
+  adapter_config.json     saved adapter configuration
+  hardware.txt            hardware/run summary
