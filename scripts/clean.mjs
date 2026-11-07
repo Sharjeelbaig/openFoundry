@@ -24,6 +24,14 @@ const targets = [
   "landing-src/.build",
   "node_modules/.cache",
   "tsconfig.tsbuildinfo",
+  // Android packaging: the downloaded Node/llama.cpp inputs, the staged server
+  // zip and the generated project's build outputs. The next Android build
+  // re-creates all of them.
+  ".android-cache",
+  "src-tauri/gen/android/app/build",
+  "src-tauri/gen/android/app/src/main/jniLibs",
+  "src-tauri/gen/android/.gradle",
+  "src-tauri/gen/android/app/src/main/assets/openfoundry-server.zip",
 ];
 
 function sizeKb(target) {
