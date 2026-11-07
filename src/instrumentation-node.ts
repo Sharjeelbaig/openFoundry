@@ -43,4 +43,12 @@ export async function register() {
 
   const { startVoiceWebSocketServer } = await import("./lib/voice-ws-server");
   startVoiceWebSocketServer();
+
+  // On a phone the bundled llama.cpp runtime is the only local model server.
+  // Start it at boot when a model is already downloaded so the Models and
+  // Providers screens are live without visiting settings first.
+  if (process.env.OPENFOUNDRY_DISABLE_RUNTIME !== "1") {
+    const { autoStartOnDeviceRuntime } = await import("./lib/llamacpp-runtime");
+    void autoStartOnDeviceRuntime();
+  }
 }

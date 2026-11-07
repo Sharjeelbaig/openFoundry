@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>openFoundry</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+        background: linear-gradient(to top, rgba(100,63,178,.09), rgba(100,63,178,0) 240px),
+          radial-gradient(760px 420px at 50% -8%, rgba(100,63,178,.16), transparent 62%), #0f0f0f;
+        color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { text-align: center; padding: 24px; }
+      .mark { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 12px;
+        background: #1f1f1f; display: grid; place-items: center;
+        box-shadow: 0 16px 60px rgba(0,0,0,.4); font-size: 24px; font-weight: 700; }
+      h1 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
+      p { margin: 0; color: #adadad; font-size: 13px; line-height: 19px; }
+      .dots { display: flex; justify-content: center; gap: 5px; margin-top: 18px; }
+      .dots span { width: 5px; height: 5px; border-radius: 50%; background: #8251ee;
+        animation: pulse 1.2s ease-in-out infinite; }
+      .dots span:nth-child(2) { animation-delay: .15s; }
+      .dots span:nth-child(3) { animation-delay: .3s; }
+      @keyframes pulse { 0%,100% { opacity:.35; transform:translateY(0); } 50% { opacity:1; transform:translateY(-2px); } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark">F</div>
+      <h1>openFoundry</h1>
+      <p id="status">Starting the local server…</p>
+      <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    </main>
+    <script>
+      const target = "http://127.0.0.1:31337/";
+      let attempts = 0;
+      async function waitForServer() {
+        attempts += 1;
+        try {
+          await fetch(target, { mode: "no-cors", cache: "no-store" });
+          document.getElementById("status").textContent = "Opening your workspace…";
+          window.location.replace(target);
+          return;
+        } catch {
+          if (attempts > 120) {
+            document.getElementById("status").textContent =
+              "The local server did not start. Close and reopen the app.";
+            return;
+          }
+          setTimeout(waitForServer, 500);
+        }
+      }
+      waitForServer();
+    </script>
+  </body>
+</html>

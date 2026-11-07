@@ -1054,3 +1054,51 @@ export interface ToolApprovalState {
   policy: ToolApprovalPolicy;
   history: ToolApprovalRecord[];
 }
+
+/** A small GGUF the on-device llama.cpp runtime can download and serve. */
+export interface OnDeviceModelSpec {
+  file: string;
+  name: string;
+  params: string;
+  quantization: string;
+  sizeBytes: number;
+  url: string;
+  license: string;
+  description: string;
+  recommendedRamBytes: number;
+}
+
+export interface DownloadedModel {
+  file: string;
+  sizeBytes: number;
+  spec?: OnDeviceModelSpec;
+}
+
+export interface DownloadState {
+  file: string;
+  received: number;
+  total: number;
+  error?: string;
+}
+
+export interface OnDeviceRuntimeStatus {
+  /** True when the bundled executable and its libraries are present. */
+  available: boolean;
+  /** True when this process is a mobile/bundled runtime rather than a desktop. */
+  mobile: boolean;
+  platform: string;
+  binary: string | null;
+  libDir: string | null;
+  modelsDir: string;
+  port: number;
+  running: boolean;
+  ready: boolean;
+  pid: number | null;
+  model: string | null;
+  models: DownloadedModel[];
+  catalog: OnDeviceModelSpec[];
+  downloads: DownloadState[];
+  logs: string[];
+  note?: string;
+  error?: string;
+}

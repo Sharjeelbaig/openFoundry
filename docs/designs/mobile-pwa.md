@@ -1,19 +1,22 @@
-# Mobile layer: installable PWA + Termux server
+# Mobile layer
 
-The mobile layer is not an APK. It is the same responsive openFoundry workspace,
-installed from the browser as a PWA, with two supported hosting paths:
+openFoundry runs on a phone. There are three supported ways to do that, in order
+of how self-contained they are:
 
-1. **Termux on the phone** — Termux runs a native Android Node.js build, so the
-   Next.js server runs on the device itself.
-2. **A desktop or LAN server** — open the workspace from the phone browser, or
-   use a HTTPS endpoint if you need installability.
+1. **The Android app (recommended).** A Tauri APK with a bundled Node.js runtime
+   and llama.cpp. It runs the whole workspace and serves GGUF models on the
+   device, with no Termux, no second app and no computer on the network. See
+   [android-apk-assessment.md](./android-apk-assessment.md) for how it is built
+   and what it can do.
+2. **Termux on the phone.** Install Node in Termux and run the server there, then
+   open the workspace in the phone browser as an installable PWA.
+3. **A desktop or LAN server.** Open the workspace from the phone browser, or use
+   an HTTPS endpoint if you need installability over the network.
 
-This is the honest mobile option for this codebase. The research below explains
-why Tauri and React Native cannot host the current server directly.
+The rest of this document covers the Termux and LAN paths and the research behind
+them. The Android app is the built-in option.
 
-## What the research found
-
-### Termux
+## Termux
 
 Termux is not an emulator or a Linux virtual machine. Its packages are
 cross-compiled with the Android NDK and installed as native binaries in the
@@ -26,35 +29,25 @@ Termux app's private directory:
 
 That is why `pkg install nodejs-lts` gives a real Node.js runtime with HTTP,
 filesystem and child-process APIs. It is a native Android build, not the macOS
-or Linux desktop binary.
+or Linux desktop binary. The Android app uses this same Node build, packaged
+inside the app instead of installed by Termux.
 
-### Tauri mobile
+### Tauri mobile sidecars
 
-Tauri 2 supports Android and iOS, and `tauri android init` works on this machine.
-However, Tauri's sidecar/`externalBin` feature is **not supported on mobile**.
-The maintainers' tracking issue is still open:
+Tauri's sidecar/`externalBin` feature is not supported on mobile
+(<https://github.com/tauri-apps/tauri/issues/9774>). The Android app works around
+this by naming its executables `lib*.so` and placing them in `jniLibs/<abi>`, then
+starting them from Android's `nativeLibraryDir`. That is deliberately a build
+detail of the app, not a desktop sidecar.
 
-- <https://github.com/tauri-apps/tauri/issues/9774>
+### React Native and Node.js Mobile
 
-The issue discussion includes an unsupported workaround: naming an executable
-`lib*.so` and placing it in `jniLibs/<abi>`, then starting it from Android's
-`nativeLibraryDir`. That is a hack around Android 10+ executable restrictions,
-not a supported Tauri feature.
+React Native's JavaScript runtime is not Node.js: no HTTP server, `fs`,
+`child_process` or native module loading, so it cannot run the Next.js server.
+Node.js for Mobile Apps is a real embedded Node library, but its latest release
+is Node 18.20.4 and Next.js 16 needs Node 20.9 or newer.
 
-### React Native
-
-React Native's JavaScript runtime is not Node.js. It does not provide Node's
-HTTP server, `fs`, `child_process` or native module loading, so it cannot run the
-Next.js server.
-
-### Node.js Mobile
-
-Node.js for Mobile Apps is a real embedded Node.js library with React Native and
-Cordova plugins. Its latest release is Node **18.20.4**. Next.js 16 requires Node
-20.9 or newer, so the current Node.js Mobile release cannot run this app without
-downgrading Next or maintaining a custom Node build.
-
-## What was added
+## The PWA (works with Termux or a LAN server)
 
 - `src/app/manifest.ts` — installable web-app manifest.
 - `public/sw.js` — static-asset service worker for the installed app shell.
@@ -120,18 +113,6 @@ an installable PWA unless you put HTTPS in front of it.
 
 The desktop app itself binds to `127.0.0.1` and is not reachable from the phone.
 
-## Why no APK
-
-A Tauri APK would need a Node runtime and a Next server on Android. Tauri mobile
-does not support that sidecar, and Node.js Mobile's current Node 18 release is
-too old for Next 16. Building a custom Node 24 Android binary and packaging it
-through the `jniLibs/libnode.so` workaround is possible, but it is unsupported,
-fragile and not something to ship as a production APK without a separate mobile
-engineering effort.
-
-The PWA + Termux path uses a supported native Node runtime and is testable
-today.
-
 ## Verification
 
 The standalone build was served locally and checked with Chrome:
@@ -143,19 +124,26 @@ The standalone build was served locally and checked with Chrome:
 - Chrome installability check → no errors
 - Service worker → active and controlling the page
 
+The Android app was verified on an arm64 Android 34 emulator: clean install,
+model download, runtime start and a streamed chat through openFoundry's own API.
+See [android-apk-assessment.md](./android-apk-assessment.md).
+
 The Termux script was syntax-checked but not run on an Android device in this
-environment. The standalone server and PWA paths were tested on macOS.
+environment; the standalone server and PWA paths were tested on macOS.
 
 ## Limits
 
-- The phone must keep Termux (or a LAN server) running.
-- Android can kill background processes; use `termux-wake-lock` and keep the app
-  in the foreground for long sessions.
+- The Android app is arm64-only and currently a debug build; see its document
+  for model-size limits.
+- The Termux path requires Termux to stay running and uses more storage, since
+  Node and the build are installed separately.
+- Android can kill background processes; keep the app in the foreground for long
+  sessions, and use `termux-wake-lock` under Termux.
 - A PWA is not a native app: no native push, no native menu, no background
   service.
 - Service-worker caching is limited to static assets; the workspace is always
   served live.
 - LAN HTTP is visible on the network. Use a trusted network and the built-in
   sign-in/RBAC; use HTTPS for anything beyond a trusted LAN.
-- iOS cannot use Termux. It needs a desktop/LAN HTTPS server for a proper PWA
-  install.
+- iOS has no bundled-runtime path; it needs a desktop/LAN HTTPS server for a
+  proper PWA install.

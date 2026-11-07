@@ -20,6 +20,7 @@ import {
 import { formatDate, formatNumber, useApi, useDeployments, useModels } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import UsersTab from "@/components/manage/UsersTab";
+import OnDeviceRuntime from "@/components/manage/OnDeviceRuntime";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import type {
   Agent,
@@ -377,7 +378,9 @@ export default function ProjectDetailsPage() {
               {tab === "Users" && <UsersTab />}
 
               {tab === "Connected resources" && (
-                <div className="table-card">
+                <>
+                  <OnDeviceRuntime />
+                  <div className="table-card">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -411,6 +414,7 @@ export default function ProjectDetailsPage() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
 
               {tab === "Admin-connected models" && (

@@ -8,22 +8,23 @@
 // it to answer, and points the window at it. Workspace data is written to the
 // OS app-data directory instead of the read-only application bundle.
 
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 use std::net::{TcpListener, TcpStream};
 use std::sync::Mutex;
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 use std::thread;
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 use std::time::Duration;
 
 use tauri::{Manager, RunEvent};
 use tauri_plugin_shell::process::CommandChild;
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 use tauri_plugin_shell::ShellExt;
 
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 struct ServerProcess(Mutex<Option<CommandChild>>);
 
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 fn free_port() -> u16 {
     TcpListener::bind(("127.0.0.1", 0))
         .and_then(|listener| listener.local_addr())
@@ -31,7 +32,7 @@ fn free_port() -> u16 {
         .unwrap_or(3210)
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 fn machine_key(data_dir: &std::path::Path) -> Option<String> {
     // The server writes this file while it boots. It is the shell's proof that
     // it can read the same data directory, so no sign-in prompt is needed.
@@ -47,7 +48,7 @@ fn machine_key(data_dir: &std::path::Path) -> Option<String> {
     None
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 fn navigate_when_ready(
     window: tauri::WebviewWindow,
     url: String,
@@ -75,7 +76,7 @@ fn navigate_when_ready(
     });
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
 fn url_port(url: &str) -> u16 {
     url.rsplit(':')
         .next()
@@ -89,9 +90,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            #[cfg(debug_assertions)]
+            #[cfg(any(debug_assertions, target_os = "android", target_os = "ios"))]
             let _ = app;
-            #[cfg(not(debug_assertions))]
+            #[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
             {
                 let window = app
                     .get_webview_window("main")
@@ -160,14 +161,21 @@ pub fn run() {
         .expect("error while building openFoundry");
 
     app.run(|app_handle, event| {
-        if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {
-            if let Some(server) = app_handle.try_state::<ServerProcess>() {
-                if let Ok(mut child) = server.0.lock() {
-                    if let Some(process) = child.take() {
-                        let _ = process.kill();
+        #[cfg(all(not(debug_assertions), not(any(target_os = "android", target_os = "ios"))))]
+        {
+            if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {
+                if let Some(server) = app_handle.try_state::<ServerProcess>() {
+                    if let Ok(mut child) = server.0.lock() {
+                        if let Some(process) = child.take() {
+                            let _ = process.kill();
+                        }
                     }
                 }
             }
+        }
+        #[cfg(any(debug_assertions, target_os = "android", target_os = "ios"))]
+        {
+            let _ = (app_handle, event);
         }
     });
 }

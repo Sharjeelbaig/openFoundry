@@ -10682,3 +10682,78 @@ svg {
     display: none;
   }
 }
+
+/* On-device llama.cpp runtime (Manage → Connected resources). */
+.runtime-card {
+  background: var(--surface-card);
+  border-radius: var(--card-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.runtime-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.runtime-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.runtime-sub {
+  margin: 4px 0 0;
+  color: var(--fg-3);
+  font-size: 13px;
+  max-width: 62ch;
+}
+.runtime-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.runtime-note {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 13px;
+}
+.runtime-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.runtime-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.runtime-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--brand-hover);
+  min-width: 4px;
+}
+.runtime-logs summary {
+  cursor: pointer;
+  color: var(--fg-3);
+  font-size: 13px;
+}
+.runtime-logs pre {
+  margin: 8px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 12px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

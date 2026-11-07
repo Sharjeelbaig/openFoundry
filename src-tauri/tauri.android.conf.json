@@ -1,0 +1,22 @@
+{
+  "build": {
+    "beforeBuildCommand": "npm run build && node scripts/prepare-android.mjs",
+    "frontendDist": "mobile"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "openFoundry",
+        "width": 400,
+        "height": 800,
+        "minWidth": 0,
+        "minHeight": 0,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+  "bundle": {
+    "resources": []
+  }
+}

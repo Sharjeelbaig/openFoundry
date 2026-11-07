@@ -104,6 +104,7 @@ const RULES: Rule[] = [
   { pattern: /^\/api\/oauth\/token$/, actions: { GET: "connections.read" } },
   { pattern: /^\/api\/quota-requests$/, actions: { GET: "quota.read", POST: "quota.write", PATCH: "quota.write" } },
   { pattern: /^\/api\/routines(\/.*)?$/, actions: { GET: "routines.read", POST: "routines.write", PATCH: "routines.write", DELETE: "routines.write" } },
+  { pattern: /^\/api\/runtime$/, actions: { GET: "models.read", POST: "models.write" } },
   { pattern: /^\/api\/settings$/, actions: { GET: "settings.read", PATCH: "settings.write" } },
   { pattern: /^\/api\/responses\/retention$/, actions: { GET: "settings.read", POST: "settings.write" } },
   { pattern: /^\/api\/responses\/tenants$/, actions: { GET: "settings.read", POST: "settings.write" } },
