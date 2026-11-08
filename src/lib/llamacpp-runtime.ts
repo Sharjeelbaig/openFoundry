@@ -89,6 +89,8 @@ interface Running {
 const globalRuntime = globalThis as unknown as {
   __openFoundryLlama?: {
     running: Running | null;
+    /** A llama-server inherited from a previous Node process. */
+    externalPid: number | null;
     downloads: Map<string, DownloadState>;
     logs: string[];
   };
@@ -98,6 +100,7 @@ function state() {
   if (!globalRuntime.__openFoundryLlama) {
     globalRuntime.__openFoundryLlama = {
       running: null,
+      externalPid: null,
       downloads: new Map(),
       logs: [],
     };
@@ -137,6 +140,10 @@ function libDirPath(): string | null {
   return fromEnv || null;
 }
 
+function pidFile(): string {
+  return path.join(dataDir(), "llama.pid");
+}
+
 async function fileExists(target: string): Promise<boolean> {
   try {
     await fs.access(target);
@@ -144,6 +151,116 @@ async function fileExists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Only claim a PID we can prove is llama-server. A recycled PID belonging to
+ * another process must never be signalled.
+ */
+async function looksLikeLlamaServer(pid: number): Promise<boolean> {
+  if (process.platform !== "android" && process.platform !== "linux") return false;
+  try {
+    const cmdline = await fs.readFile(`/proc/${pid}/cmdline`, "utf8");
+    return /libllamaserver\.so|llama-server/.test(cmdline);
+  } catch {
+    return false;
+  }
+}
+
+async function waitForExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processAlive(pid)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return !processAlive(pid);
+}
+
+async function stopPid(pid: number): Promise<void> {
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    return;
+  }
+  if (await waitForExit(pid, 4000)) return;
+  try {
+    process.kill(pid, "SIGKILL");
+  } catch {
+    // already gone
+  }
+  await waitForExit(pid, 1000);
+}
+
+async function writePidFile(pid: number): Promise<void> {
+  try {
+    await fs.writeFile(pidFile(), String(pid), { mode: 0o600 });
+  } catch {
+    // A missing PID file only costs us orphan cleanup on the next boot.
+  }
+}
+
+async function clearPidFile(pid?: number): Promise<void> {
+  try {
+    if (pid !== undefined) {
+      const current = Number((await fs.readFile(pidFile(), "utf8")).trim());
+      if (current !== pid) return;
+    }
+    await fs.rm(pidFile(), { force: true });
+  } catch {
+    // Nothing to clear.
+  }
+}
+
+/**
+ * Reconcile the PID file left by a previous server process.
+ *
+ * Android can outlive the Node process that spawned llama-server. If the
+ * recorded process is still ours and answers `/health` we adopt it instead of
+ * starting a second model; if it is ours but stuck we stop it; if the PID now
+ * belongs to something else we only drop the file.
+ */
+async function reconcileRuntime(): Promise<void> {
+  const store = state();
+  if (store.running || store.externalPid) return;
+
+  let pid: number | null = null;
+  try {
+    pid = Number((await fs.readFile(pidFile(), "utf8")).trim()) || null;
+  } catch {
+    return;
+  }
+  if (!pid || pid === process.pid) {
+    await clearPidFile();
+    return;
+  }
+  if (!processAlive(pid)) {
+    await clearPidFile();
+    return;
+  }
+  if (!(await looksLikeLlamaServer(pid))) {
+    // The PID was recycled. Leave the unrelated process alone.
+    await clearPidFile();
+    return;
+  }
+
+  if (await isReady()) {
+    store.externalPid = pid;
+    pushLog(`Adopted the running llama-server (pid ${pid})`);
+    return;
+  }
+
+  pushLog(`Stopping an unresponsive llama-server (pid ${pid})`);
+  await stopPid(pid);
+  await clearPidFile(pid);
 }
 
 /** Whether the bundled runtime payload is present and executable. */
@@ -189,6 +306,14 @@ export async function runtimeStatus(): Promise<OnDeviceRuntimeStatus> {
   const running = store.running;
   const alive = running && running.child.exitCode === null ? running : null;
   if (running && running.child.exitCode !== null) store.running = null;
+
+  let external = store.externalPid;
+  if (external && !processAlive(external)) {
+    store.externalPid = null;
+    external = null;
+  }
+  const externalReady = external ? await isReady() : false;
+
   return {
     available,
     mobile,
@@ -197,9 +322,9 @@ export async function runtimeStatus(): Promise<OnDeviceRuntimeStatus> {
     libDir,
     modelsDir: modelsDir(),
     port: onDevicePort(),
-    running: Boolean(alive),
-    ready: Boolean(alive?.ready),
-    pid: alive?.child.pid ?? null,
+    running: Boolean(alive || external),
+    ready: Boolean(alive?.ready || externalReady),
+    pid: alive?.child.pid ?? external ?? null,
     model: alive?.model ?? null,
     models,
     catalog: ON_DEVICE_MODELS,
@@ -226,28 +351,38 @@ async function isReady(): Promise<boolean> {
 export async function stopOnDeviceRuntime(): Promise<void> {
   const store = state();
   const running = store.running;
-  if (!running) return;
+  const external = store.externalPid;
   store.running = null;
-  const child = running.child;
-  try {
-    child.kill("SIGTERM");
-  } catch {
-    // already gone
-  }
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      try {
-        child.kill("SIGKILL");
-      } catch {
-        // already gone
-      }
-      resolve();
-    }, 4000);
-    child.once("exit", () => {
-      clearTimeout(timer);
-      resolve();
+  store.externalPid = null;
+
+  if (running) {
+    const child = running.child;
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      // already gone
+    }
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        try {
+          child.kill("SIGKILL");
+        } catch {
+          // already gone
+        }
+        resolve();
+      }, 4000);
+      child.once("exit", () => {
+        clearTimeout(timer);
+        resolve();
+      });
     });
-  });
+    if (child.pid) await clearPidFile(child.pid);
+  }
+
+  if (external) {
+    await stopPid(external);
+    await clearPidFile(external);
+  }
 }
 
 export async function startOnDeviceRuntime(
@@ -265,6 +400,11 @@ export async function startOnDeviceRuntime(
   if (!binary || !libDir || !(await runtimeAvailable())) {
     return { ok: false, error: "The on-device llama.cpp runtime is not available in this build." };
   }
+
+  await reconcileRuntime();
+  // An adopted server may be serving a different model than the caller asked
+  // for. Replace it rather than silently returning success for the wrong file.
+  if (store.externalPid) await stopOnDeviceRuntime();
 
   const current = store.running;
   if (current && current.child.exitCode === null) {
@@ -296,11 +436,13 @@ export async function startOnDeviceRuntime(
   const child = spawn(binary, args, { env, stdio: ["ignore", "pipe", "pipe"] });
   const running: Running = { child, model: file, ready: false };
   store.running = running;
+  if (child.pid) await writePidFile(child.pid);
   child.stdout?.on("data", (buf: Buffer) => pushLog(buf.toString()));
   child.stderr?.on("data", (buf: Buffer) => pushLog(buf.toString()));
   child.on("exit", (code) => {
     pushLog(`llama-server exited with code ${code ?? "null"}`);
     if (store.running?.child === child) store.running = null;
+    if (child.pid) void clearPidFile(child.pid);
   });
   child.on("error", (error) => pushLog(`llama-server failed to start: ${error.message}`));
 
@@ -328,6 +470,7 @@ export async function startOnDeviceRuntime(
  */
 export async function autoStartOnDeviceRuntime(): Promise<void> {
   if (!(await runtimeAvailable())) return;
+  await reconcileRuntime();
   if (await isReady()) return;
   const models = await listDownloadedModels();
   if (models.length === 0) return;

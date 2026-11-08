@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
     <title>openFoundry</title>
     <style>
       :root { color-scheme: dark; }
@@ -11,47 +12,73 @@
         background: linear-gradient(to top, rgba(100,63,178,.09), rgba(100,63,178,0) 240px),
           radial-gradient(760px 420px at 50% -8%, rgba(100,63,178,.16), transparent 62%), #0f0f0f;
         color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      main { text-align: center; padding: 24px; }
+      main { text-align: center; padding: 24px; max-width: 360px; }
       .mark { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 12px;
         background: #1f1f1f; display: grid; place-items: center;
         box-shadow: 0 16px 60px rgba(0,0,0,.4); font-size: 24px; font-weight: 700; }
       h1 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
       p { margin: 0; color: #adadad; font-size: 13px; line-height: 19px; }
+      .detail { margin-top: 8px; color: #7c7c7c; font-size: 12px; line-height: 17px;
+        overflow-wrap: anywhere; }
       .dots { display: flex; justify-content: center; gap: 5px; margin-top: 18px; }
       .dots span { width: 5px; height: 5px; border-radius: 50%; background: #8251ee;
         animation: pulse 1.2s ease-in-out infinite; }
       .dots span:nth-child(2) { animation-delay: .15s; }
       .dots span:nth-child(3) { animation-delay: .3s; }
       @keyframes pulse { 0%,100% { opacity:.35; transform:translateY(0); } 50% { opacity:1; transform:translateY(-2px); } }
+      button { margin-top: 18px; border: 1px solid rgba(255,255,255,.16);
+        background: #1f1f1f; color: #fff; font: inherit; font-size: 13px; font-weight: 600;
+        padding: 10px 18px; border-radius: 9px; }
+      button:active { background: #2a2a2a; }
+      [hidden] { display: none !important; }
     </style>
   </head>
   <body>
     <main>
       <div class="mark">F</div>
       <h1>openFoundry</h1>
-      <p id="status">Starting the local server…</p>
-      <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p id="status" role="status" aria-live="polite">Starting openFoundry…</p>
+      <p id="detail" class="detail" hidden></p>
+      <button id="retry" type="button" hidden>Try again</button>
+      <div class="dots" id="dots" aria-hidden="true"><span></span><span></span><span></span></div>
     </main>
     <script>
-      const target = "http://127.0.0.1:31337/";
-      let attempts = 0;
-      async function waitForServer() {
-        attempts += 1;
-        try {
-          await fetch(target, { mode: "no-cors", cache: "no-store" });
-          document.getElementById("status").textContent = "Opening your workspace…";
-          window.location.replace(target);
-          return;
-        } catch {
-          if (attempts > 120) {
-            document.getElementById("status").textContent =
-              "The local server did not start. Close and reopen the app.";
-            return;
-          }
-          setTimeout(waitForServer, 500);
+      // This page is passive. The Android host decides when the local server is
+      // ready, signs in, and then navigates to the workspace. It calls the
+      // functions below to keep the user informed. Nothing here fetches or
+      // redirects on its own: that race is what used to leave a browser error
+      // page on screen.
+      (function () {
+        var status = document.getElementById("status");
+        var detail = document.getElementById("detail");
+        var retry = document.getElementById("retry");
+        var dots = document.getElementById("dots");
+
+        function setStatus(message) {
+          status.textContent = message || "Starting openFoundry…";
+          detail.textContent = "";
+          detail.hidden = true;
+          retry.hidden = true;
+          dots.hidden = false;
         }
-      }
-      waitForServer();
+
+        function setError(message, reason) {
+          status.textContent = message || "openFoundry could not start.";
+          detail.textContent = reason || "";
+          detail.hidden = !reason;
+          retry.hidden = false;
+          dots.hidden = true;
+        }
+
+        retry.addEventListener("click", function () {
+          setStatus("Trying again…");
+          if (window.OpenFoundryHost && typeof window.OpenFoundryHost.retry === "function") {
+            window.OpenFoundryHost.retry();
+          }
+        });
+
+        window.__openFoundry = { setStatus: setStatus, setError: setError };
+      })();
     </script>
   </body>
 </html>

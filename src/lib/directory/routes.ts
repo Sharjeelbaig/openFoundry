@@ -28,6 +28,9 @@ interface Rule {
 const RULES: Rule[] = [
   // Authenticated by something other than a browser session.
   { pattern: /^\/api\/auth(\/.*)?$/, public: "auth endpoints authenticate themselves" },
+  // Startup readiness for the native shells. The handler refuses anything that
+  // is not loopback and returns boot state only — no data, no capability.
+  { pattern: /^\/api\/health$/, public: "loopback-only startup readiness" },
   { pattern: /^\/api\/a2a\/token$/, actions: { POST: "chat.use" } },
   { pattern: /^\/api\/a2a\/agent-card$/, public: "A2A agent card discovery" },
   { pattern: /^\/api\/a2a$/, public: "A2A bearer token" },
