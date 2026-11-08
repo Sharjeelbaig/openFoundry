@@ -869,7 +869,7 @@ export default function SetupWizard({
               </p>
               {chatModels.length > 0 ? (
                 <div className="setup-model-list">
-                  {chatModels.slice(0, 40).map((model) => {
+                  {chatModels.map((model) => {
                     const active = settings.defaultProviderId === model.provider && settings.defaultModel === model.id;
                     return (
                       <button
