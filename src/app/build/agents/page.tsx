@@ -369,7 +369,7 @@ export default function AgentsPage() {
                 onChange={(event) => setNewModel(event.target.value)}
               >
                 {models.length === 0 && <option value="">No local models discovered</option>}
-                {models.slice(0, 40).map((model: LocalModel) => (
+                {models.map((model: LocalModel) => (
                   <option key={model.key} value={model.key}>
                     {model.displayName} · {model.providerLabel}
                     {model.cached ? " · downloaded" : ""}

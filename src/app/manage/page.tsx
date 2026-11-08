@@ -427,7 +427,7 @@ export default function ProjectDetailsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {models.slice(0, 40).map((model) => (
+                      {models.map((model) => (
                         <tr key={model.key}>
                           <td className="cell-strong truncate" style={{ maxWidth: 280 }}>
                             {model.displayName}
