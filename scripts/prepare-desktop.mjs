@@ -192,6 +192,54 @@ require("./server.js");
   console.log(`Next server ready: ${path.relative(root, serverDir)}`);
 }
 
+/**
+ * The `openFoundry` command line ships inside the bundle next to the Node
+ * runtime it runs on. The Windows installer puts this folder on PATH; on macOS
+ * the app links the launcher into ~/.local/bin on first run.
+ */
+async function copyCli() {
+  const source = path.join(root, "scripts", "cli");
+  if (!(await exists(source))) return;
+  const target = path.join(resourcesDir, "cli");
+  await fs.mkdir(target, { recursive: true });
+  await fs.cp(source, target, { recursive: true });
+
+  if (platform.win) {
+    await fs.writeFile(
+      path.join(target, "openfoundry.cmd"),
+      `@echo off\r\n"%~dp0..\\node.exe" "%~dp0openfoundry.mjs" %*\r\n`,
+      "utf8"
+    );
+  } else {
+    const nodeRelative =
+      triple.endsWith("-apple-darwin")
+        ? "../OpenFoundry Server.app/Contents/MacOS/node"
+        : "../node";
+    const launcher = path.join(target, "openfoundry");
+    await fs.writeFile(
+      launcher,
+      `#!/bin/sh
+# Follow the symlink the installer puts on PATH so the bundled Node is found.
+target=$0
+while [ -L "$target" ]; do
+  dir=$(cd "$(dirname "$target")" && pwd)
+  link=$(readlink "$target")
+  case $link in
+    /*) target=$link ;;
+    *) target="$dir/$link" ;;
+  esac
+done
+DIR=$(cd "$(dirname "$target")" && pwd)
+exec "$DIR/${nodeRelative}" "$DIR/openfoundry.mjs" "$@"
+`,
+      "utf8"
+    );
+    await fs.chmod(launcher, 0o755);
+  }
+  console.log(`CLI ready: ${path.relative(root, target)}`);
+}
+
 await prepareNode();
 await copyServer();
+await copyCli();
 console.log("Desktop resources prepared.");

@@ -100,6 +100,7 @@ const RULES: Rule[] = [
   { pattern: /^\/api\/models\/download$/, actions: { GET: "models.read", POST: "models.download" } },
   { pattern: /^\/api\/models\/download\/[^/]+$/, actions: { GET: "models.read", DELETE: "models.download" } },
   { pattern: /^\/api\/nodes$/, actions: { GET: "runtimes.read", POST: "runtimes.write", DELETE: "runtimes.write" } },
+  { pattern: /^\/api\/runtimes$/, actions: { GET: "runtimes.read", POST: "runtimes.write" } },
   { pattern: /^\/api\/oauth\/start$/, actions: { POST: "connections.write" } },
   { pattern: /^\/api\/oauth\/token$/, actions: { GET: "connections.read" } },
   { pattern: /^\/api\/quota-requests$/, actions: { GET: "quota.read", POST: "quota.write", PATCH: "quota.write" } },

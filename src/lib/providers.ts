@@ -685,7 +685,7 @@ export async function getProviders(): Promise<ProviderStatus[]> {
       detail:
         llamacpp.length > 0
           ? `llama.cpp server at ${urls.llamacpp}`
-          : "Start llama-server on port 8080",
+          : "Not running. Install it from Setup → Runtime, or start llama-server on port 8080",
       modelCount: llamacpp.length,
       cachedCount: llamacpp.length,
     },

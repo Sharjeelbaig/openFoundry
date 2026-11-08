@@ -60,6 +60,51 @@ export interface DownloadJob {
   logs: string[];
 }
 
+/** A local inference runtime openFoundry can detect, install and control. */
+export type RuntimeId = "llamacpp" | "ollama" | "lmstudio" | "foundry";
+
+export type RuntimeState =
+  | "running"
+  | "stopped"
+  | "missing"
+  | "installing"
+  | "error";
+
+export interface RuntimeStatus {
+  id: RuntimeId;
+  label: string;
+  state: RuntimeState;
+  /** Installed and managed by openFoundry, not by the user or another app. */
+  managed: boolean;
+  url: string;
+  detail: string;
+  modelCount: number;
+  /** One-click install is available on this platform. */
+  installable: boolean;
+  /** Where to get it when one-click install is not available. */
+  installUrl: string;
+  version?: string;
+  jobId?: string;
+}
+
+export type RuntimeJobStage = "runtime" | "extract" | "model" | "start" | "done";
+
+export interface RuntimeJob {
+  id: string;
+  runtime: RuntimeId;
+  status: DownloadStatus;
+  stage: RuntimeJobStage;
+  /** 0–100 across the whole install, not just the current download. */
+  progress: number;
+  message: string;
+  bytesDownloaded: number;
+  bytesTotal: number;
+  startedAt: string;
+  updatedAt: string;
+  finishedAt?: string;
+  error?: string;
+}
+
 export interface ProviderStatus {
   id: ProviderId;
   label: string;

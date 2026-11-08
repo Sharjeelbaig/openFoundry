@@ -31,6 +31,111 @@ fn free_port() -> u16 {
         .unwrap_or(3210)
 }
 
+/// Whether this process may create files in `dir`.
+#[cfg(target_os = "macos")]
+fn writable(dir: &std::path::Path) -> bool {
+    if !dir.is_dir() {
+        return false;
+    }
+    let probe = dir.join(format!(".openfoundry-write-{}", std::process::id()));
+    match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe)
+    {
+        Ok(_) => {
+            let _ = std::fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+/// `~/.local/bin` is not in macOS's default PATH, so add one marked line to the
+/// zsh login profile when that is where the command line had to go.
+#[cfg(target_os = "macos")]
+fn ensure_login_path() {
+    use std::io::Write;
+
+    let Some(home) = std::env::var_os("HOME") else {
+        return;
+    };
+    let profile = std::path::PathBuf::from(home).join(".zprofile");
+    let existing = std::fs::read_to_string(&profile).unwrap_or_default();
+    // Respect a profile that already puts ~/.local/bin on PATH.
+    if existing
+        .lines()
+        .any(|line| !line.trim_start().starts_with('#') && line.contains(".local/bin"))
+    {
+        return;
+    }
+    if existing.contains("openFoundry CLI") {
+        return;
+    }
+    let line = "\n# openFoundry CLI\nexport PATH=\"$HOME/.local/bin:$PATH\"\n";
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&profile)
+    {
+        let _ = file.write_all(line.as_bytes());
+    }
+}
+
+/// Put the bundled `openFoundry` command line on the user's PATH.
+///
+/// The launcher lives inside the app bundle, so a symlink keeps it in step with
+/// the installed version. Prefer `/usr/local/bin` when it is writable; otherwise
+/// link into `~/.local/bin` and make sure a login shell can find it.
+#[cfg(target_os = "macos")]
+fn install_cli(resource_dir: &std::path::Path) {
+    use std::os::unix::fs::symlink;
+
+    let source = resource_dir.join("resources").join("cli").join("openfoundry");
+    if !source.is_file() {
+        return;
+    }
+
+    let system_bin = std::path::PathBuf::from("/usr/local/bin");
+    let target_dir = if writable(&system_bin) {
+        system_bin
+    } else {
+        let Some(home) = std::env::var_os("HOME") else {
+            return;
+        };
+        let user_bin = std::path::PathBuf::from(home).join(".local").join("bin");
+        if std::fs::create_dir_all(&user_bin).is_err() || !writable(&user_bin) {
+            return;
+        }
+        ensure_login_path();
+        user_bin
+    };
+
+    let link = target_dir.join("openfoundry");
+    match std::fs::symlink_metadata(&link) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            let current = std::fs::read_link(&link).unwrap_or_default();
+            if current == source {
+                return;
+            }
+            // Replace a link that points into an old or moved openFoundry
+            // bundle. Never take over an unrelated command.
+            let ours = !current.exists()
+                || current
+                    .to_string_lossy()
+                    .to_ascii_lowercase()
+                    .contains("openfoundry");
+            if !ours {
+                return;
+            }
+            let _ = std::fs::remove_file(&link);
+        }
+        Ok(_) => return,
+        Err(_) => {}
+    }
+    let _ = symlink(&source, &link);
+}
+
 #[cfg(not(debug_assertions))]
 fn machine_key(data_dir: &std::path::Path) -> Option<String> {
     // The server writes this file while it boots. It is the shell's proof that
@@ -89,6 +194,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            install_cli(&app.path().resource_dir()?);
             #[cfg(debug_assertions)]
             let _ = app;
             #[cfg(not(debug_assertions))]
