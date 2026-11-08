@@ -16,7 +16,7 @@ import {
   Info20Regular,
   Server20Regular,
 } from "@fluentui/react-icons";
-import { formatDate, useApi } from "@/lib/client";
+import { formatDate, useApi, useMounted } from "@/lib/client";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import type { LocalModel, ProviderStatus } from "@/lib/types";
 
@@ -48,6 +48,9 @@ export default function ServicesPage() {
     {}
   );
   const [now, setNow] = useState(Date.now());
+  // The footer reads the wall clock; render it only after mount so SSR and
+  // hydration produce the same text (OS-21, React #418).
+  const mounted = useMounted();
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -333,7 +336,8 @@ api-key: <agent key>
         </Link>
         <span className="spacer" />
         <span className="muted text-12">
-          {models.length} models discovered · checked {formatDate(new Date(now).toISOString())}
+          {models.length} models discovered · checked{" "}
+          {mounted ? formatDate(new Date(now).toISOString()) : "just now"}
         </span>
       </div>
 

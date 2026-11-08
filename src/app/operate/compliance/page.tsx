@@ -14,7 +14,7 @@ import {
   Search20Regular,
   DocumentText20Regular,
 } from "@fluentui/react-icons";
-import { formatDate, useApi, useDeployments, useModels } from "@/lib/client";
+import { formatDate, useApi, useDeployments, useModels, useMounted } from "@/lib/client";
 import { Spinner } from "@/components/ui";
 import type { Agent, EvaluationRun, KnowledgeBase } from "@/lib/types";
 
@@ -54,6 +54,9 @@ export default function CompliancePage() {
 
   const [tab, setTab] = useState<Tab>("Overview");
   const [query, setQuery] = useState("");
+  // The "Last assessed" fact row reads the wall clock; render it only after
+  // mount so SSR and hydration produce the same text (OS-21, React #418).
+  const mounted = useMounted();
 
   const controls = useMemo<Control[]>(() => {
     const guarded = agents.filter((agent) => (agent.guardrail || "Default") !== "Off");
@@ -276,7 +279,7 @@ export default function CompliancePage() {
               </div>
               <div className="fact-row">
                 <span>Last assessed</span>
-                <span>{formatDate(new Date().toISOString())}</span>
+                <span>{mounted ? formatDate(new Date().toISOString()) : "just now"}</span>
               </div>
               <div className="fact-row">
                 <span>Assessor</span>
