@@ -300,6 +300,7 @@ export default function ProjectDetailsPage() {
                 <input
                   className="input mono"
                   readOnly
+                  aria-label="Project API key"
                   value={showKey ? settings.apiKey : "••••••••••••••••••••••••••••••••"}
                 />
                 <button
