@@ -20,6 +20,11 @@ import {
 import { formatDate, formatNumber, useApi, useDeployments } from "@/lib/client";
 import { useToast } from "@/components/Toast";
 import { CopyButton, DottedObject, EmptyState, Spinner, StatusBadge } from "@/components/ui";
+import {
+  countDeploymentsByKind,
+  defaultDeploymentKind,
+  nextNonEmptyKind,
+} from "@/lib/deployment-kinds";
 import type { BatchJob, Deployment, DeploymentKind } from "@/lib/types";
 import { useOrigin } from "@/components/Origin";
 
@@ -51,7 +56,10 @@ function whereRuns(deployment: Deployment): string {
 export default function DeploymentsPage() {
   const { toast } = useToast();
   const [topTab, setTopTab] = useState<TopTab>("Deployments");
-  const [kind, setKind] = useState<KindTab>("Serverless");
+  // null until the user picks a tab: the page then follows the data and opens
+  // on a section that actually has deployments (OS-19), instead of defaulting
+  // to Serverless and claiming the project has none.
+  const [kind, setKind] = useState<KindTab | null>(null);
   const [query, setQuery] = useState("");
   const [deployOpen, setDeployOpen] = useState(false);
   const [ptuOpen, setPtuOpen] = useState(false);
@@ -80,17 +88,24 @@ export default function DeploymentsPage() {
     return node ? `${node.name} · ${node.status}` : "Isolated runtime";
   };
 
+  const counts = useMemo(() => countDeploymentsByKind(deployments), [deployments]);
+  // The tab the user chose, or the first one that has content until they do.
+  const activeKind: KindTab = kind ?? defaultDeploymentKind(deployments);
+  const kindDeployments = useMemo(
+    () => deployments.filter((deployment) => deployment.kind === activeKind),
+    [deployments, activeKind]
+  );
+  const otherKind = nextNonEmptyKind(deployments, activeKind);
+
   const filtered = useMemo(
     () =>
-      deployments
-        .filter((deployment) => deployment.kind === kind)
-        .filter(
-          (deployment) =>
-            !query ||
-            deployment.name.toLowerCase().includes(query.toLowerCase()) ||
-            deployment.modelName.toLowerCase().includes(query.toLowerCase())
-        ),
-    [deployments, kind, query]
+      kindDeployments.filter(
+        (deployment) =>
+          !query ||
+          deployment.name.toLowerCase().includes(query.toLowerCase()) ||
+          deployment.modelName.toLowerCase().includes(query.toLowerCase())
+      ),
+    [kindDeployments, query]
   );
 
   const deployedModels = useMemo(() => {
@@ -212,10 +227,11 @@ export default function DeploymentsPage() {
             {(Object.keys(KIND_LABEL) as KindTab[]).map((item) => (
               <button
                 key={item}
-                className={`tab${kind === item ? " active" : ""}`}
+                className={`tab${activeKind === item ? " active" : ""}`}
                 onClick={() => setKind(item)}
               >
                 {KIND_LABEL[item]}
+                {counts[item] > 0 && <span className="tab-count">{counts[item]}</span>}
               </button>
             ))}
           </div>
@@ -271,17 +287,45 @@ export default function DeploymentsPage() {
           {filtered.length === 0 ? (
             <div className="models-empty">
               <DottedObject />
-              <h2>{loading ? "Loading deployments…" : "Deploy your first model"}</h2>
-              <p>
-                After you deploy a model, you can try it out in the{" "}
-                <Link href="/playground" className="link">
-                  playground
+              <h2>
+                {loading && deployments.length === 0
+                  ? "Loading deployments…"
+                  : deployments.length === 0
+                    ? "Deploy your first model"
+                    : kindDeployments.length === 0
+                      ? `No ${KIND_LABEL[activeKind].toLowerCase()}`
+                      : `No deployments match “${query}”`}
+              </h2>
+              {deployments.length === 0 && !loading && (
+                <p>
+                  After you deploy a model, you can try it out in the{" "}
+                  <Link href="/playground" className="link">
+                    playground
+                  </Link>
+                  .
+                </p>
+              )}
+              {deployments.length > 0 && kindDeployments.length === 0 && (
+                <p>
+                  This project has {deployments.length} deployment
+                  {deployments.length === 1 ? "" : "s"} in other sections.
+                </p>
+              )}
+              {!loading && deployments.length === 0 && (
+                <Link href="/discover/models" className="btn btn-primary mt-16">
+                  Browse the model catalog
                 </Link>
-                .
-              </p>
-              <Link href="/discover/models" className="btn btn-primary mt-16">
-                Browse the model catalog
-              </Link>
+              )}
+              {!loading && deployments.length > 0 && kindDeployments.length === 0 && otherKind && (
+                <button className="btn btn-primary mt-16" onClick={() => setKind(otherKind)}>
+                  View {KIND_LABEL[otherKind].toLowerCase()} ({counts[otherKind]})
+                </button>
+              )}
+              {!loading && deployments.length > 0 && kindDeployments.length > 0 && (
+                <button className="btn btn-secondary mt-16" onClick={() => setQuery("")}>
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <div className="table-card">
