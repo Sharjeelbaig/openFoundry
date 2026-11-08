@@ -34,6 +34,9 @@ data/
 # Keep the shipped tool catalog data.
 !src/data/
 !src/data/**
+# The runtime rule above also matches this app route, which is source code.
+!src/app/build/data/
+!src/app/build/data/**
 
 # Generated desktop sidecar resources
 .desktop-cache/
