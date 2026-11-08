@@ -1,16 +1,16 @@
 {
-  "version": "0.4.3",
-  "tag": "v0.4.3-macos-beta.1",
-  "asset": "openFoundry_0.4.3_aarch64.dmg",
-  "bytes": 58983820,
-  "sha256": "7d63cadde39a404e312a367f717622b28f2910cde302d2836bb1f7f9e15aae45",
-  "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.3-macos-beta.1/openFoundry_0.4.3_aarch64.dmg",
+  "version": "0.4.4",
+  "tag": "v0.4.4-macos-beta.1",
+  "asset": "openFoundry_0.4.4_aarch64.dmg",
+  "bytes": 59009540,
+  "sha256": "83aa876de2354ed0eaad0cf2856e584853db1bc7d0551e651d2ef6a93c84efc4",
+  "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-macos-beta.1/openFoundry_0.4.4_aarch64.dmg",
   "macos": {
-    "tag": "v0.4.3-macos-beta.1",
-    "asset": "openFoundry_0.4.3_aarch64.dmg",
-    "bytes": 58983820,
-    "sha256": "7d63cadde39a404e312a367f717622b28f2910cde302d2836bb1f7f9e15aae45",
-    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.3-macos-beta.1/openFoundry_0.4.3_aarch64.dmg"
+    "tag": "v0.4.4-macos-beta.1",
+    "asset": "openFoundry_0.4.4_aarch64.dmg",
+    "bytes": 59009540,
+    "sha256": "83aa876de2354ed0eaad0cf2856e584853db1bc7d0551e651d2ef6a93c84efc4",
+    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-macos-beta.1/openFoundry_0.4.4_aarch64.dmg"
   },
   "windows": {
     "tag": "v0.4.3-windows-beta.1",
