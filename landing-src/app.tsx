@@ -10,13 +10,6 @@ import {
   AccordionPanel,
   Button,
   Card,
-  Carousel,
-  CarouselCard,
-  CarouselNav,
-  CarouselNavButton,
-  CarouselNavContainer,
-  CarouselSlider,
-  CarouselViewport,
   FluentProvider,
   Image,
   Link,
@@ -51,9 +44,8 @@ import {
   Rocket24Regular,
   WeatherMoon20Regular,
   WeatherSunny20Regular,
-  Window20Regular,
 } from "@fluentui/react-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   COMMANDS,
   DEPLOYMENT_MODES,
@@ -596,51 +588,20 @@ function useDelayedFlag(active: boolean, delay: number) {
   return show;
 }
 
-function Reveal({
+function ScrollReveal({
   children,
-  delay = 0,
-  kind = "fade",
+  kind = "scale",
   className,
 }: {
   children: React.ReactNode;
-  delay?: number;
-  kind?: "fade" | "slide";
+  kind?: "scale" | "left";
   className?: string;
 }) {
   const styles = useStyles();
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [shown, setShown] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setShown(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setShown(true);
-            observer.disconnect();
-            return;
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -48px 0px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div
-      ref={ref}
       className={mergeClasses(styles.revealItem, className)}
-      data-reveal={shown ? "shown" : "pending"}
-      data-reveal-kind={kind}
-      style={{ "--of-delay": `${delay}ms` } as React.CSSProperties}
+      data-scroll-reveal={kind}
     >
       {children}
     </div>
@@ -714,7 +675,6 @@ export function App() {
   const toasterId = useId("toaster");
   const { dispatchToast } = useToastController(toasterId);
   const [starting, setStarting] = useState(false);
-  const [slide, setSlide] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
 
@@ -949,7 +909,7 @@ export function App() {
 
             <div className={styles.grid3}>
               {FEATURES.map((feature, index) => (
-                <Reveal key={feature.key} kind="slide" delay={index * 70}>
+                <ScrollReveal key={feature.key} kind={index % 2 === 0 ? "left" : "scale"}>
                   <Card appearance="filled" className={styles.card}>
                     <div className={styles.iconTile}>
                       {FEATURE_ICONS[feature.key]}
@@ -961,104 +921,49 @@ export function App() {
                       {feature.body}
                     </Text>
                   </Card>
-                </Reveal>
+                </ScrollReveal>
               ))}
             </div>
           </div>
         </section>
 
-        <section className={styles.section} id="screenshots">
-          <div className={styles.container}>
-            <div className={styles.sectionHead}>
-              <Text
-                as="h2"
-                size={900}
-                weight="medium"
-                block
-                className={styles.sectionTitle}
-              >
-                A look around
-              </Text>
-              <Text size={400} block className={styles.sectionText}>
-                Five screens from a real workspace. Use the arrows or the dots to
-                move through them.
-              </Text>
-            </div>
-
-            <Reveal kind="slide">
-              <Carousel
-                circular
-                defaultActiveIndex={0}
-                onActiveIndexChange={(_event, data) => setSlide(data.index)}
-              >
-                <CarouselViewport>
-                  <CarouselSlider>
-                    {SLIDES.map((image, index) => (
-                      <CarouselCard key={image.src}>
-                        <SlideImage
-                          src={image.src}
-                          alt={image.alt}
-                          active={index === slide}
-                        />
-                      </CarouselCard>
-                    ))}
-                  </CarouselSlider>
-                </CarouselViewport>
-
-                <div className={styles.carouselFooter}>
-                  <div>
-                    <Text
-                      as="h3"
-                      size={600}
-                      weight="semibold"
-                      block
-                      className={styles.carouselTitle}
-                    >
-                      {SLIDES[slide].title}
-                    </Text>
-                    <Text size={300} block className={styles.carouselText}>
-                      {SLIDES[slide].caption}
-                    </Text>
-                  </div>
-
-                  <div className={styles.navRow}>
-                    <Text size={200} className={styles.counter}>
-                      {slide + 1} of {SLIDES.length}
-                    </Text>
-                    <CarouselNavContainer
-                      next={{
-                        "aria-label": "Next screenshot",
-                        appearance: "secondary",
-                        shape: "circular",
-                        size: "large",
-                      }}
-                      prev={{
-                        "aria-label": "Previous screenshot",
-                        appearance: "secondary",
-                        shape: "circular",
-                        size: "large",
-                      }}
-                    >
-                      <CarouselNav>
-                        {(index) => (
-                          <CarouselNavButton
-                            key={index}
-                            aria-label={`Go to screenshot ${index + 1}: ${
-                              SLIDES[index].title
-                            }`}
-                          />
-                        )}
-                      </CarouselNav>
-                    </CarouselNavContainer>
-                  </div>
-                </div>
-              </Carousel>
-            </Reveal>
-
-            <div aria-live="polite" className={styles.helper}>
-              {`Screenshot ${slide + 1} of ${SLIDES.length}: ${
-                SLIDES[slide].title
-              }`}
+        <section className={"horizontalSection"} id="screenshots">
+          <div className={"horizontalOuter"} data-horizontal="outer">
+            <div className={"horizontalPin"} data-horizontal="pin">
+              <div className={"horizontalHead"}>
+                <Text
+                  as="h2"
+                  size={900}
+                  weight="medium"
+                  block
+                  className={styles.sectionTitle}
+                >
+                  A look around
+                </Text>
+                <Text size={400} block className={styles.sectionText}>
+                  Five screens from a real workspace. Keep scrolling and the
+                  strip moves sideways; when it ends, the page carries on.
+                </Text>
+              </div>
+              <div className={"horizontalTrack"} data-horizontal="track">
+                {SLIDES.map((image, index) => (
+                  <figure className={"horizontalCard"} key={image.src}>
+                    <SlideImage
+                      src={image.src}
+                      alt={image.alt}
+                      active={index === 0}
+                    />
+                    <figcaption className={"horizontalCaption"}>
+                      <Text as="h3" size={600} weight="semibold" block>
+                        {image.title}
+                      </Text>
+                      <Text size={300} block className={styles.muted}>
+                        {image.caption}
+                      </Text>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -1082,8 +987,8 @@ export function App() {
             </div>
 
             <div className={styles.grid3}>
-              {DEPLOYMENT_MODES.map((mode, index) => (
-                <Reveal key={mode.title} kind="slide" delay={index * 70}>
+              {DEPLOYMENT_MODES.map((mode) => (
+                <ScrollReveal key={mode.title} kind="left">
                   <Card appearance="filled" className={styles.card}>
                     <Text as="h3" size={600} weight="semibold">
                       {mode.title}
@@ -1092,7 +997,7 @@ export function App() {
                       {mode.body}
                     </Text>
                   </Card>
-                </Reveal>
+                </ScrollReveal>
               ))}
             </div>
 

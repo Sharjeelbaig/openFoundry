@@ -178,3 +178,136 @@ html[data-js="true"] [data-reveal="shown"][data-reveal-kind="slide"] {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Scroll-driven reveals: an element scales up as it enters the viewport and
+   shrinks as it leaves, or slides in from the left. The animation is tied to
+   scroll position (animation-timeline), so scrolling up reverses it. */
+@keyframes of-scroll-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes of-scroll-left {
+  from {
+    opacity: 0;
+    transform: translateX(-96px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  [data-scroll-reveal] {
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+    animation-timeline: view();
+    animation-range: entry 0% entry 85%;
+  }
+  [data-scroll-reveal="scale"] {
+    animation-name: of-scroll-scale;
+  }
+  [data-scroll-reveal="left"] {
+    animation-name: of-scroll-left;
+  }
+}
+
+/* Pinned horizontal strip: the section holds still while the cards move
+   sideways, then the page continues. Falls back to a normal horizontal
+   scroller when scroll-driven animations are unavailable. */
+.horizontalSection {
+  background-color: var(--of-bg);
+}
+
+.horizontalOuter {
+  position: relative;
+}
+
+.horizontalPin {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 40px;
+  padding: 72px 0;
+  overflow-x: auto;
+}
+
+.horizontalHead {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+.horizontalTrack {
+  display: flex;
+  gap: 24px;
+  width: max-content;
+  padding-inline: max(24px, calc((100vw - 1320px) / 2));
+}
+
+.horizontalCard {
+  flex: 0 0 auto;
+  width: min(78vw, 900px);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.horizontalCaption {
+  padding-inline: 2px;
+}
+
+@keyframes of-horizontal-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% + 100vw));
+  }
+}
+
+@supports (animation-timeline: view()) {
+  .horizontalOuter {
+    height: 340vh;
+    view-timeline-name: --of-horizontal;
+    view-timeline-axis: block;
+  }
+  .horizontalPin {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .horizontalTrack {
+    animation: of-horizontal-scroll linear both;
+    animation-timeline: --of-horizontal;
+    animation-range: contain 0% contain 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-scroll-reveal] {
+    animation: none !important;
+  }
+  .horizontalOuter {
+    height: auto !important;
+  }
+  .horizontalPin {
+    position: static !important;
+    height: auto !important;
+    overflow-x: auto !important;
+  }
+  .horizontalTrack {
+    animation: none !important;
+    transform: none !important;
+  }
+}
