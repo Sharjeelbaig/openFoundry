@@ -7,7 +7,7 @@ import { createWriteStream, promises as fs } from "fs";
 import path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-import { dataDir } from "./store";
+import { dataDir, getSettings, saveSettings } from "./store";
 import type {
   DownloadedModel,
   DownloadState,
@@ -38,6 +38,18 @@ import type {
  */
 
 const LOOPBACK = "127.0.0.1";
+
+/**
+ * The id llama-server reports for whichever GGUF it is serving.
+ *
+ * A phone has one model slot; the app must be able to select it without
+ * knowing which file happens to be on disk, so the server always advertises
+ * this stable alias and settings.defaultModel points at it.
+ */
+export const ON_DEVICE_ALIAS = "openfoundry-on-device";
+
+/** The model a fresh install downloads first. */
+export const STARTER_MODEL = "SmolLM2-135M-Instruct-Q4_K_M.gguf";
 
 /**
  * A short, curated list of small GGUF chat models that run on a phone without a
@@ -494,6 +506,10 @@ export async function startOnDeviceRuntime(
     "-c",
     String(opts.contextSize ?? 4096),
     "--no-webui",
+    // Serve the file under a stable id so settings and the Playground never
+    // have to know which GGUF is on disk.
+    "--alias",
+    ON_DEVICE_ALIAS,
   ];
 
   pushLog(`Starting llama-server for ${file} on ${LOOPBACK}:${port}`);
@@ -528,20 +544,65 @@ export async function startOnDeviceRuntime(
 }
 
 /**
+ * Point settings at the model llama-server actually serves, under the stable
+ * alias, so the Playground and chat can select it without a discovery step.
+ *
+ * Desktop is left alone: it selects models through the provider list as before.
+ */
+async function publishServedModel(): Promise<void> {
+  if (process.platform !== "android") return;
+  try {
+    const res = await fetch(`http://${LOOPBACK}:${onDevicePort()}/v1/models`, {
+      signal: AbortSignal.timeout(2000),
+      cache: "no-store",
+    });
+    if (!res.ok) return;
+    const body = (await res.json()) as { data?: Array<{ id?: string }> };
+    const ids = (body.data ?? [])
+      .map((entry) => entry.id)
+      .filter((id): id is string => Boolean(id));
+    const id = ids.includes(ON_DEVICE_ALIAS) ? ON_DEVICE_ALIAS : ids[0];
+    if (!id) return;
+    const settings = await getSettings();
+    if (settings.defaultModel === id && settings.defaultProviderId === "llamacpp") return;
+    await saveSettings({
+      ...settings,
+      defaultModel: id,
+      defaultProviderId: settings.defaultProviderId || "llamacpp",
+    });
+    pushLog(`Default model set to ${id}`);
+  } catch (error) {
+    pushLog(`Could not read /v1/models: ${(error as Error).message}`);
+  }
+}
+
+/**
  * Start the runtime with any downloaded model, preferring the smallest. Used at
  * boot so an already-provisioned phone serves models without a first visit to
  * the settings screen.
+ *
+ * On Android this is the whole provisioning story: no GGUF on disk means the
+ * starter model downloads here (resuming any partial file), then llama-server
+ * starts and settings learns the served model id.
  */
 export async function autoStartOnDeviceRuntime(): Promise<void> {
   if (!(await runtimeAvailable())) return;
   await reconcileRuntime();
-  if (await isReady()) return;
-  const models = await listDownloadedModels();
+  if (await isReady()) {
+    await publishServedModel();
+    return;
+  }
+  let models = await listDownloadedModels();
+  if (models.length === 0 && process.platform === "android") {
+    await downloadOnDeviceModel(STARTER_MODEL);
+    models = await listDownloadedModels();
+  }
   if (models.length === 0) return;
   const preferred =
     models.find((m) => m.spec && m.spec.params === "0.5B") ||
     models.sort((a, b) => a.sizeBytes - b.sizeBytes)[0];
-  await startOnDeviceRuntime(preferred.file);
+  const started = await startOnDeviceRuntime(preferred.file);
+  if (started.ok) await publishServedModel();
 }
 
 export async function downloadOnDeviceModel(
@@ -558,29 +619,90 @@ export async function downloadOnDeviceModel(
   if (await fileExists(target)) return { ok: true };
 
   const temp = `${target}.part`;
-  const progress: DownloadState = { file, received: 0, total: spec.sizeBytes };
+
+  // A previous attempt may have left bytes behind. Resume from exactly there —
+  // the app can be killed at any moment and must not restart a 100 MB transfer.
+  let offset = 0;
+  try {
+    offset = (await fs.stat(temp)).size;
+  } catch {
+    offset = 0;
+  }
+  if (offset > spec.sizeBytes) {
+    // The partial file cannot be right; start over rather than extend corrupt data.
+    await fs.rm(temp, { force: true });
+    offset = 0;
+  }
+  if (offset === spec.sizeBytes) {
+    await fs.rename(temp, target);
+    pushLog(`${spec.name} was already complete`);
+    return { ok: true };
+  }
+
+  const progress: DownloadState = {
+    file,
+    received: offset,
+    total: spec.sizeBytes,
+  };
   store.downloads.set(file, progress);
-  pushLog(`Downloading ${spec.name} (${(spec.sizeBytes / 1e6).toFixed(0)} MB)`);
+  pushLog(
+    offset > 0
+      ? `Resuming ${spec.name} at ${(offset / 1e6).toFixed(0)} MB`
+      : `Downloading ${spec.name} (${(spec.sizeBytes / 1e6).toFixed(0)} MB)`
+  );
 
   try {
-    const res = await fetch(spec.url, { redirect: "follow" });
+    const res = await fetch(spec.url, {
+      redirect: "follow",
+      headers: offset > 0 ? { range: `bytes=${offset}-` } : {},
+    });
+    if (res.status === 416) {
+      // The server rejects our range: the partial file is useless to it.
+      await fs.rm(temp, { force: true });
+      throw new Error(
+        "The server refused to resume this download. Try again to restart it."
+      );
+    }
     if (!res.ok || !res.body) throw new Error(`Download failed: HTTP ${res.status}`);
-    const total = Number(res.headers.get("content-length")) || spec.sizeBytes;
-    progress.total = total;
+
+    // 206 means the server honoured the resume; 200 means it is sending the
+    // whole file, so the partial bytes have to be discarded, not appended to.
+    const append = offset > 0 && res.status === 206;
+    if (offset > 0 && !append) {
+      pushLog(`The server sent the whole file; restarting ${spec.name} from 0`);
+      offset = 0;
+      progress.received = 0;
+    }
+    const remaining = Number(res.headers.get("content-length")) || 0;
+    progress.total = append && remaining ? offset + remaining : spec.sizeBytes;
 
     const source = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
     source.on("data", (chunk: Buffer) => {
       progress.received += chunk.length;
     });
-    await pipeline(source, createWriteStream(temp));
-    if (progress.received < total * 0.99) {
-      throw new Error("Download ended early. Check the connection and try again.");
+    await pipeline(source, createWriteStream(temp, { flags: append ? "a" : "w" }));
+
+    // Verify before the file becomes a usable model: a truncated or oversized
+    // GGUF must never be presented as downloaded.
+    const written = (await fs.stat(temp)).size;
+    if (written > spec.sizeBytes) {
+      await fs.rm(temp, { force: true });
+      throw new Error(
+        `Downloaded ${written} bytes but expected ${spec.sizeBytes}; the file was discarded.`
+      );
+    }
+    if (written < spec.sizeBytes) {
+      // Keep the partial file: the next attempt resumes from here.
+      throw new Error(
+        `Downloaded ${written} of ${spec.sizeBytes} bytes. Retry to resume.`
+      );
     }
     await fs.rename(temp, target);
     pushLog(`Downloaded ${spec.name}`);
     return { ok: true };
   } catch (error) {
-    await fs.rm(temp, { force: true });
+    // The .part file stays on disk on purpose — that is what makes the next
+    // attempt a resume instead of a restart.
     const message = error instanceof Error ? error.message : "download failed";
     progress.error = message;
     pushLog(`Download failed for ${spec.name}: ${message}`);

@@ -46,6 +46,32 @@ function installShutdownHooks(): void {
   process.once("SIGINT", () => stop("SIGINT"));
 }
 
+/**
+ * On a phone there is no desktop setup flow to walk through: the app has to
+ * arrive already onboarded with llama.cpp selected, or the first screen is a
+ * wizard asking about runtimes that do not exist on Android.
+ *
+ * Only fills what is still empty — a choice the user makes later sticks.
+ */
+async function applyAndroidBootDefaults(): Promise<void> {
+  if (process.platform !== "android") return;
+  const { getSettings, saveSettings } = await import("./lib/store");
+  const settings = await getSettings();
+  const patched = { ...settings };
+  let changed = false;
+  for (const flag of ["onboarded", "termsAccepted", "disclaimerDismissed"] as const) {
+    if (!patched[flag]) {
+      patched[flag] = true;
+      changed = true;
+    }
+  }
+  if (!patched.defaultProviderId) {
+    patched.defaultProviderId = "llamacpp";
+    changed = true;
+  }
+  if (changed) await saveSettings(patched);
+}
+
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
@@ -88,6 +114,14 @@ export async function register() {
     console.error("openFoundry could not finish its boot sequence:", error);
     updateBootState({ ready: false, error: message });
     return;
+  }
+
+  // The phone has to look claimed before the first frame: the shell opens the
+  // workspace as soon as health answers 200, so these defaults go in first.
+  try {
+    await applyAndroidBootDefaults();
+  } catch (error) {
+    console.error("openFoundry could not apply the Android boot defaults:", error);
   }
 
   // From here the install is usable: the health endpoint answers 200 and a
