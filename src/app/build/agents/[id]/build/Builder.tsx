@@ -43,6 +43,7 @@ import {
   Wrench20Regular,
 } from "@fluentui/react-icons";
 import { formatDate, formatNumber, formatVersionStamp, useApi, useDeployments, useModels } from "@/lib/client";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useToast } from "@/components/Toast";
 import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
 import ModelSelect from "@/components/ModelSelect";
@@ -494,7 +495,11 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
           })),
         }),
       });
-      if (!res.ok || !res.body) throw new Error("The local model did not respond");
+      if (!res.ok)
+        throw new Error(
+          await apiErrorMessage(res, "The local model did not respond")
+        );
+      if (!res.body) throw new Error("The model returned an empty response");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
