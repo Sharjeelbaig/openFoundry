@@ -298,8 +298,10 @@ export default function SetupWizard({
         router.refresh();
         return;
       }
-      router.refresh();
-      window.location.reload();
+      // Leave /setup for good. The layout is dynamic, so a full navigation is
+      // the reliable way to drop the finished wizard and render the app shell:
+      // reloading this route (the old behaviour) just re-rendered the wizard.
+      window.location.assign(returnTo || "/discover/models");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

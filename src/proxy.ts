@@ -9,6 +9,7 @@ import { resolveApiRoute } from "@/lib/directory/routes";
 import { scopeForAction } from "@/lib/directory/scope";
 import { findSession, SESSION_COOKIE } from "@/lib/directory/sessions";
 import { getDirectory } from "@/lib/directory/store";
+import { getSettings } from "@/lib/store";
 
 export const config = {
   // Everything except the framework's assets and files with an extension.
@@ -71,6 +72,19 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/setup";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  // A finished install keeps /setup out of reach, the way a signed-in session
+  // keeps /signin out of reach. Without this, the wizard's final step reloaded
+  // /setup and the onboarded user was dropped back on Welcome forever.
+  if (pathname === "/setup" && session) {
+    const { onboarded } = await getSettings();
+    if (onboarded) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   if (pathname === "/signin") {
