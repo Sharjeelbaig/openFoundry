@@ -2,7 +2,7 @@
 // Copyright 2026 Sharjeel Baig
 
 import type { ReactNode } from "react";
-import { REPO, REPO_FILES } from "./content";
+import { REPO_FILES } from "./content";
 
 type S = Record<string, string>;
 
@@ -68,7 +68,7 @@ export function buildLessons(s: S): DocsLesson[] {
           body: (
             <>
               <ul className={s.list}>
-                <li>macOS 13.5 or later on Apple silicon for the desktop app.</li>
+                <li>macOS 13.5 or later on Apple silicon, or 64-bit Windows 10 or 11, for the desktop app.</li>
                 <li>Node.js 20.9 or later for the web workspace.</li>
                 <li>No account, no cloud subscription and no usage bill.</li>
               </ul>
@@ -103,8 +103,9 @@ export function buildLessons(s: S): DocsLesson[] {
                   asks for a display name, initials and an email.
                 </li>
                 <li>
-                  Point the provider step at Foundry Local, Ollama, LM Studio or llama.cpp, then
-                  pick a model.
+                  The provider step lists Foundry Local, Ollama, LM Studio and llama.cpp. If none
+                  is installed, install llama.cpp from the wizard: it downloads the matching
+                  server build and a small Qwen2.5 0.5B starter model, then starts it.
                 </li>
               </ol>
               <Note s={s}>
@@ -168,15 +169,23 @@ npm run dev`}</code>
           body: (
             <>
               <p className={s.p}>
-                The desktop build for Windows is not available yet. The web workspace runs on
-                Windows with Node.js 20.9 or later, using the same commands as above.
+                A Windows x64 beta ships with the macOS beta. Download
+                <span className={s.code}> openFoundry_0.4.3_x64-setup.exe</span> from the{" "}
+                <a className={s.link} href={REPO_FILES.releases}>
+                  releases page
+                </a>
+                . The installer adds a Start menu shortcut, installs the Microsoft WebView2
+                runtime when missing, and puts <span className={s.code}>openFoundry</span> on the
+                machine PATH.
               </p>
               <p className={s.p}>
-                The packaged app is macOS only for now. Windows packaging is tracked in{" "}
-                <a className={s.link} href={`${REPO}/issues/1`}>
-                  issue 1
-                </a>
-                .
+                The build is unsigned, so SmartScreen shows a warning the first time: choose
+                <strong> More info</strong>, then <strong>Run anyway</strong>. The portable ZIP
+                works without installing; keep the whole folder together.
+              </p>
+              <p className={s.p}>
+                The web workspace also runs on Windows with Node.js 20.9 or later, using the same
+                commands as above.
               </p>
             </>
           ),
@@ -193,6 +202,15 @@ npm run dev`}</code>
               </p>
               <pre className={s.pre}>
                 <code>npm run access-code</code>
+              </pre>
+              <p className={s.p}>
+                A desktop install ships the same tool as a command. In Terminal on macOS or
+                PowerShell on Windows:
+              </p>
+              <pre className={s.pre}>
+                <code>{`openFoundry access-code
+openFoundry access-code list
+openFoundry access-code revoke`}</code>
               </pre>
               <p className={s.p}>
                 It prints a new code for the owner and revokes the old one. It needs the same

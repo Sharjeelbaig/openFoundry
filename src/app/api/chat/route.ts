@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { streamCompletion } from "@/lib/chat";
 import { messageText, replaceMessageText } from "@/lib/chat-content";
 import { retrieveViaMcp } from "@/lib/knowledge/mcp-client";
+import { knowledgeFileSearchTool } from "@/lib/file-search";
 import {
   appendTrace,
   getAgent,
@@ -361,6 +362,15 @@ export async function POST(req: NextRequest) {
             })),
             ...toolboxResolution.functionTools,
           ];
+          // Local file search is a real function tool, not a decorative flag:
+          // when the agent enables it and has knowledge bases attached, the
+          // model can ask for a second retrieval pass instead of relying only
+          // on the automatic context injected before the call.
+          if (tools.includes("file-search") && knowledgeBaseIds.length) {
+            resolvedFunctionTools.push(
+              knowledgeFileSearchTool(req.nextUrl.origin, knowledgeBaseIds)
+            );
+          }
           // Deduplicate function tools by their model-visible name.
           const usedNames = new Set<string>();
           const dedupedFunctionTools: ResolvedTool[] = [];

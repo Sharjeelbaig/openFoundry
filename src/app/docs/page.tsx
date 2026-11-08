@@ -11,6 +11,8 @@ export const metadata = {
 const SECTIONS = [
   ["overview", "Overview"],
   ["getting-started", "Getting started"],
+  ["setup", "Setup and runtimes"],
+  ["cli", "Command line"],
   ["models", "Models and deployments"],
   ["deployment-types", "Deployment types"],
   ["runtime-nodes", "Runtime nodes"],
@@ -40,8 +42,9 @@ export default function DocsPage() {
       <article className="docs-content">
         <p className="docs-lead">
           This is a local mirror of the openFoundry portal. It keeps the layout,
-          navigation and vocabulary of the real product, but every model call, index and
-          deployment runs on this computer.
+          navigation and vocabulary of the real product. Workspace data is stored on
+          this computer; model calls go to whichever provider endpoint you configure,
+          which is a local runtime unless you add a remote one.
         </p>
 
         <h2 id="overview">Overview</h2>
@@ -53,9 +56,9 @@ export default function DocsPage() {
         </p>
         <ul>
           <li>Project identity and credentials: configure them in <Link href="/manage">Manage → Project details</Link>. They are generated and stored on this computer.</li>
-          <li>The project starts empty. Agents, deployments, knowledge, datasets and evaluations exist only after you create them.</li>
+          <li>Agents, deployments, knowledge bases, datasets and evaluations exist only after you create them. Three guardrails (Default, DefaultV2, MAIDefault) and a Profanity blocklist are seeded on first run, so guardrails are the one section that is not empty.</li>
           <li>Inference: whichever local runtime owns the model.</li>
-          <li>Embeddings: Ollama <span className="mono">nomic-embed-text</span>, then a Foundry embedding model, then lexical scoring.</li>
+          <li>Embeddings: an Ollama embedding model (<span className="mono">nomic-embed-text</span> preferred), then a Foundry embedding model, then lexical scoring.</li>
           <li>Storage: JSON files under <span className="mono">data/</span>.</li>
         </ul>
 
@@ -73,12 +76,58 @@ export default function DocsPage() {
           <span className="mono">Running</span>.
         </p>
 
+        <h2 id="setup">Setup and runtimes</h2>
+        <p>
+          First launch opens a five-step wizard: Welcome, Profile, Providers, Model, Ready.
+          The Providers step scans for Foundry Local, Ollama, LM Studio and llama.cpp. Only
+          llama.cpp can be installed end to end from here, because it needs no account and
+          publishes standalone server builds. Install downloads the matching build from the
+          llama.cpp GitHub releases plus a Qwen2.5 0.5B Instruct starting model, then starts{" "}
+          <span className="mono">llama-server</span> on the configured port.
+        </p>
+        <ul>
+          <li>Downloads show live progress and can be cancelled; a finished download is reused on retry.</li>
+          <li>The server can be started, stopped and removed from the same step. Removing it deletes the managed binary and model, not your workspace data.</li>
+          <li>Ollama, LM Studio and Foundry Local keep their own installers. The wizard reports their real state and links to the official download instead of faking a one-click install.</li>
+          <li>The managed runtime lives under <span className="mono">data/runtimes/llama.cpp</span> and the starter model under <span className="mono">data/models/llama.cpp</span>. The default endpoint is <span className="mono">http://127.0.0.1:8080</span>.</li>
+          <li>Raw endpoint fields stay behind a disclosure for people who already run a server elsewhere. A non-loopback endpoint is reported as unmanaged.</li>
+        </ul>
+        <p>
+          The profile, project identity and terms are stored in{" "}
+          <span className="mono">data/settings.json</span>. The desktop shell signs itself in
+          with a machine credential in the app data folder; the web build prints a one-time
+          setup token to the terminal.
+        </p>
+
+        <h2 id="cli">Command line</h2>
+        <p>
+          Both desktop builds ship an <span className="mono">openFoundry</span> command that
+          reads the same <span className="mono">directory.json</span> as the server. macOS
+          links it into <span className="mono">/usr/local/bin</span> or{" "}
+          <span className="mono">~/.local/bin</span> on first launch. The Windows installer
+          puts it on the machine <span className="mono">PATH</span>. Open a new terminal after
+          installing.
+        </p>
+        <pre className="code-block">{`openFoundry access-code                 # mint a code, replacing the old one
+openFoundry access-code --email you@example.com
+openFoundry access-code list            # every code and its state
+openFoundry access-code revoke          # revoke codes and sign out sessions
+openFoundry status                      # data directory, owners, sessions`}</pre>
+        <p>
+          It is a recovery tool, not a remote reset: it needs the same filesystem access the
+          server already has. Web installs keep using{" "}
+          <span className="mono">npm run access-code</span>. On macOS the data directory is{" "}
+          <span className="mono">~/Library/Application Support/app.openfoundry.desktop/data</span>;
+          on Windows it is <span className="mono">%APPDATA%\app.openfoundry.desktop\data</span>.
+        </p>
+
         <h2 id="models">Models and deployments</h2>
         <p>
-          The catalog is a live union of model aliases found in the three runtimes.
-          Metadata such as context window, task and license is read from the runtime and
-          is never invented. Deploying a model creates a real local OpenAI-compatible
-          endpoint:
+          The catalog is a live union of the models the configured runtimes report (Foundry
+          Local, Ollama, LM Studio, llama.cpp) plus the Foundry Local CLI catalog and the
+          Hugging Face catalog. Metadata such as context window, task and license is read
+          from the runtime or the catalog entry and is never invented. Deploying a model
+          creates a real local OpenAI-compatible endpoint:
         </p>
         <pre className="code-block">{`POST /api/v1/deployments/<deployment-name>/chat/completions
 Content-Type: application/json
@@ -298,7 +347,8 @@ version = project.agents.create_version(
         <ul>
           <li>Text, Markdown, CSV, JSON and HTML are read directly.</li>
           <li>PDF extraction uses <span className="mono">pdftotext</span> if installed.</li>
-          <li>If no embedding model is cached, the index reports lexical mode instead of pretending to be vector search.</li>
+          <li>Uploads need an embedding model: Ollama with <span className="mono">nomic-embed-text</span>, or a Foundry embedding model. Without one the upload fails with a clear error rather than indexing half a document.</li>
+          <li>A base that has no vectors (an imported or legacy one) is searched lexically instead of pretending to be vector search.</li>
         </ul>
 
         <h2 id="memory">Memory</h2>
@@ -345,10 +395,23 @@ version = project.agents.create_version(
 
         <h2 id="tools">Tools</h2>
         <p>
-          Three tools are implemented: web search, file search and calculator. Tools run
-          in the server before the model call and their output is added to the system
-          prompt. Web search is the only outbound request; it uses DuckDuckGo HTML
-          endpoints with no key.
+          Agents, toolboxes and the playground can use three built-in tools:{" "}
+          <span className="mono">web-search</span>, <span className="mono">file-search</span>{" "}
+          and <span className="mono">calculator</span>. Web search and calculator results are
+          resolved before the model call and added to the system prompt. Attached knowledge
+          bases are also retrieved automatically on every turn; when{" "}
+          <span className="mono">file-search</span> is enabled as well, the model gets a{" "}
+          <span className="mono">file_search</span> function it can call for a second pass.
+          Beyond the built-ins, a toolbox can hold MCP servers (stdio or HTTP), HTTP tools
+          with templated URLs and headers, and local skills from the catalog. Nested
+          toolboxes are rejected.
+        </p>
+        <p>
+          Built-in web search uses DuckDuckGo HTML endpoints with no key. It is not the only
+          outbound path: MCP servers, HTTP tools, image providers and any remote model
+          endpoint you configure also leave the machine. Tools marked write or destructive
+          require approval when the approval policy is on, and MCP annotations decide that
+          classification where the server provides them.
         </p>
 
         <h2 id="gateway">AI Gateway</h2>
@@ -421,6 +484,23 @@ api-key: <project api key>
                 ["/api/guardrails", "Guardrails, blocklists and controls", "GET / POST"],
                 ["/api/connections", "Project connections used by Foundry IQ sources", "GET / POST"],
                 ["/api/tools/test", "Run a tool in isolation", "POST"],
+                ["/api/toolboxes", "Toolboxes: built-ins, MCP servers and HTTP tools", "GET / POST"],
+                ["/api/toolboxes/<id>/call", "Run a toolbox definition in isolation", "POST"],
+                ["/api/mcp", "Registered MCP servers", "GET / POST"],
+                ["/api/http-tools", "Registered HTTP tools", "GET / POST"],
+                ["/api/skills", "Local skill catalog entries attached to agents", "GET / POST"],
+                ["/api/images/generate", "Generate an image with the configured provider", "POST"],
+                ["/api/speech/synthesize", "Local text to speech", "POST"],
+                ["/api/speech/transcribe", "Local speech to text", "POST"],
+                ["/api/fine-tune", "Fine-tune datasets built from traces", "GET / POST / DELETE"],
+                ["/api/fine-tune/<id>/export", "Export a dataset as JSONL", "GET"],
+                ["/api/workflows", "Workflow definitions and runs", "GET / POST"],
+                ["/api/routines", "Scheduled routines", "GET / POST"],
+                ["/api/batch", "Asynchronous batch jobs", "GET / POST / PATCH"],
+                ["/api/traces", "Recorded turns for traces and datasets", "GET"],
+                ["/api/tool-approvals", "Pending tool approvals and the approval policy", "GET"],
+                ["/api/nodes", "Runtime nodes used by deployment routing", "GET / POST / DELETE"],
+                ["/api/system", "Machine, runtime and storage status", "GET"],
                 ["/api/gateway/v1/chat/completions", "Routed gateway completion", "POST"],
                 ["/api/evaluations", "Quality and red team runs", "GET / POST / PATCH"],
                 ["/api/users", "Local project access records", "GET / POST / PATCH / DELETE"],
@@ -455,7 +535,9 @@ api-key: <project api key>
           Project records are written atomically to JSON files in{" "}
           <span className="mono">data/</span>: agents, deployments, knowledge, memory,
           guardrails, connections, traces, evaluations, routines, workflows, batch jobs,
-          gateway configuration and settings. Export everything from{" "}
+          gateway configuration and settings. Installed runtimes and downloaded weights live
+          under <span className="mono">data/runtimes</span> and{" "}
+          <span className="mono">data/models</span>. Export everything from{" "}
           <Link href="/build/data">Build → Data</Link>. Memory extracted by the agent
           builder is stored on this computer in{" "}
           <span className="mono">data/memory.json</span> and is never uploaded.
@@ -464,7 +546,7 @@ api-key: <project api key>
         <h2 id="limits">Limitations</h2>
         <ul>
           <li>There is no cloud resource, subscription, quota or billing behind any page. Local serving behaviour (metering, rate limits, reserved slots, queues, batch) is real; only data residency is simulated.</li>
-          <li>No fine-tuning runtime is bundled; datasets can be exported for an external trainer.</li>
+          <li>Chat-model fine-tuning is not bundled. Build → Fine-tune manages datasets sourced from traces and exports JSONL for an external trainer. Custom extraction can train a real local MLX LoRA adapter on macOS from the extraction page.</li>
           <li>Guardrails combine a deterministic local classifier with prompt instructions; they are not a hosted moderation model. Hosted-agent-only controls such as network egress rules are recorded but not enforced against local models.</li>
           <li>The project Responses surface and chat completions both support streaming.</li>
           <li>Local models are smaller than hosted frontier models and can hallucinate.</li>

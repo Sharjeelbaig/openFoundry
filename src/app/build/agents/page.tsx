@@ -39,6 +39,7 @@ export default function AgentsPage() {
   const [newName, setNewName] = useState("");
   const [newModel, setNewModel] = useState("");
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
 
   const { data, refresh } = useApi<{ agents: Agent[] }>("/api/agents");
   const { data: modelData } = useModels(30000);
@@ -67,6 +68,18 @@ export default function AgentsPage() {
       return true;
     });
   }, [agents, query, typeFilter, interactionFilter]);
+
+  const PAGE_SIZE = 20;
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, typeFilter, interactionFilter]);
+
+  useEffect(() => {
+    setPage((value) => Math.min(value, pages));
+  }, [pages]);
 
   const createAgent = async () => {
     if (!newName.trim()) return;
@@ -177,7 +190,7 @@ export default function AgentsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((agent) => (
+            {shown.map((agent) => (
               <tr key={agent.id}>
                 <td>
                   <Link
@@ -287,11 +300,25 @@ export default function AgentsPage() {
       </div>
       <div className="table-footer">
         <span>
-          {filtered.length ? `1-${filtered.length} of ${filtered.length}` : "0 of 0"}
+          {filtered.length
+            ? `${(page - 1) * PAGE_SIZE + 1}-${
+                (page - 1) * PAGE_SIZE + shown.length
+              } of ${filtered.length}`
+            : "0 of 0"}
         </span>
         <div className="pager">
-          <button disabled>‹ Prev</button>
-          <button disabled>Next ›</button>
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+          >
+            ‹ Prev
+          </button>
+          <button
+            disabled={page >= pages}
+            onClick={() => setPage((value) => Math.min(pages, value + 1))}
+          >
+            Next ›
+          </button>
         </div>
       </div>
 

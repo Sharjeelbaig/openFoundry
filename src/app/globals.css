@@ -56,6 +56,16 @@
   --bento-dot: #5a5a5a;
   --bento-shade: #141414;
   /*
+   * Paired colours for filled controls. The dark theme pairs a deep brand
+   * surface with white; light needs its own pair so a token swap cannot leave
+   * dark text on a dark fill (the user message bubble and the Save button both
+   * hit that before these existed).
+   */
+  --on-brand-fg: #ffffff;
+  --chat-user-bg: #38255e;
+  --chat-user-fg: #ffffff;
+  --chat-user-stroke: rgba(146, 99, 241, 0.35);
+  /*
    * Foundry surfaces, measured on the signed-in portal (ai.azure.com home and
    * catalog), dark scheme:
    *   canvas #0f0f0f, card #1f1f1f, catalog card / logo plate #1a1a1a,
@@ -164,6 +174,11 @@
   --scrollbar-thumb-hover: #bdbdbd;
   --bento-dot: #d8d1e4;
   --bento-shade: #e9e3f2;
+  /* Light keeps the brand pair legible: tinted lilac fill, deep purple text. */
+  --on-brand-fg: #ffffff;
+  --chat-user-bg: #e1cefc;
+  --chat-user-fg: #38255e;
+  --chat-user-stroke: #c9aaf9;
   /* Same surfaces in the light scheme: Foundry's neutralBackground1 tiles on a
      #f0f0f0 canvas, with #fafafa for the catalog card and logo plate. */
   --surface-card: #ffffff;
@@ -2197,6 +2212,13 @@ svg {
   padding: 2px;
   z-index: 60;
 }
+.app-context-menu {
+  position: fixed;
+  right: auto;
+  top: auto;
+  min-width: 180px;
+  z-index: 200;
+}
 .menu-item {
   width: 100%;
   border: 0;
@@ -2619,8 +2641,9 @@ svg {
   word-break: break-word;
 }
 .chat-msg.user .chat-bubble {
-  background: var(--brand-pressed);
-  border: 1px solid rgba(146, 99, 241, 0.35);
+  background: var(--chat-user-bg);
+  color: var(--chat-user-fg);
+  border: 1px solid var(--chat-user-stroke);
 }
 .chat-msg.assistant .chat-bubble {
   background: transparent;
@@ -7699,7 +7722,9 @@ svg {
 .agent-builder .head-btn-save {
   background: var(--brand-stroke);
   border-color: transparent;
-  color: var(--fg-1);
+  /* The fill is the brand stroke, not a neutral surface: keep the label white
+     in both themes instead of inheriting the (light) foreground colour. */
+  color: var(--on-brand-fg);
 }
 .agent-builder .head-btn-save:hover:not(:disabled) {
   background: var(--brand-hover);
@@ -7708,6 +7733,11 @@ svg {
   background: var(--surface-icon);
   color: var(--fg-disabled);
   cursor: default;
+}
+/* Light-only: grey on grey read as a rendering bug. Dark keeps its palette. */
+[data-theme="light"] .agent-builder .head-btn-save:disabled {
+  background: var(--bg-3);
+  color: var(--fg-3);
 }
 .agent-builder .head-btn-code {
   background: transparent;

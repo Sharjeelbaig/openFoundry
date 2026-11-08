@@ -4,10 +4,17 @@
 import release from "./release.json";
 
 export const REPO = "https://github.com/Sharjeelbaig/openFoundry";
-export const DOWNLOAD_URL = `${REPO}/releases/latest/download/openFoundry-macos-arm64.dmg`;
+const assetUrl = (tag: string, asset: string) =>
+  `${REPO}/releases/download/${tag}/${asset}`;
+export const DOWNLOAD_URL =
+  release.macos?.downloadUrl || assetUrl(release.tag, release.asset);
+export const WINDOWS_DOWNLOAD_URL = release.windows?.downloadUrl || "";
 export const VERSION = release.version;
 export const SIZE_MB = Math.ceil(release.bytes / (1024 * 1024));
 export const SHA256 = release.sha256;
+export const WINDOWS_SIZE_MB = Math.ceil((release.windows?.bytes || 0) / (1024 * 1024));
+export const WINDOWS_SHA256 = release.windows?.sha256 || "";
+export const BETA = true;
 
 export const NAV = [
   { label: "Features", href: "#features" },
@@ -128,11 +135,11 @@ export const FAQ = [
   },
   {
     q: "Is there a Windows desktop build?",
-    a: "Not yet. The web version runs on Windows with Node.js. The desktop build is macOS only for now.",
+    a: "Yes, a Windows x64 beta ships alongside the macOS build. The installer adds openFoundry to the Start menu and PATH. It is unsigned, so SmartScreen asks for confirmation on first run.",
   },
   {
     q: "How do I update?",
-    a: "Download the new DMG and replace the app. Your workspace data stays in the app-data folder.",
+    a: "Download the new installer for your platform and install it over the old version. Your workspace data stays in the app-data folder.",
   },
   {
     q: "Why does macOS warn about the app?",

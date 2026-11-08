@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.345",
+    "@tauri-apps/plugin-opener": "^2.7.2",
     "@xyflow/react": "^12.12.1",
     "cron-parser": "^5.10.3",
     "next": "16.4.3",

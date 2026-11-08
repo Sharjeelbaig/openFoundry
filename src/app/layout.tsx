@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import AppContextMenu from "@/components/AppContextMenu";
 import { OriginProvider } from "@/components/Origin";
 import { projectScope, summaryFor } from "@/lib/directory/can";
 import { hasOwner } from "@/lib/directory/bootstrap";
@@ -68,6 +69,7 @@ export default async function RootLayout({
             {children}
           </AppShell>
         </OriginProvider>
+        <AppContextMenu />
       </body>
     </html>
   );

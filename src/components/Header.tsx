@@ -82,19 +82,42 @@ export default function Header({
     return pathname.startsWith(href.split("/").slice(0, 2).join("/"));
   };
 
-  const saveFeedback = () => {
-    if (!feedback.trim()) return;
+  const saveFeedback = async () => {
+    const text = feedback.trim();
+    if (!text) return;
+    // Feedback leaves through the user's own mail client, never silently into
+    // localStorage. Tauri's webview cannot be relied on to handle a mailto
+    // navigation itself, so the desktop build asks the opener plugin to hand
+    // the address to the system mail app.
+    const url = `mailto:eng.sharjeel.baig@gmail.com?subject=${encodeURIComponent(
+      "openFoundry Feedback"
+    )}&body=${encodeURIComponent(text)}`;
+    const tauri = (
+      window as unknown as {
+        __TAURI_INTERNALS__?: { invoke: (command: string, args?: unknown) => Promise<unknown> };
+      }
+    ).__TAURI_INTERNALS__;
     try {
-      const key = "foundry-local:feedback";
-      const existing = JSON.parse(localStorage.getItem(key) || "[]") as unknown[];
-      existing.push({ text: feedback.trim(), at: new Date().toISOString() });
-      localStorage.setItem(key, JSON.stringify(existing));
+      if (tauri) {
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
+        await openUrl(url);
+      } else {
+        // A real anchor click lets the platform hand mailto: to the mail app
+        // without Next's client router treating it as an internal navigation.
+        const link = document.createElement("a");
+        link.href = url;
+        link.rel = "noopener";
+        link.click();
+      }
+      setFeedback("");
+      setMenu(null);
+      toast("Opening your email app with the feedback draft.", "success");
     } catch {
-      // ignore
+      toast(
+        "Could not open your email app. Write to eng.sharjeel.baig@gmail.com instead.",
+        "error"
+      );
     }
-    setFeedback("");
-    setMenu(null);
-    toast("Feedback saved on this computer. Thank you!", "success");
   };
 
   return (
@@ -295,8 +318,8 @@ export default function Header({
                 </button>
               </div>
               <p className="muted text-12 mb-8">
-                Comments are stored on this computer only. Nothing is sent to
-                openFoundry.
+                Opens your email app with <strong>openFoundry Feedback</strong> as the
+                subject. Nothing is sent until you send it.
               </p>
               <textarea
                 className="textarea"
@@ -306,7 +329,7 @@ export default function Header({
                 onChange={(event) => setFeedback(event.target.value)}
               />
               <button className="btn btn-primary btn-wide mt-8" onClick={saveFeedback}>
-                Save feedback
+                Open email draft
               </button>
             </div>
           )}

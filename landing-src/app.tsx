@@ -67,6 +67,9 @@ import {
   SIZE_MB,
   SLIDES,
   VERSION,
+  WINDOWS_DOWNLOAD_URL,
+  WINDOWS_SHA256,
+  WINDOWS_SIZE_MB,
 } from "./content";
 import { fluentTheme, useThemeMode } from "./theme";
 
@@ -483,12 +486,6 @@ const useStyles = makeStyles({
   button: {
     ...shorthands.borderRadius("4px"),
   },
-  disabledCta: {
-    color: tokens.colorNeutralForeground2,
-    backgroundColor: "transparent",
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke1),
-    opacity: 1,
-  },
   footer: {
     backgroundColor: "var(--of-surface-alt)",
     ...shorthands.borderTop("1px", "solid", tokens.colorNeutralStroke2),
@@ -856,6 +853,16 @@ export function App() {
                 </Button>
                 <Button
                   as="a"
+                  href={WINDOWS_DOWNLOAD_URL}
+                  appearance="secondary"
+                  size="large"
+                  className={styles.button}
+                  icon={<Window20Regular />}
+                >
+                  Download for Windows
+                </Button>
+                <Button
+                  as="a"
                   href="#run"
                   appearance="secondary"
                   size="large"
@@ -864,20 +871,11 @@ export function App() {
                 >
                   Run the web version
                 </Button>
-                <Button
-                  appearance="secondary"
-                  size="large"
-                  className={mergeClasses(styles.button, styles.disabledCta)}
-                  icon={<Window20Regular />}
-                  disabledFocusable
-                >
-                  Windows (not yet)
-                </Button>
               </div>
 
               <Text size={200} block className={styles.heroCaption}>
-                Free and open source · Apple silicon · macOS 13.5+ ·{" "}
-                {SIZE_MB} MB · v{VERSION}
+                Free and open source · macOS Apple silicon and Windows x64 ·{" "}
+                {SIZE_MB} MB · v{VERSION} beta
               </Text>
               <Text size={200} block className={styles.heroCaption}>
                 No account. No telemetry. No cloud bill.
@@ -1202,7 +1200,7 @@ export function App() {
               </Text>
               <Text size={400} block className={styles.sectionText}>
                 A native window, a bundled Node runtime and the same workspace.
-                Nothing else to install.
+                macOS and Windows betas come from the same source.
               </Text>
             </div>
 
@@ -1212,10 +1210,11 @@ export function App() {
                   <div className={styles.stepNum}>1</div>
                   <div>
                     <Text size={300} weight="semibold" block>
-                      Download the DMG
+                      Download the installer
                     </Text>
                     <Text size={300} className={styles.muted}>
-                      The file is {SIZE_MB} MB. Apple silicon only.
+                      The macOS DMG is {SIZE_MB} MB for Apple silicon. The Windows
+                      installer is {WINDOWS_SIZE_MB} MB for x64.
                     </Text>
                     <div className={styles.heroActions}>
                       <Button
@@ -1228,6 +1227,15 @@ export function App() {
                       >
                         Download for macOS
                       </Button>
+                      <Button
+                        as="a"
+                        href={WINDOWS_DOWNLOAD_URL}
+                        appearance="secondary"
+                        className={styles.button}
+                        icon={<Window20Regular />}
+                      >
+                        Download for Windows
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1236,11 +1244,12 @@ export function App() {
                   <div className={styles.stepNum}>2</div>
                   <div>
                     <Text size={300} weight="semibold" block>
-                      Move it to Applications
+                      Install it
                     </Text>
                     <Text size={300} className={styles.muted}>
-                      Open the DMG, then drag openFoundry to the Applications
-                      folder.
+                      On macOS, open the DMG and drag openFoundry to Applications.
+                      On Windows, run the setup file and finish the installer. It
+                      adds a Start menu shortcut and the openFoundry command line.
                     </Text>
                   </div>
                 </div>
@@ -1252,10 +1261,11 @@ export function App() {
                       Open it the first time
                     </Text>
                     <Text size={300} className={styles.muted}>
-                      The build is ad-hoc signed and not notarized, so macOS asks
-                      for confirmation. Right-click the app, choose Open, then
-                      confirm. On macOS 15 and later, use System Settings,
-                      Privacy & Security, Open Anyway.
+                      Neither build is code signed yet. macOS asks for
+                      confirmation: right-click the app, choose Open, then confirm,
+                      or use System Settings, Privacy & Security, Open Anyway. On
+                      Windows, SmartScreen shows a warning: choose More info, then
+                      Run anyway.
                     </Text>
                   </div>
                 </div>
@@ -1295,7 +1305,15 @@ export function App() {
                     Platform
                   </Text>
                   <Text size={300} weight="semibold">
-                    macOS, Apple silicon
+                    macOS Apple silicon
+                  </Text>
+                </div>
+                <div className={styles.factRow}>
+                  <Text size={300} className={styles.muted}>
+                    Also
+                  </Text>
+                  <Text size={300} weight="semibold">
+                    Windows 10 / 11 x64
                   </Text>
                 </div>
                 <div className={styles.factRow}>
@@ -1311,7 +1329,7 @@ export function App() {
                     Size
                   </Text>
                   <Text size={300} weight="semibold">
-                    {SIZE_MB} MB
+                    {SIZE_MB} MB macOS · {WINDOWS_SIZE_MB} MB Windows
                   </Text>
                 </div>
                 <div className={styles.factRow}>
@@ -1326,7 +1344,7 @@ export function App() {
                 <div className={styles.checksum}>
                   <div className={styles.checksumHead}>
                     <Text size={200} weight="semibold">
-                      SHA-256
+                      SHA-256, macOS
                     </Text>
                     <Button
                       appearance="subtle"
@@ -1339,14 +1357,36 @@ export function App() {
                         )
                       }
                       onClick={() => copy(SHA256, "sha")}
-                      aria-label="Copy SHA-256 checksum"
+                      aria-label="Copy macOS SHA-256 checksum"
                     />
                   </div>
                   <code className={styles.checksumCode}>{SHA256}</code>
                 </div>
 
+                <div className={styles.checksum}>
+                  <div className={styles.checksumHead}>
+                    <Text size={200} weight="semibold">
+                      SHA-256, Windows
+                    </Text>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={
+                        copied === "sha-win" ? (
+                          <Checkmark20Regular />
+                        ) : (
+                          <Copy20Regular />
+                        )
+                      }
+                      onClick={() => copy(WINDOWS_SHA256, "sha-win")}
+                      aria-label="Copy Windows SHA-256 checksum"
+                    />
+                  </div>
+                  <code className={styles.checksumCode}>{WINDOWS_SHA256}</code>
+                </div>
+
                 <Text size={200} className={styles.muted}>
-                  The source is on GitHub. Builds for other platforms can be
+                  The source is on GitHub. Both desktop builds are betas and can be
                   produced from the same code.
                 </Text>
               </Card>
@@ -1411,6 +1451,16 @@ export function App() {
                   onClick={startDownload}
                 >
                   Download for macOS
+                </Button>
+                <Button
+                  as="a"
+                  href={WINDOWS_DOWNLOAD_URL}
+                  appearance="secondary"
+                  size="large"
+                  className={styles.button}
+                  icon={<Window20Regular />}
+                >
+                  Download for Windows
                 </Button>
                 <Button
                   as="a"

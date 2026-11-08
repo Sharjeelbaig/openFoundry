@@ -2,7 +2,7 @@
 
 **A local AI workbench for your own computer.**
 
-[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/latest) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
+[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.3-macos-beta.1/openFoundry_0.4.3_aarch64.dmg) | [Download for Windows](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.3-windows-beta.1/openFoundry_0.4.3_x64-setup.exe) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
 
 openFoundry is a free, independent desktop app for discovering models, chatting with
 them, and building prompt agents. Workspace data stays on your machine and the app talks
@@ -14,9 +14,14 @@ directly to the model runtimes you configure.
 
 ## Status
 
-openFoundry 0.4.2 is available as a macOS desktop app and as a web workspace. Both run the
-same Next.js app, keep workspace data on the machine, and talk directly to the model
-runtimes you configure. The desktop build is packaged with Tauri 2.
+openFoundry 0.4.3 is available as a beta desktop app for macOS (Apple silicon) and
+Windows (x64), and as a web workspace. Both run the same Next.js app, keep workspace data
+on the machine, and talk directly to the model runtimes you configure. The desktop build
+is packaged with Tauri 2.
+
+Neither desktop build is code signed yet. macOS asks for confirmation on first launch
+(right-click, Open), and Windows SmartScreen asks for confirmation (More info, Run
+anyway).
 
 What it does:
 
@@ -41,14 +46,16 @@ What it does:
   follows the Azure IAM flow Foundry uses: `Role → Members → Review + assign`.
 - Desktop packaging: the Tauri bundle starts a bundled Next.js standalone server and Node
   runtime on a free loopback port, and stores workspace data in the OS app-data directory.
+- One-click llama.cpp: the setup wizard downloads the matching llama.cpp server build and
+  a Qwen2.5 0.5B starter model, then starts `llama-server` on a managed port. Ollama, LM
+  Studio and Foundry Local keep their own installers and are reported honestly.
+- An `openFoundry` command line in both desktop builds for access-code recovery and status.
 
 ## Roadmap
 
-- Bundled llama.cpp installer (tracked in
-  [issue #2](https://github.com/Sharjeelbaig/openFoundry/issues/2)).
-- Windows installer QA (tracked in
-  [issue #1](https://github.com/Sharjeelbaig/openFoundry/issues/1)).
-- Automatic installation of provider runtimes.
+- Windows installer testing on real Windows hardware (the bundle is built and staged, but
+  has not been run on a Windows machine yet).
+- Automatic installation for the remaining runtimes (Ollama, LM Studio, Foundry Local).
 
 ## Screenshots
 
@@ -165,6 +172,18 @@ For the installed desktop app, point it at the app data directory:
 npm run access-code -- --desktop
 ```
 
+Both desktop builds also ship a standalone `openFoundry` command that reads the same
+`directory.json`. On macOS it is linked into `/usr/local/bin` or `~/.local/bin` on first
+launch; the Windows installer puts it on the machine `PATH`. Open a new terminal after
+installing.
+
+```bash
+openFoundry access-code            # mint a code, replacing the old one
+openFoundry access-code list       # every code and its state
+openFoundry access-code revoke     # revoke codes and sign out sessions
+openFoundry status                 # data directory, owners, sessions
+```
+
 The dev server is not a desktop build, so it uses the token, not the machine credential.
 
 ## Run the desktop app
@@ -198,10 +217,16 @@ npm run clean
 It removes those build outputs only. The installed app and your workspace data are not
 touched.
 
-The macOS arm64 build is approximately 190 MB installed and 56 MB as a DMG. Most of that
-is the embedded Node runtime. Removing it would require replacing the Next.js server with
-a native or static implementation; the current tradeoff keeps the workspace identical to
+The macOS arm64 build is approximately 190 MB installed, 56 MB as a DMG. The Windows x64
+build is about 36 MB as a setup executable and 54 MB as a portable ZIP. Most of that is
+the embedded Node runtime. Removing it would require replacing the Next.js server with a
+native or static implementation; the current tradeoff keeps the workspace identical to
 the web build and works without requiring Node on the user's computer.
+
+To produce the Windows bundle from macOS, install `mingw-w64` and `makensis`, add the
+`x86_64-pc-windows-gnu` Rust target, and run `npm run desktop:build` with the target set.
+The build hook downloads the Windows Node runtime and stages the server, the CLI wrapper
+and `WebView2Loader.dll`.
 
 ## Providers
 

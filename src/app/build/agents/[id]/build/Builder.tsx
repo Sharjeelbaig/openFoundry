@@ -1112,6 +1112,12 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                         </button>
                       </div>
                     )}
+                    {tools.includes("file-search") && knowledgeIds.length === 0 && (
+                      <p className="config-desc">
+                        Add a knowledge base in the Knowledge section: file search reads
+                        those indexes and has nothing to search without one.
+                      </p>
+                    )}
                     {tools.includes("calculator") && (
                       <div className="tool-row">
                         <Options20Regular />

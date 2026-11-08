@@ -26,6 +26,11 @@ const eslintConfig = defineConfig([
     ".desktop-cache/**",
     "landing-src/.build/**",
     "landing/**",
+    // Local/generated directories that are not part of the app source.
+    ".android-cache/**",
+    "src-tauri/gen/**",
+    ".github/agents/**",
+    ".github/skills/**",
   ]),
 ]);
 
