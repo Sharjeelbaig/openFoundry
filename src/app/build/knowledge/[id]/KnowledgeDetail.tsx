@@ -523,12 +523,13 @@ export default function KnowledgeDetail({ id }: { id: string }) {
       for (const file of list) form.append("files", file);
       const res = await fetch("/api/knowledge", { method: "POST", body: form });
       const json = (await res.json()) as {
-        documents?: KnowledgeDocument[];
+        /** Number of documents the upload indexed (not an array). */
+        documents?: number;
         error?: string;
       };
       if (!res.ok) throw new Error(json.error || "Upload failed");
       toast(
-        `Indexed ${json.documents?.length || 0} document(s) into ${base.name}`,
+        `Indexed ${json.documents ?? 0} document(s) into ${base.name}`,
         "success"
       );
       refresh();
