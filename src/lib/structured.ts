@@ -121,10 +121,263 @@ function tableTitle(lines: Line[], startIndex: number, tableLines: Set<number>):
   return undefined;
 }
 
+/* ------------------------------------------------------------------ */
+/* CSV and JSON documents                                              */
+/* ------------------------------------------------------------------ */
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function cellText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+/** Parse RFC 4180-style CSV, honouring quoted fields and escaped quotes. */
+export function csvRecords(text: string): string[][] {
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = "";
+  let quoted = false;
+  let index = 0;
+  while (index < text.length) {
+    const char = text[index];
+    if (quoted) {
+      if (char === '"') {
+        if (text[index + 1] === '"') {
+          field += '"';
+          index += 2;
+          continue;
+        }
+        quoted = false;
+        index += 1;
+        continue;
+      }
+      field += char;
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = true;
+      index += 1;
+      continue;
+    }
+    if (char === ",") {
+      record.push(field);
+      field = "";
+      index += 1;
+      continue;
+    }
+    if (char === "\r") {
+      index += 1;
+      continue;
+    }
+    if (char === "\n") {
+      record.push(field);
+      records.push(record);
+      record = [];
+      field = "";
+      index += 1;
+      continue;
+    }
+    field += char;
+    index += 1;
+  }
+  if (field.length || record.length) {
+    record.push(field);
+    records.push(record);
+  }
+  return records.filter((row) => row.some((cell) => cell.trim() !== ""));
+}
+
+function dominantWidth(records: string[][]): number {
+  const counts = new Map<number, number>();
+  for (const record of records) {
+    counts.set(record.length, (counts.get(record.length) || 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 0;
+}
+
+/** Build a table from a matrix whose first row is usually the header. */
+function tableFromMatrix(records: string[][], page = 1): ExtractedTable | null {
+  const rows = records.filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length < 2) return null;
+  const width = dominantWidth(rows);
+  if (width < 2) return null;
+  const first = rows[0].map((cell) => cell.trim());
+  const headerIsNumeric = first.every(
+    (cell) => !cell || /^[$€£]?\s?-?[\d.,%]+$/.test(cell)
+  );
+  const columns = headerIsNumeric
+    ? Array.from({ length: width }, (_, column) => `Column ${column + 1}`)
+    : first
+        .slice(0, width)
+        .map((cell, column) => cell || `Column ${column + 1}`);
+  const body = headerIsNumeric ? rows : rows.slice(1);
+  if (body.length === 0) return null;
+  const normalized = body.map((row) => {
+    const cells = row.slice(0, width).map((cell) => cell.trim());
+    while (cells.length < width) cells.push("");
+    if (row.length > width) {
+      cells[width - 1] = `${cells[width - 1]} ${row
+        .slice(width)
+        .map((cell) => cell.trim())
+        .join(" ")}`.trim();
+    }
+    return cells;
+  });
+  return {
+    index: 0,
+    columns,
+    rows: normalized,
+    lineStart: 1,
+    lineEnd: records.length,
+    page,
+    confidence: 0.9,
+  };
+}
+
+/**
+ * A comma-separated document. When the filename says `.csv` this is trusted;
+ * otherwise the shape has to be unambiguous so ordinary prose that happens to
+ * contain commas is left to the text parser.
+ */
+function parseCsvDocument(
+  text: string,
+  kind: ExtractionKind,
+  trusted: boolean
+): StructuredDocument | null {
+  if (!trusted && (text.includes("|") || text.includes("\t"))) return null;
+  const records = csvRecords(text);
+  if (records.length < 2) return null;
+  const width = dominantWidth(records);
+  if (width < 2) return null;
+  const consistent =
+    records.filter((record) => Math.abs(record.length - width) <= 1).length /
+    records.length;
+  if (consistent < 0.7) return null;
+  if (!trusted) {
+    const header = records[0].map((cell) => cell.trim());
+    const numericData = records
+      .slice(1)
+      .some((record) =>
+        record.some((cell) => /^[$€£]?\s?-?[\d.,%]+$/.test(cell.trim()))
+      );
+    if (records.length < 3 && !numericData) return null;
+    if (header.length < 3 && !numericData) return null;
+  }
+  const table = tableFromMatrix(records);
+  if (!table) return null;
+  return { kind, keyValues: [], tables: [table], warnings: [] };
+}
+
+/** A JSON document: arrays of objects become tables, objects become fields. */
+function parseJsonDocument(
+  text: string,
+  kind: ExtractionKind
+): StructuredDocument | null {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
+  let value: unknown;
+  try {
+    value = JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+
+  const tables: ExtractedTable[] = [];
+  const keyValues: KeyValuePair[] = [];
+  const pushTable = (rows: Record<string, unknown>[], title?: string) => {
+    const columns: string[] = [];
+    for (const row of rows) {
+      for (const key of Object.keys(row)) {
+        if (!columns.includes(key)) columns.push(key);
+      }
+    }
+    if (columns.length === 0) return;
+    tables.push({
+      index: tables.length,
+      title,
+      columns,
+      rows: rows.map((row) => columns.map((column) => cellText(row[column]))),
+      lineStart: 1,
+      lineEnd: 1,
+      page: 1,
+      confidence: 0.9,
+    });
+  };
+
+  if (Array.isArray(value)) {
+    if (value.length > 0 && value.every(isPlainObject)) {
+      pushTable(value as Record<string, unknown>[]);
+    } else if (
+      value.length > 0 &&
+      value.every((row) => Array.isArray(row))
+    ) {
+      const table = tableFromMatrix(
+        (value as unknown[][]).map((row) => row.map(cellText))
+      );
+      if (table) tables.push(table);
+    }
+  } else if (isPlainObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      if (
+        Array.isArray(item) &&
+        item.length > 0 &&
+        item.every(isPlainObject)
+      ) {
+        pushTable(item as Record<string, unknown>[], key);
+      }
+    }
+    const leaves: [string, unknown][] = [];
+    const flatten = (object: Record<string, unknown>, prefix: string) => {
+      for (const [key, item] of Object.entries(object)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        if (
+          Array.isArray(item) &&
+          item.length > 0 &&
+          item.every(isPlainObject)
+        ) {
+          continue;
+        }
+        if (isPlainObject(item)) flatten(item, path);
+        else leaves.push([path, item]);
+      }
+    };
+    flatten(value, "");
+    for (const [key, item] of leaves) {
+      keyValues.push({
+        key,
+        value: Array.isArray(item)
+          ? item.map((entry) => cellText(entry)).join(", ")
+          : cellText(item),
+        line: 1,
+        page: 1,
+        confidence: 0.9,
+      });
+    }
+  }
+
+  if (tables.length === 0 && keyValues.length === 0) return null;
+  return { kind, keyValues, tables, warnings: [] };
+}
+
 export function extractStructured(
   text: string,
-  kind: ExtractionKind = "text"
+  kind: ExtractionKind = "text",
+  fileName?: string
 ): StructuredDocument {
+  const json = parseJsonDocument(text, kind);
+  if (json) return json;
+  const csv = parseCsvDocument(
+    text,
+    kind,
+    /\.csv$/i.test(fileName || "")
+  );
+  if (csv) return csv;
+
   const lines = linesWithPages(text);
   const tables: ExtractedTable[] = [];
   const tableLines = new Set<number>();

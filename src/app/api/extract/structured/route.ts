@@ -37,7 +37,11 @@ export async function POST(req: NextRequest) {
       }
       const buffer = Buffer.from(await file.arrayBuffer());
       const extracted = await extractBuffer(file.name || "document", buffer);
-      const structured = extractStructured(extracted.text, extracted.kind);
+      const structured = extractStructured(
+        extracted.text,
+        extracted.kind,
+        file.name
+      );
       return NextResponse.json({
         name: file.name,
         ...structured,
