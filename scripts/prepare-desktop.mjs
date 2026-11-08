@@ -40,6 +40,8 @@ const platforms = {
   "x86_64-apple-darwin": { node: "darwin-x64", ext: "tar.gz", win: false },
   "x86_64-pc-windows-msvc": { node: "win-x64", ext: "zip", win: true },
   "aarch64-pc-windows-msvc": { node: "win-arm64", ext: "zip", win: true },
+  "x86_64-pc-windows-gnu": { node: "win-x64", ext: "zip", win: true },
+  "aarch64-pc-windows-gnullvm": { node: "win-arm64", ext: "zip", win: true },
   "x86_64-unknown-linux-gnu": { node: "linux-x64", ext: "tar.xz", win: false },
   "aarch64-unknown-linux-gnu": { node: "linux-arm64", ext: "tar.xz", win: false },
 };
