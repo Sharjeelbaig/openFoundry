@@ -6,6 +6,12 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Checkmark16Filled, ChevronDown20Regular } from "@fluentui/react-icons";
+import {
+  firstEnabledIndex,
+  initialActiveIndex,
+  lastEnabledIndex,
+  stepEnabledIndex,
+} from "@/lib/select-keyboard";
 
 /**
  * A custom dropdown that replaces the native `<select>` control across the
@@ -100,9 +106,14 @@ export default function Select({
     null
   );
   const [internalValue, setInternalValue] = useState<string | undefined>(undefined);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+  const optionId = useCallback(
+    (index: number) => `${listId}-option-${index}`,
+    [listId]
+  );
 
   const options = useMemo(() => collectOptions(children), [children]);
 
@@ -150,16 +161,91 @@ export default function Select({
     };
   }, [open, measure]);
 
+  const openList = useCallback(() => {
+    measure();
+    setActiveIndex(initialActiveIndex(options, selected?.value));
+    setOpen(true);
+  }, [measure, options, selected?.value]);
+
+  const closeList = useCallback(() => {
+    setOpen(false);
+    setActiveIndex(-1);
+  }, []);
+
+  const moveActive = useCallback(
+    (delta: 1 | -1) => {
+      setActiveIndex((current) => stepEnabledIndex(options, current, delta));
+    },
+    [options]
+  );
+
+  // Keep the keyboard-active option visible inside the scrollable popover.
+  useEffect(() => {
+    if (!open || activeIndex < 0) return;
+    const node = popoverRef.current?.children[activeIndex] as HTMLElement | undefined;
+    node?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex]);
+
   const choose = (option: OptionInfo) => {
     if (option.disabled) return;
     if (!controlled) setInternalValue(option.value);
     setOpen(false);
+    setActiveIndex(-1);
     if (!onChange) return;
     const event = {
       target: { value: option.value },
       currentTarget: { value: option.value },
     } as unknown as React.ChangeEvent<HTMLSelectElement>;
     onChange(event);
+  };
+
+  const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        if (!open) openList();
+        else moveActive(1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        if (!open) {
+          openList();
+          setActiveIndex(lastEnabledIndex(options));
+        } else {
+          moveActive(-1);
+        }
+        break;
+      case "Home":
+        if (open) {
+          event.preventDefault();
+          setActiveIndex(firstEnabledIndex(options));
+        }
+        break;
+      case "End":
+        if (open) {
+          event.preventDefault();
+          setActiveIndex(lastEnabledIndex(options));
+        }
+        break;
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        if (!open) openList();
+        else if (activeIndex >= 0 && options[activeIndex]) choose(options[activeIndex]);
+        break;
+      case "Escape":
+        if (open) {
+          event.preventDefault();
+          closeList();
+        }
+        break;
+      case "Tab":
+        if (open) closeList();
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -172,6 +258,9 @@ export default function Select({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-haspopup="listbox"
+        aria-activedescendant={
+          open && activeIndex >= 0 ? optionId(activeIndex) : undefined
+        }
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         className={`custom-select-trigger${className ? ` ${className}` : ""}`}
@@ -180,9 +269,10 @@ export default function Select({
         title={title ?? (selected?.text || undefined)}
         onClick={() => {
           if (disabled) return;
-          if (!open) measure();
-          setOpen((value) => !value);
+          if (open) closeList();
+          else openList();
         }}
+        onKeyDown={onTriggerKeyDown}
       >
         <span className="custom-select-value">{selected?.label ?? null}</span>
         <ChevronDown20Regular className="custom-select-chevron" />
@@ -203,16 +293,19 @@ export default function Select({
             ) : (
               options.map((option, index) => {
                 const isSelected = option.value === selected?.value;
+                const isActive = index === activeIndex;
                 return (
                   <div
                     key={`${option.value}-${index}`}
+                    id={optionId(index)}
                     role="option"
                     aria-selected={isSelected}
                     aria-disabled={option.disabled}
                     className={`custom-select-option${isSelected ? " selected" : ""}${
-                      option.disabled ? " disabled" : ""
-                    }`}
+                      isActive ? " active" : ""
+                    }${option.disabled ? " disabled" : ""}`}
                     onClick={() => choose(option)}
+                    onMouseEnter={() => setActiveIndex(index)}
                   >
                     <span className="custom-select-check">
                       {isSelected && <Checkmark16Filled />}
