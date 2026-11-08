@@ -18,6 +18,7 @@ import {
   Stop20Regular,
 } from "@fluentui/react-icons";
 import { useDeployments, useModels } from "@/lib/client";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useToast } from "@/components/Toast";
 import { CopyButton, StatusBadge } from "@/components/ui";
 import { ModelLogo } from "@/components/Logos";
@@ -190,7 +191,9 @@ export default function Playground() {
           ],
         }),
       });
-      if (!res.ok || !res.body) throw new Error("The model did not respond");
+      if (!res.ok)
+        throw new Error(await apiErrorMessage(res, "The model did not respond"));
+      if (!res.body) throw new Error("The model returned an empty response");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
