@@ -17,6 +17,7 @@ import {
   syncSource,
   updateBase,
 } from "@/lib/knowledge/service";
+import { normalizeSourceKind } from "@/lib/knowledge/create-sources";
 import type {
   OutputMode,
   ReasoningEffort,
@@ -95,6 +96,14 @@ export async function POST(req: NextRequest) {
     sourceName?: string;
     sourceDetail?: string;
     sourceConfig?: Record<string, unknown>;
+    /** Source types chosen on the create page, attached at create time (OS-23). */
+    sources?: {
+      kind?: string;
+      catalogKind?: string;
+      name?: string;
+      detail?: string;
+      reuseOf?: string;
+    }[];
   };
 
   try {
@@ -122,8 +131,43 @@ export async function POST(req: NextRequest) {
         connectionId: body.connectionId,
         encryption: body.encryption,
       });
+
+      // The create page only picks source *types*, but the base must record what
+      // the user chose instead of dropping it (OS-23). Attach each one now:
+      // reused sources are cloned, the rest are created directly. A source that
+      // still needs a connection or extra configuration cannot be created here,
+      // so it is reported back and the detail page finishes it through its
+      // usual dialog.
+      const pendingSources: SourceKind[] = [];
+      const pendingReuse: string[] = [];
+      for (const source of body.sources ?? []) {
+        if (typeof source?.reuseOf === "string" && source.reuseOf) {
+          try {
+            await cloneSourceIntoBase(base.id, source.reuseOf);
+          } catch {
+            pendingReuse.push(source.reuseOf);
+          }
+          continue;
+        }
+        const kind = normalizeSourceKind(source?.kind, source?.catalogKind);
+        if (!kind) continue;
+        try {
+          await addSource({
+            baseId: base.id,
+            kind,
+            name: source?.name?.trim() || kind,
+            description: source?.detail,
+          });
+        } catch {
+          pendingSources.push(kind);
+        }
+      }
+
       const state = await stateFor(base.id);
-      return NextResponse.json({ knowledgeBase: state.knowledgeBase }, { status: 201 });
+      return NextResponse.json(
+        { knowledgeBase: state.knowledgeBase, pendingSources, pendingReuse },
+        { status: 201 }
+      );
     }
 
     const baseId = body.id || "";

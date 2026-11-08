@@ -190,6 +190,7 @@ export default function KnowledgeCreatePage() {
       {
         id: `src-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         kind: option.kind,
+        catalogKind: option.catalogKind,
         name: option.label,
         detail: option.description,
         status: "Ready",
@@ -234,6 +235,7 @@ export default function KnowledgeCreatePage() {
       {
         id: `src-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         kind: "upload",
+        catalogKind: "file",
         name: "Files",
         detail: "Upload documents to index with file search",
         status: "Connected",
@@ -270,22 +272,22 @@ export default function KnowledgeCreatePage() {
           sources,
         }),
       });
-      const json = (await res.json()) as { knowledgeBase?: KnowledgeBase; error?: string };
+      const json = (await res.json()) as {
+        knowledgeBase?: KnowledgeBase;
+        pendingSources?: SourceKind[];
+        pendingReuse?: string[];
+        error?: string;
+      };
       if (!res.ok || !json.knowledgeBase)
         throw new Error(json.error || "Could not create the knowledge base");
       toast("Knowledge base created", "success");
-      const chosen = sources
-        .filter((source) => !source.reuseOf)
-        .map((source) => source.catalogKind)
-        .filter(Boolean)
-        .join(",");
-      const reuse = sources
-        .map((source) => source.reuseOf)
-        .filter(Boolean)
-        .join(",");
+      // The server already attached every source it could. Only the ones that
+      // still need a connection or configuration are handed to the detail page.
       const params = new URLSearchParams();
-      if (chosen) params.set("add", chosen);
-      if (reuse) params.set("reuse", reuse);
+      if (json.pendingSources?.length)
+        params.set("add", json.pendingSources.join(","));
+      if (json.pendingReuse?.length)
+        params.set("reuse", json.pendingReuse.join(","));
       router.push(
         `/build/knowledge/${encodeURIComponent(json.knowledgeBase.id)}${
           params.size ? `?${params.toString()}` : ""
