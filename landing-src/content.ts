@@ -14,6 +14,11 @@ export const SIZE_MB = Math.ceil(release.bytes / (1024 * 1024));
 export const SHA256 = release.sha256;
 export const WINDOWS_SIZE_MB = Math.ceil((release.windows?.bytes || 0) / (1024 * 1024));
 export const WINDOWS_SHA256 = release.windows?.sha256 || "";
+export const WINDOWS_ASSET = release.windows?.asset || "";
+export const LINUX_DOWNLOAD_URL = release.linux?.downloadUrl || "";
+export const LINUX_ASSET = release.linux?.asset || "";
+export const LINUX_SIZE_MB = Math.ceil((release.linux?.bytes || 0) / (1024 * 1024));
+export const LINUX_SHA256 = release.linux?.sha256 || "";
 export const BETA = true;
 
 export const NAV = [
@@ -136,6 +141,10 @@ export const FAQ = [
   {
     q: "Is there a Windows desktop build?",
     a: "Yes, a Windows x64 beta ships alongside the macOS build. The installer adds openFoundry to the Start menu and PATH. It is unsigned, so SmartScreen asks for confirmation on first run.",
+  },
+  {
+    q: "Is there a Linux desktop build?",
+    a: `Yes. A Debian package for x64 ships alongside the macOS and Windows builds. Install it with sudo apt install ./${LINUX_ASSET} on Ubuntu 22.04+ or Debian 12+.`,
   },
   {
     q: "How do I update?",

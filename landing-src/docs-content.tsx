@@ -2,7 +2,7 @@
 // Copyright 2026 Sharjeel Baig
 
 import type { ReactNode } from "react";
-import { REPO_FILES } from "./content";
+import { LINUX_ASSET, REPO_FILES, WINDOWS_ASSET } from "./content";
 
 type S = Record<string, string>;
 
@@ -68,7 +68,7 @@ export function buildLessons(s: S): DocsLesson[] {
           body: (
             <>
               <ul className={s.list}>
-                <li>macOS 13.5 or later on Apple silicon, or 64-bit Windows 10 or 11, for the desktop app.</li>
+                <li>macOS 13.5 or later on Apple silicon, 64-bit Windows 10 or 11, or 64-bit Debian or Ubuntu, for the desktop app.</li>
                 <li>Node.js 20.9 or later for the web workspace.</li>
                 <li>No account, no cloud subscription and no usage bill.</li>
               </ul>
@@ -170,7 +170,7 @@ npm run dev`}</code>
             <>
               <p className={s.p}>
                 A Windows x64 beta ships with the macOS beta. Download
-                <span className={s.code}> openFoundry_0.4.3_x64-setup.exe</span> from the{" "}
+                <span className={s.code}> {WINDOWS_ASSET}</span> from the{" "}
                 <a className={s.link} href={REPO_FILES.releases}>
                   releases page
                 </a>
@@ -185,6 +185,35 @@ npm run dev`}</code>
               </p>
               <p className={s.p}>
                 The web workspace also runs on Windows with Node.js 20.9 or later, using the same
+                commands as above.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "linux",
+          title: "Linux",
+          body: (
+            <>
+              <p className={s.p}>
+                A Debian package for x64 ships with the macOS and Windows betas. Download
+                <span className={s.code}> {LINUX_ASSET}</span> from the{" "}
+                <a className={s.link} href={REPO_FILES.releases}>
+                  releases page
+                </a>
+                , then install it:
+              </p>
+              <pre className={s.pre}>
+                <code>{`sudo apt install ./${LINUX_ASSET}`}</code>
+              </pre>
+              <p className={s.p}>
+                It is built on Ubuntu 22.04, so it runs on Ubuntu 22.04 or later and Debian 12 or
+                later. The package installs the app, the bundled Node runtime and the{" "}
+                <span className={s.code}>openfoundry</span> command. Linux needs WebKitGTK 4.1 and
+                GTK 3, which the package declares as dependencies.
+              </p>
+              <p className={s.p}>
+                The web workspace also runs on Linux with Node.js 20.9 or later, using the same
                 commands as above.
               </p>
             </>
