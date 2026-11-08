@@ -55,7 +55,7 @@ jobs:
       - name: Collect the artifact
         id: artifact
         run: |
-          set -euo pipefail
+          set -eu
           DEB=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb -name '*.deb' | head -1)
           test -n "$DEB"
           echo "path=$DEB" >> "$GITHUB_OUTPUT"
@@ -63,7 +63,8 @@ jobs:
           echo "bytes=$(stat -c%s "$DEB")" >> "$GITHUB_OUTPUT"
           echo "sha256=$(sha256sum "$DEB" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           dpkg-deb --info "$DEB"
-          dpkg-deb --contents "$DEB" | head -20
+          dpkg-deb --contents "$DEB" > /tmp/deb-contents.txt
+          head -20 /tmp/deb-contents.txt
 
       - name: Upload the .deb
         uses: actions/upload-artifact@v4
