@@ -19,5 +19,12 @@
     "sha256": "b49c14c431fe8b45e0553f5092ea03b17f21c5cb39a3499f38e4296ca904ec99",
     "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-windows-beta.1/openFoundry_0.4.4_x64-setup.exe"
   },
+  "linux": {
+    "tag": "v0.4.4-linux-beta.1",
+    "asset": "openFoundry_0.4.4_amd64.deb",
+    "bytes": 66864954,
+    "sha256": "6223b4a9039206d065d267c2302dd54d399a3d592453e743021e55fbc4aecfd2",
+    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-linux-beta.1/openFoundry_0.4.4_amd64.deb"
+  },
   "siteUrl": "https://openfoundry.pages.dev"
 }

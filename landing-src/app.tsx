@@ -60,6 +60,10 @@ import {
   DOWNLOAD_URL,
   FAQ,
   FEATURES,
+  LINUX_ASSET,
+  LINUX_DOWNLOAD_URL,
+  LINUX_SHA256,
+  LINUX_SIZE_MB,
   NAV,
   REPO,
   REPO_FILES,
@@ -863,6 +867,16 @@ export function App() {
                 </Button>
                 <Button
                   as="a"
+                  href={LINUX_DOWNLOAD_URL}
+                  appearance="secondary"
+                  size="large"
+                  className={styles.button}
+                  icon={<ArrowDownload20Regular />}
+                >
+                  Download for Linux
+                </Button>
+                <Button
+                  as="a"
                   href="#run"
                   appearance="secondary"
                   size="large"
@@ -874,8 +888,8 @@ export function App() {
               </div>
 
               <Text size={200} block className={styles.heroCaption}>
-                Free and open source · macOS Apple silicon and Windows x64 ·{" "}
-                {SIZE_MB} MB · v{VERSION} beta
+                Free and open source · macOS Apple silicon, Windows x64 and Linux
+                x64 · v{VERSION} beta
               </Text>
               <Text size={200} block className={styles.heroCaption}>
                 No account. No telemetry. No cloud bill.
@@ -1200,7 +1214,7 @@ export function App() {
               </Text>
               <Text size={400} block className={styles.sectionText}>
                 A native window, a bundled Node runtime and the same workspace.
-                macOS and Windows betas come from the same source.
+                macOS, Windows and Linux betas come from the same source.
               </Text>
             </div>
 
@@ -1213,8 +1227,9 @@ export function App() {
                       Download the installer
                     </Text>
                     <Text size={300} className={styles.muted}>
-                      The macOS DMG is {SIZE_MB} MB for Apple silicon. The Windows
-                      installer is {WINDOWS_SIZE_MB} MB for x64.
+                      The macOS DMG is {SIZE_MB} MB for Apple silicon, the Windows
+                      installer is {WINDOWS_SIZE_MB} MB for x64, and the Debian
+                      package is {LINUX_SIZE_MB} MB for x64.
                     </Text>
                     <div className={styles.heroActions}>
                       <Button
@@ -1236,6 +1251,15 @@ export function App() {
                       >
                         Download for Windows
                       </Button>
+                      <Button
+                        as="a"
+                        href={LINUX_DOWNLOAD_URL}
+                        appearance="secondary"
+                        className={styles.button}
+                        icon={<ArrowDownload20Regular />}
+                      >
+                        Download for Linux
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1250,6 +1274,8 @@ export function App() {
                       On macOS, open the DMG and drag openFoundry to Applications.
                       On Windows, run the setup file and finish the installer. It
                       adds a Start menu shortcut and the openFoundry command line.
+                      On Debian or Ubuntu, install the package with{" "}
+                      <code>sudo apt install ./{LINUX_ASSET}</code>.
                     </Text>
                   </div>
                 </div>
@@ -1261,11 +1287,12 @@ export function App() {
                       Open it the first time
                     </Text>
                     <Text size={300} className={styles.muted}>
-                      Neither build is code signed yet. macOS asks for
+                      None of the builds is code signed yet. macOS asks for
                       confirmation: right-click the app, choose Open, then confirm,
                       or use System Settings, Privacy & Security, Open Anyway. On
                       Windows, SmartScreen shows a warning: choose More info, then
-                      Run anyway.
+                      Run anyway. On Linux, install the .deb with apt or your
+                      package manager.
                     </Text>
                   </div>
                 </div>
@@ -1313,7 +1340,7 @@ export function App() {
                     Also
                   </Text>
                   <Text size={300} weight="semibold">
-                    Windows 10 / 11 x64
+                    Windows 10 / 11 x64 and Linux x64
                   </Text>
                 </div>
                 <div className={styles.factRow}>
@@ -1321,7 +1348,7 @@ export function App() {
                     Minimum
                   </Text>
                   <Text size={300} weight="semibold">
-                    macOS 13.5
+                    macOS 13.5, Windows 10, Ubuntu 22.04 / Debian 12
                   </Text>
                 </div>
                 <div className={styles.factRow}>
@@ -1329,7 +1356,8 @@ export function App() {
                     Size
                   </Text>
                   <Text size={300} weight="semibold">
-                    {SIZE_MB} MB macOS · {WINDOWS_SIZE_MB} MB Windows
+                    {SIZE_MB} MB macOS · {WINDOWS_SIZE_MB} MB Windows ·{" "}
+                    {LINUX_SIZE_MB} MB Linux
                   </Text>
                 </div>
                 <div className={styles.factRow}>
@@ -1385,9 +1413,31 @@ export function App() {
                   <code className={styles.checksumCode}>{WINDOWS_SHA256}</code>
                 </div>
 
+                <div className={styles.checksum}>
+                  <div className={styles.checksumHead}>
+                    <Text size={200} weight="semibold">
+                      SHA-256, Linux
+                    </Text>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={
+                        copied === "sha-linux" ? (
+                          <Checkmark20Regular />
+                        ) : (
+                          <Copy20Regular />
+                        )
+                      }
+                      onClick={() => copy(LINUX_SHA256, "sha-linux")}
+                      aria-label="Copy Linux SHA-256 checksum"
+                    />
+                  </div>
+                  <code className={styles.checksumCode}>{LINUX_SHA256}</code>
+                </div>
+
                 <Text size={200} className={styles.muted}>
-                  The source is on GitHub. Both desktop builds are betas and can be
-                  produced from the same code.
+                  The source is on GitHub. All three desktop builds are betas and
+                  can be produced from the same code.
                 </Text>
               </Card>
             </div>
@@ -1461,6 +1511,16 @@ export function App() {
                   icon={<Window20Regular />}
                 >
                   Download for Windows
+                </Button>
+                <Button
+                  as="a"
+                  href={LINUX_DOWNLOAD_URL}
+                  appearance="secondary"
+                  size="large"
+                  className={styles.button}
+                  icon={<ArrowDownload20Regular />}
+                >
+                  Download for Linux
                 </Button>
                 <Button
                   as="a"

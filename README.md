@@ -2,7 +2,7 @@
 
 **A local AI workbench for your own computer.**
 
-[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.3-macos-beta.1/openFoundry_0.4.3_aarch64.dmg) | [Download for Windows](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.3-windows-beta.1/openFoundry_0.4.3_x64-setup.exe) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
+[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-macos-beta.1/openFoundry_0.4.4_aarch64.dmg) | [Download for Windows](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-windows-beta.1/openFoundry_0.4.4_x64-setup.exe) | [Download for Linux](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-linux-beta.1/openFoundry_0.4.4_amd64.deb) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
 
 openFoundry is a free, independent desktop app for discovering models, chatting with
 them, and building prompt agents. Workspace data stays on your machine and the app talks
@@ -227,6 +227,12 @@ To produce the Windows bundle from macOS, install `mingw-w64` and `makensis`, ad
 `x86_64-pc-windows-gnu` Rust target, and run `npm run desktop:build` with the target set.
 The build hook downloads the Windows Node runtime and stages the server, the CLI wrapper
 and `WebView2Loader.dll`.
+
+The Linux `.deb` is about 64 MB. It builds on Ubuntu 22.04+ or Debian 12+ with
+`npm run desktop:build -- --target x86_64-unknown-linux-gnu --bundles deb`, or from the
+manual `Release Linux` workflow on GitHub Actions. The package declares
+`libwebkit2gtk-4.1-0` and `libgtk-3-0`, and installs with
+`sudo apt install ./openFoundry_<version>_amd64.deb`.
 
 ## Providers
 
