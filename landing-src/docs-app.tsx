@@ -21,6 +21,29 @@ import { DOWNLOAD_URL, REPO } from "./content";
 import { buildLessons, type DocsLesson } from "./docs-content";
 import { fluentTheme, useThemeMode } from "./theme";
 
+/** Resolve `#<lesson>` and `#<lesson>-<section>` document links. */
+function resolveDocHash(
+  lessons: DocsLesson[],
+  hash: string
+): { lesson: string; section?: string } | null {
+  const raw = (() => {
+    const value = hash.replace(/^#/, "");
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  })();
+  if (!raw) return null;
+  if (lessons.some((item) => item.id === raw)) return { lesson: raw };
+  for (const item of lessons) {
+    if (item.sections.some((section) => `${item.id}-${section.id}` === raw)) {
+      return { lesson: item.id, section: raw.slice(item.id.length + 1) };
+    }
+  }
+  return null;
+}
+
 /* Measured on learn.microsoft.com/en-us/dynamics365/get-started/intro-crossapp-index
    in dark mode: body #1f1f1f, bars and sidebar #292929, rules #404040,
    active row #333333, link #75b6e7, article column 688 inside a 736 wrapper,
@@ -479,19 +502,45 @@ export function DocsApp() {
   const [target, setTarget] = useState<{ lesson: string; section?: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const lesson = lessons.find((item) => item.id === lessonId) ?? lessons[0];
+  const lessonsRef = useRef(lessons);
+  useEffect(() => {
+    lessonsRef.current = lessons;
+  }, [lessons]);
 
   const navigate = (nextLesson: string, nextSection?: string) => {
     setLessonId(nextLesson);
     if (nextSection) setSectionId(nextSection);
     setOpen((current) => ({ ...current, [nextLesson]: true }));
     setTarget({ lesson: nextLesson, section: nextSection });
+    const hash = nextSection ? `#${nextLesson}-${nextSection}` : `#${nextLesson}`;
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, "", hash);
+    }
   };
+
+  // Honour deep links such as /docs/#authentication or /docs/#setup-macos.
+  useEffect(() => {
+    const apply = () => {
+      const next = resolveDocHash(lessonsRef.current, window.location.hash);
+      if (!next) return;
+      const targetLesson =
+        lessonsRef.current.find((item) => item.id === next.lesson) ??
+        lessonsRef.current[0];
+      setLessonId(next.lesson);
+      setSectionId(next.section ?? targetLesson.sections[0]?.id ?? "");
+      setOpen((current) => ({ ...current, [next.lesson]: true }));
+      setTarget({ lesson: next.lesson, section: next.section });
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, []);
 
   useEffect(() => {
     if (!target) return;
     window.requestAnimationFrame(() => {
       if (target.section) {
-        const element = document.getElementById(`section-${target.section}`);
+        const element = document.getElementById(`${target.lesson}-${target.section}`);
         element?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else {
         document.getElementById("article-top")?.scrollIntoView({
@@ -507,7 +556,7 @@ export function DocsApp() {
     const onScroll = () => {
       let current = lesson.sections[0]?.id ?? "";
       for (const section of lesson.sections) {
-        const element = document.getElementById(`section-${section.id}`);
+        const element = document.getElementById(`${lesson.id}-${section.id}`);
         if (element && element.getBoundingClientRect().top <= 140) current = section.id;
       }
       setSectionId(current);
@@ -525,6 +574,14 @@ export function DocsApp() {
   return (
     <FluentProvider theme={fluentTheme(mode)}>
       <div className={s.root}>
+        <div
+          aria-hidden="true"
+          style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
+        >
+          {lessons.map((item) => (
+            <span id={item.id} key={item.id} />
+          ))}
+        </div>
         <header className={s.topbar}>
           <div className={s.topbarInner}>
             <a className={s.brand} href="./">
@@ -713,7 +770,7 @@ export function DocsApp() {
 
               {lesson.sections.map((section) => (
                 <section key={section.id}>
-                  <h2 className={s.h2} id={`section-${section.id}`}>
+                  <h2 className={s.h2} id={`${lesson.id}-${section.id}`}>
                     {section.title}
                   </h2>
                   {section.body}
