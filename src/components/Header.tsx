@@ -86,9 +86,12 @@ export default function Header({
     const text = feedback.trim();
     if (!text) return;
     // Feedback leaves through the user's own mail client, never silently into
-    // localStorage. Tauri's webview cannot be relied on to handle a mailto
-    // navigation itself, so the desktop build asks the opener plugin to hand
-    // the address to the system mail app.
+    // localStorage. The desktop window loads the UI from the local server, so
+    // the browser side cannot reliably hand `mailto:` to the OS: a WebView
+    // drops the navigation and the Tauri opener only reports that a launcher
+    // started. The local server can launch the real handler and say whether it
+    // accepted the draft, so the desktop build asks it and only reports success
+    // when a mail client actually took the message.
     const url = `mailto:eng.sharjeel.baig@gmail.com?subject=${encodeURIComponent(
       "openFoundry Feedback"
     )}&body=${encodeURIComponent(text)}`;
@@ -99,8 +102,18 @@ export default function Header({
     ).__TAURI_INTERNALS__;
     try {
       if (tauri) {
-        const { openUrl } = await import("@tauri-apps/plugin-opener");
-        await openUrl(url);
+        const response = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        const result = (await response.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+        };
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || "The mail client did not accept the draft.");
+        }
       } else {
         // A real anchor click lets the platform hand mailto: to the mail app
         // without Next's client router treating it as an internal navigation.
@@ -112,9 +125,11 @@ export default function Header({
       setFeedback("");
       setMenu(null);
       toast("Opening your email app with the feedback draft.", "success");
-    } catch {
+    } catch (error) {
       toast(
-        "Could not open your email app. Write to eng.sharjeel.baig@gmail.com instead.",
+        error instanceof Error && error.message
+          ? `${error.message} You can also write to eng.sharjeel.baig@gmail.com.`
+          : "Could not open your email app. Write to eng.sharjeel.baig@gmail.com instead.",
         "error"
       );
     }
