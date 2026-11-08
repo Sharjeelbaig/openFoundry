@@ -21,6 +21,7 @@ import {
   LockClosed20Regular,
 } from "@fluentui/react-icons";
 import { useApi, useDeployments } from "@/lib/client";
+import { isChatDeployment } from "@/lib/model-task";
 import { useToast } from "@/components/Toast";
 import { Field, Spinner } from "@/components/ui";
 import type {
@@ -149,7 +150,8 @@ export default function KnowledgeCreatePage() {
   const chatDeployments = useMemo(
     () =>
       (deploymentsData?.deployments ?? []).filter(
-        (deployment) => deployment.status === "Running"
+        (deployment) =>
+          deployment.status === "Running" && isChatDeployment(deployment)
       ),
     [deploymentsData]
   );
