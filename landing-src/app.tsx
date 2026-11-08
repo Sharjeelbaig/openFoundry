@@ -940,10 +940,6 @@ export function App() {
                 >
                   A look around
                 </Text>
-                <Text size={400} block className={styles.sectionText}>
-                  Five screens from a real workspace. Keep scrolling and the
-                  strip moves sideways; when it ends, the page carries on.
-                </Text>
               </div>
               <div className={"horizontalTrack"} data-horizontal="track">
                 {SLIDES.map((image, index) => (
