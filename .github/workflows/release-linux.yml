@@ -1,0 +1,84 @@
+name: Release Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version being released (for the artifact name)"
+        required: true
+        default: "0.4.4"
+
+permissions:
+  contents: read
+
+jobs:
+  deb:
+    # 22.04 keeps the .deb compatible with Ubuntu 22.04+ and Debian 12+.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            dpkg-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build the Debian package
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run desktop:build -- --target x86_64-unknown-linux-gnu --bundles deb
+
+      - name: Collect the artifact
+        id: artifact
+        run: |
+          set -euo pipefail
+          DEB=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb -name '*.deb' | head -1)
+          test -n "$DEB"
+          echo "path=$DEB" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$DEB")" >> "$GITHUB_OUTPUT"
+          echo "bytes=$(stat -c%s "$DEB")" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$DEB" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          dpkg-deb --info "$DEB"
+          dpkg-deb --contents "$DEB" | head -20
+
+      - name: Upload the .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: ${{ steps.artifact.outputs.path }}
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          {
+            echo "### Linux .deb"
+            echo ""
+            echo "- Asset: \`${{ steps.artifact.outputs.name }}\`"
+            echo "- Bytes: ${{ steps.artifact.outputs.bytes }}"
+            echo "- SHA-256: \`${{ steps.artifact.outputs.sha256 }}\`"
+            echo "- Version input: ${{ inputs.version }}"
+          } >> "$GITHUB_STEP_SUMMARY"
