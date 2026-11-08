@@ -618,10 +618,14 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
       form.set("knowledgeBaseId", kb.id);
       for (const file of Array.from(files)) form.append("files", file);
       const res = await fetch("/api/knowledge", { method: "POST", body: form });
-      const json = (await res.json()) as { error?: string; documents?: unknown[] };
+      const json = (await res.json()) as {
+        error?: string;
+        /** Number of documents the upload indexed (not an array). */
+        documents?: number;
+      };
       if (!res.ok) throw new Error(json.error || "Upload failed");
       toast(
-        `Indexed ${json.documents?.length || 0} file(s) into ${kb.name}`,
+        `Indexed ${json.documents ?? 0} file(s) into ${kb.name}`,
         "success"
       );
       refreshKnowledge();
