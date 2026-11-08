@@ -7547,6 +7547,11 @@ svg {
 .agent-builder .chat-input-actions .send-button:disabled {
   color: var(--fg-disabled);
 }
+/* OS-28: the Stop control replaces Send while a reply streams. */
+.agent-builder .chat-input-actions .send-button.stop-button {
+  color: var(--brand-stroke);
+  background: color-mix(in srgb, var(--brand-stroke) 16%, transparent);
+}
 .agent-builder .chat-disclaimer {
   margin: 0;
   padding: 4px;

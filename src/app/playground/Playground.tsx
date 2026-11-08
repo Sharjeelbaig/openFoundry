@@ -15,10 +15,11 @@ import {
   Options20Regular,
   Send20Regular,
   Sparkle20Regular,
+  Stop20Regular,
 } from "@fluentui/react-icons";
 import { useDeployments, useModels } from "@/lib/client";
 import { useToast } from "@/components/Toast";
-import { CopyButton, Spinner, StatusBadge } from "@/components/ui";
+import { CopyButton, StatusBadge } from "@/components/ui";
 import { ModelLogo } from "@/components/Logos";
 import { taskLabel } from "@/lib/model-info";
 import type {
@@ -75,6 +76,8 @@ export default function Playground() {
   const [messages, setMessages] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  /** Aborts the in-flight reply when the user presses Stop (OS-28). */
+  const chatAbort = useRef<AbortController | null>(null);
   const [approvals, setApprovals] = useState<ToolApprovalRecord[]>([]);
   const [usage, setUsage] = useState<{
     promptTokens: number;
@@ -161,10 +164,13 @@ export default function Playground() {
     setApprovals([]);
     setStreaming(true);
     stream.current = { assistant: "", citations: [] };
+    const controller = new AbortController();
+    chatAbort.current = controller;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           model: activeModel.id,
           provider: activeModel.provider,
@@ -264,25 +270,45 @@ export default function Playground() {
       }
     } catch (error) {
       setApprovals([]);
-      const message =
-        error instanceof Error ? error.message : "Model request failed";
-      setMessages((current) => {
-        const copy = [...current];
-        if (copy[copy.length - 1]?.role === "assistant") {
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content: stream.current.assistant,
-            error: message,
-          };
-        } else {
-          copy.push({ role: "assistant", content: "", error: message });
-        }
-        return copy;
-      });
+      if (controller.signal.aborted) {
+        // The user stopped the reply. Keep whatever had streamed; drop the
+        // empty placeholder if nothing had arrived yet (OS-28).
+        setMessages((current) => {
+          const copy = [...current];
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant" && !last.content) copy.pop();
+          return copy;
+        });
+      } else {
+        const message =
+          error instanceof Error ? error.message : "Model request failed";
+        setMessages((current) => {
+          const copy = [...current];
+          if (copy[copy.length - 1]?.role === "assistant") {
+            copy[copy.length - 1] = {
+              role: "assistant",
+              content: stream.current.assistant,
+              error: message,
+            };
+          } else {
+            copy.push({ role: "assistant", content: "", error: message });
+          }
+          return copy;
+        });
+      }
     } finally {
+      if (chatAbort.current === controller) chatAbort.current = null;
       setStreaming(false);
     }
   };
+
+  /** Stop the reply that is streaming now, keeping the partial answer (OS-28). */
+  const stop = () => {
+    chatAbort.current?.abort();
+  };
+
+  // Do not leave a request running when the Playground unmounts.
+  useEffect(() => () => chatAbort.current?.abort(), []);
 
   const origin = useOrigin();
 
@@ -725,15 +751,27 @@ export default function Playground() {
                   <Attach20Regular />
                 </button>
                 <span className="spacer" />
-                <button
-                  className="icon-button"
-                  aria-label="Send message"
-                  disabled={streaming || (!input.trim() && !image) || !activeModel}
-                  onClick={() => void send()}
-                  style={{ color: "var(--brand-stroke)" }}
-                >
-                  {streaming ? <Spinner /> : <Send20Regular />}
-                </button>
+                {streaming ? (
+                  <button
+                    className="icon-button stop-button"
+                    aria-label="Stop generating"
+                    title="Stop generating"
+                    onClick={stop}
+                    style={{ color: "var(--brand-stroke)" }}
+                  >
+                    <Stop20Regular />
+                  </button>
+                ) : (
+                  <button
+                    className="icon-button"
+                    aria-label="Send message"
+                    disabled={(!input.trim() && !image) || !activeModel}
+                    onClick={() => void send()}
+                    style={{ color: "var(--brand-stroke)" }}
+                  >
+                    <Send20Regular />
+                  </button>
+                )}
               </div>
               <div className="chat-disclaimer">
                 AI-generated content may be incorrect
