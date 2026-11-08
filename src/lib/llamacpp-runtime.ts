@@ -162,17 +162,36 @@ function processAlive(pid: number): boolean {
   }
 }
 
+/** The same probe, but saying why it failed — orphan cleanup is invisible otherwise. */
+function processAliveDetail(pid: number): { alive: boolean; detail: string } {
+  try {
+    process.kill(pid, 0);
+    return { alive: true, detail: "" };
+  } catch (error) {
+    return { alive: false, detail: (error as NodeJS.ErrnoException).code || String(error) };
+  }
+}
+
 /**
  * Only claim a PID we can prove is llama-server. A recycled PID belonging to
  * another process must never be signalled.
+ *
+ * Returns the reason rather than a bare boolean: on a phone this runs unattended,
+ * and "we dropped the PID file" without the cause is unanswerable in the field.
  */
-async function looksLikeLlamaServer(pid: number): Promise<boolean> {
-  if (process.platform !== "android" && process.platform !== "linux") return false;
+async function looksLikeLlamaServer(pid: number): Promise<{ ok: boolean; detail: string }> {
+  if (process.platform !== "android" && process.platform !== "linux") {
+    return { ok: false, detail: `platform ${process.platform} has no /proc` };
+  }
   try {
     const cmdline = await fs.readFile(`/proc/${pid}/cmdline`, "utf8");
-    return /libllamaserver\.so|llama-server/.test(cmdline);
-  } catch {
-    return false;
+    if (/libllamaserver\.so|llama-server/.test(cmdline)) return { ok: true, detail: "" };
+    return { ok: false, detail: `cmdline is ${JSON.stringify(cmdline.replace(/\0/g, " ").slice(0, 120))}` };
+  } catch (error) {
+    return {
+      ok: false,
+      detail: `cannot read /proc/${pid}/cmdline: ${(error as NodeJS.ErrnoException).code || error}`,
+    };
   }
 }
 
@@ -185,19 +204,20 @@ async function waitForExit(pid: number, timeoutMs: number): Promise<boolean> {
   return !processAlive(pid);
 }
 
-async function stopPid(pid: number): Promise<void> {
+async function stopPid(pid: number): Promise<boolean> {
   try {
     process.kill(pid, "SIGTERM");
-  } catch {
-    return;
+  } catch (error) {
+    pushLog(`Could not signal llama-server (pid ${pid}): ${(error as NodeJS.ErrnoException).code || error}`);
+    return false;
   }
-  if (await waitForExit(pid, 4000)) return;
+  if (await waitForExit(pid, 4000)) return true;
   try {
     process.kill(pid, "SIGKILL");
   } catch {
     // already gone
   }
-  await waitForExit(pid, 1000);
+  return waitForExit(pid, 1000);
 }
 
 async function writePidFile(pid: number): Promise<void> {
@@ -228,6 +248,33 @@ async function clearPidFile(pid?: number): Promise<void> {
  * starting a second model; if it is ours but stuck we stop it; if the PID now
  * belongs to something else we only drop the file.
  */
+/**
+ * Find the llama-server that is already answering our port, for the case where
+ * the PID file is gone but the process is not.
+ *
+ * The file can be lost — a failed write, or a stale entry dropped by an earlier
+ * reconcile — while the server keeps the port. Without this the app reports
+ * "not running", cannot stop it, and the next start fails to bind 8080.
+ */
+async function findServingLlamaServer(): Promise<number | null> {
+  if (process.platform !== "android" && process.platform !== "linux") return null;
+  if (!(await isReady())) return null;
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir("/proc");
+  } catch {
+    return null;
+  }
+  for (const entry of entries) {
+    if (!/^\d+$/.test(entry)) continue;
+    const pid = Number(entry);
+    if (pid === process.pid) continue;
+    const claim = await looksLikeLlamaServer(pid);
+    if (claim.ok) return pid;
+  }
+  return null;
+}
+
 async function reconcileRuntime(): Promise<void> {
   const store = state();
   if (store.running || store.externalPid) return;
@@ -236,18 +283,28 @@ async function reconcileRuntime(): Promise<void> {
   try {
     pid = Number((await fs.readFile(pidFile(), "utf8")).trim()) || null;
   } catch {
+    pid = null;
+  }
+  if (!pid) {
+    const discovered = await findServingLlamaServer();
+    if (discovered === null) return;
+    store.externalPid = discovered;
+    await writePidFile(discovered);
+    pushLog(`Adopted the running llama-server (pid ${discovered}) found without a PID file`);
     return;
   }
   if (!pid || pid === process.pid) {
+    pushLog("Dropping a meaningless llama-server PID file");
     await clearPidFile();
     return;
   }
-  if (!processAlive(pid)) {
-    await clearPidFile();
-    return;
-  }
-  if (!(await looksLikeLlamaServer(pid))) {
+  // Prove the PID before touching it, and adopt before trying to signal it:
+  // a llama-server that already answers is worth keeping even when this
+  // process is not allowed to signal it (Android can refuse across sandboxes).
+  const claim = await looksLikeLlamaServer(pid);
+  if (!claim.ok) {
     // The PID was recycled. Leave the unrelated process alone.
+    pushLog(`PID ${pid} is not llama-server, so it is left alone: ${claim.detail}`);
     await clearPidFile();
     return;
   }
@@ -255,6 +312,13 @@ async function reconcileRuntime(): Promise<void> {
   if (await isReady()) {
     store.externalPid = pid;
     pushLog(`Adopted the running llama-server (pid ${pid})`);
+    return;
+  }
+
+  const probe = processAliveDetail(pid);
+  if (!probe.alive) {
+    pushLog(`The recorded llama-server (pid ${pid}) is not running (${probe.detail})`);
+    await clearPidFile();
     return;
   }
 
