@@ -71,31 +71,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ guardrail }, { status: 201 });
   }
 
-  const guardrail = guardrails.find((entry) => entry.id === body.id);
-  if (!guardrail)
-    return NextResponse.json({ error: "Guardrail not found" }, { status: 404 });
-
-  if (body.action === "update") {
-    if (body.controls) guardrail.controls = body.controls;
-    if (body.streamingMode) guardrail.streamingMode = body.streamingMode;
-    if (body.agents) guardrail.agents = body.agents;
-    if (body.deployments) guardrail.deployments = body.deployments;
-    guardrail.updatedAt = nowIso();
-    await saveGuardrails(guardrails);
-    await applyToAgents(guardrail);
-    return NextResponse.json({ guardrail });
-  }
-
-  if (body.action === "delete") {
-    if (guardrail.builtIn)
-      return NextResponse.json(
-        { error: "Built-in guardrails cannot be deleted." },
-        { status: 400 }
-      );
-    await saveGuardrails(guardrails.filter((entry) => entry.id !== guardrail.id));
-    return NextResponse.json({ ok: true });
-  }
-
+  // Blocklist actions carry no guardrail id, so they are handled before the
+  // guardrail lookup below — otherwise every blocklist call fell through to
+  // "Guardrail not found" (OS-22).
   if (body.action === "createBlocklist") {
     const blocklists = await getBlocklists();
     const name = (body.name || "blocklist").trim();
@@ -119,6 +97,31 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     await saveBlocklists(blocklists.filter((entry) => entry.id !== body.blocklistId));
+    return NextResponse.json({ ok: true });
+  }
+
+  const guardrail = guardrails.find((entry) => entry.id === body.id);
+  if (!guardrail)
+    return NextResponse.json({ error: "Guardrail not found" }, { status: 404 });
+
+  if (body.action === "update") {
+    if (body.controls) guardrail.controls = body.controls;
+    if (body.streamingMode) guardrail.streamingMode = body.streamingMode;
+    if (body.agents) guardrail.agents = body.agents;
+    if (body.deployments) guardrail.deployments = body.deployments;
+    guardrail.updatedAt = nowIso();
+    await saveGuardrails(guardrails);
+    await applyToAgents(guardrail);
+    return NextResponse.json({ guardrail });
+  }
+
+  if (body.action === "delete") {
+    if (guardrail.builtIn)
+      return NextResponse.json(
+        { error: "Built-in guardrails cannot be deleted." },
+        { status: 400 }
+      );
+    await saveGuardrails(guardrails.filter((entry) => entry.id !== guardrail.id));
     return NextResponse.json({ ok: true });
   }
 
