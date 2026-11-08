@@ -14,6 +14,19 @@ import type {
   Trace,
 } from "./types";
 
+/**
+ * False during the server render and the first client render, true afterwards.
+ * Gate anything that reads the wall clock at render time (`new Date()`,
+ * `Date.now()`) behind this so the server HTML and the client's first render
+ * agree; otherwise a value that includes seconds can differ between the two and
+ * React throws a hydration mismatch (error #418).
+ */
+export function useMounted(): boolean {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
+}
+
 export function useApi<T>(
   url: string,
   intervalMs = 0
