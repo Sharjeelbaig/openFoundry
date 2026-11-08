@@ -213,6 +213,22 @@ export interface AgentVersion {
   savedAt: string;
   model: string;
   instructions: string;
+  /**
+   * Full configuration snapshot, so a stored version can be rolled back to its
+   * tools, knowledge, memory and guardrail as well as its prompt (OS-25).
+   * Optional so entries written before the snapshot existed stay valid.
+   */
+  provider?: ProviderId;
+  temperature?: number;
+  topP?: number;
+  maxTokens?: number;
+  voiceMode?: boolean;
+  memoryEnabled?: boolean;
+  memoryStoreId?: string;
+  guardrail?: "Default" | "Strict" | "Off";
+  guardrailId?: string;
+  tools?: string[];
+  knowledgeBaseIds?: string[];
 }
 
 export type ToolCatalogType = "Custom" | "Remote MCP" | "Local MCP" | "Skills";

@@ -2,6 +2,7 @@
 // Copyright 2026 Sharjeel Baig
 
 import { NextRequest, NextResponse } from "next/server";
+import { snapshotVersion, versionChanged } from "@/lib/agent-version";
 import {
   getAgents,
   nowIso,
@@ -41,6 +42,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const now = nowIso();
 
   if (body.action === "publish") {
+    // "Publish new version" promises a new version, so it always cuts one from
+    // the current configuration rather than only flipping the status (OS-25).
+    agent.version += 1;
+    agent.history.unshift(snapshotVersion(agent, now, agent.version));
+    agent.history = agent.history.slice(0, 30);
     agent.status = "Running";
     agent.publishedAt = now;
     agent.updatedAt = now;
@@ -51,12 +57,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   } else if (body.action === "touch") {
     agent.lastViewedAt = now;
   } else {
-    const contentChanged =
-      (body.instructions !== undefined &&
-        body.instructions !== agent.instructions) ||
-      (body.model !== undefined && body.model !== agent.model) ||
-      (body.temperature !== undefined &&
-        body.temperature !== agent.temperature);
+    // Snapshot the behavioural configuration before the edit so a change to
+    // tools, knowledge, memory or guardrails cuts a version too, not just
+    // instructions/model/temperature (OS-25).
+    const before = snapshotVersion(agent, now, agent.version);
 
     const allowed: (keyof Agent)[] = [
       "name",
@@ -83,14 +87,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
     agent.updatedAt = now;
     agent.lastViewedAt = now;
-    if (contentChanged) {
+    if (versionChanged(before, agent)) {
       agent.version += 1;
-      agent.history.unshift({
-        version: agent.version,
-        savedAt: now,
-        model: agent.model,
-        instructions: agent.instructions,
-      });
+      agent.history.unshift(snapshotVersion(agent, now, agent.version));
       agent.history = agent.history.slice(0, 30);
       if (agent.status === "Draft") agent.status = "Running";
     }

@@ -873,8 +873,29 @@ export default function AgentBuilder({ agentId }: { agentId: string }) {
                     className="menu-item"
                     key={entry.version}
                     onClick={() => {
+                      // Restore the whole snapshot, not just the prompt/model,
+                      // so tools/knowledge/memory/guardrail roll back too
+                      // (OS-25). Old entries lack the extra fields; skip those.
                       setVersion(entry.version);
                       setInstructions(entry.instructions);
+                      if (entry.temperature !== undefined)
+                        setTemperature(entry.temperature);
+                      if (entry.topP !== undefined) setTopP(entry.topP);
+                      if (entry.maxTokens !== undefined)
+                        setMaxTokens(entry.maxTokens);
+                      if (entry.voiceMode !== undefined)
+                        setVoiceMode(entry.voiceMode);
+                      if (entry.memoryEnabled !== undefined)
+                        setMemoryEnabled(entry.memoryEnabled);
+                      if (entry.memoryStoreId !== undefined)
+                        setMemoryStoreId(entry.memoryStoreId || "");
+                      if (entry.guardrail !== undefined)
+                        setGuardrail(entry.guardrail);
+                      if (entry.guardrailId !== undefined)
+                        setGuardrailId(entry.guardrailId || "");
+                      if (entry.tools) setTools(entry.tools);
+                      if (entry.knowledgeBaseIds)
+                        setKnowledgeIds(entry.knowledgeBaseIds);
                       const found = models.find((m) => m.id === entry.model);
                       if (found) setModelKey(found.key);
                       setVersionOpen(false);
