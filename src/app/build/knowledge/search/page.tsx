@@ -255,7 +255,9 @@ export default function KnowledgePage() {
                   <td colSpan={4} className="muted" style={{ textAlign: "center", padding: 36 }}>
                     {bases.length === 0
                       ? "No indexes yet. Create a knowledge base to build one locally."
-                      : `No indexes match “${query}”.`}
+                      : query.trim()
+                        ? `No indexes match “${query.trim()}”.`
+                        : "No indexes yet. Add documents to a knowledge base to build one locally."}
                   </td>
                 </tr>
               )}
