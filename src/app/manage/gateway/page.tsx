@@ -227,7 +227,7 @@ export default function GatewayPage() {
             limit and optionally cache identical requests in memory.
           </p>
           <div className="input-with-button" style={{ maxWidth: 620 }}>
-            <input className="input mono" readOnly value={endpoint} />
+            <input className="input mono" readOnly aria-label="Gateway endpoint" value={endpoint} />
             <CopyButton value={endpoint} label="Copy gateway endpoint" className="icon-button" />
           </div>
         </div>

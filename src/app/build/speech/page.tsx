@@ -377,6 +377,7 @@ export default function SpeechPage() {
           <select
             className="select"
             style={{ maxWidth: 240 }}
+            aria-label="Whisper model"
             value={modelChoice}
             onChange={(event) => setModelChoice(event.target.value)}
           >

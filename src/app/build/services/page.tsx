@@ -194,7 +194,12 @@ export default function ServicesPage() {
                 {service.description}
               </p>
               <div className="input-with-button">
-                <input className="input mono" readOnly value={service.endpoint} />
+                <input
+                  className="input mono"
+                  readOnly
+                  aria-label={`${service.name} endpoint`}
+                  value={service.endpoint}
+                />
                 <CopyButton
                   value={service.endpoint}
                   label={`Copy ${service.name} endpoint`}

@@ -149,7 +149,12 @@ export default function DiscoverServicesPage() {
             )}
             {service.id === "project" && (
               <div className="input-with-button">
-                <input className="input mono" readOnly value={`${origin}/api/v1`} />
+                <input
+                  className="input mono"
+                  readOnly
+                  aria-label="Project endpoint"
+                  value={`${origin}/api/v1`}
+                />
                 <CopyButton
                   value={`${origin}/api/v1`}
                   label="Copy project endpoint"
@@ -162,6 +167,7 @@ export default function DiscoverServicesPage() {
                 <input
                   className="input mono"
                   readOnly
+                  aria-label="Gateway endpoint"
                   value={`${origin}/api/gateway/v1/chat/completions`}
                 />
                 <CopyButton
