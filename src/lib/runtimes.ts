@@ -12,6 +12,11 @@ import path from "path";
 import { promisify } from "util";
 import { dataDir, nowIso, readJson, writeJson } from "./store";
 import { getRuntimeUrls, invalidateModelCache } from "./providers";
+import {
+  findExecutable,
+  hasFoundryInstall,
+  hasLmStudioInstall,
+} from "./runtime-discovery";
 import type {
   LocalSettings,
   RuntimeId,
@@ -389,15 +394,8 @@ async function probeOllama(base: string): Promise<{ online: boolean; count: numb
   }
 }
 
-async function hasBinary(name: string): Promise<boolean> {
-  try {
-    await execFileAsync(process.platform === "win32" ? "where.exe" : "which", [name], {
-      timeout: 3000,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+async function hasBinary(name: "foundry" | "ollama"): Promise<boolean> {
+  return Boolean(await findExecutable(name));
 }
 
 function portFromUrl(value: string, fallback = 8080): number {
@@ -877,7 +875,18 @@ export async function runtimeStatuses(): Promise<RuntimeStatus[]> {
   ]);
 
   const meta = await readJson<LlamaMeta | null>("llama-runtime.json", null);
-  const installed = await fileExists(serverPath());
+  const [managedLlama, llamaBinary, ollamaPresent, foundryPresent, lmstudioPresent] =
+    await Promise.all([
+      fileExists(serverPath()),
+      findExecutable("llama-server"),
+      hasBinary("ollama"),
+      hasFoundryInstall(),
+      hasLmStudioInstall(),
+    ]);
+  const installed = managedLlama || Boolean(llamaBinary);
+  const ollamaInstalled = ollama.online || ollamaPresent;
+  const foundryInstalled = foundry.online || foundryPresent;
+  const lmstudioInstalled = lmstudio.online || lmstudioPresent;
   const job = activeJob("llamacpp");
 
   const llamaState: RuntimeStatus = {
@@ -890,12 +899,14 @@ export async function runtimeStatuses(): Promise<RuntimeStatus[]> {
       : installed
       ? "stopped"
       : "missing",
-    managed: installed,
+    managed: managedLlama,
     url: urls.llamacpp,
     detail: llama.online
       ? `${llama.count} model${llama.count === 1 ? "" : "s"} at ${urls.llamacpp}`
-      : installed
+      : managedLlama
       ? "Installed. The server is not running."
+      : llamaBinary
+      ? `Installed at ${llamaBinary.path}. Start llama-server to serve models.`
       : "Not installed on this machine.",
     modelCount: llama.count,
     installable: llamaInstallable(),
@@ -903,9 +914,6 @@ export async function runtimeStatuses(): Promise<RuntimeStatus[]> {
     version: meta?.tag,
     jobId: job?.id,
   };
-
-  const ollamaInstalled = ollama.online || (await hasBinary("ollama"));
-  const foundryInstalled = foundry.online || (await hasBinary("foundry"));
 
   return [
     llamaState,
@@ -918,7 +926,7 @@ export async function runtimeStatuses(): Promise<RuntimeStatus[]> {
       detail: ollama.online
         ? `${ollama.count} model${ollama.count === 1 ? "" : "s"} at ${urls.ollama}`
         : ollamaInstalled
-        ? "Installed. Start the Ollama app."
+        ? "Installed. Start the Ollama app to serve models."
         : "Not installed on this machine.",
       modelCount: ollama.count,
       installable: false,
@@ -927,12 +935,18 @@ export async function runtimeStatuses(): Promise<RuntimeStatus[]> {
     {
       id: "lmstudio",
       label: "LM Studio",
-      state: lmstudio.online ? "running" : "missing",
+      state: lmstudio.online
+        ? "running"
+        : lmstudioInstalled
+        ? "stopped"
+        : "missing",
       managed: false,
       url: urls.lmstudio,
       detail: lmstudio.online
         ? `${lmstudio.count} model${lmstudio.count === 1 ? "" : "s"} at ${urls.lmstudio}`
-        : "Not running. Start the LM Studio local server.",
+        : lmstudioInstalled
+        ? "Installed. Start the local server in LM Studio."
+        : "Not installed on this machine.",
       modelCount: lmstudio.count,
       installable: false,
       installUrl: RUNTIME_INSTALL_URLS.lmstudio,

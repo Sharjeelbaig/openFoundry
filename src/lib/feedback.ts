@@ -25,6 +25,7 @@ export function openerCommand(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
   if (platform === "darwin") return { command: "open", args: [url] };
-  if (platform === "win32") return { command: "cmd", args: ["/c", "start", "", url] };
+  if (platform === "win32")
+    return { command: "rundll32", args: ["url.dll,FileProtocolHandler", url] };
   return { command: "xdg-open", args: [url] };
 }

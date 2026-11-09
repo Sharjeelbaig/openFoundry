@@ -62,6 +62,7 @@ export default function AppShell({
             initial={settings}
             systemHost={systemHost}
             needsClaim={needsClaim}
+            theme={theme}
           />
         </DownloadProvider>
       </ToastProvider>
