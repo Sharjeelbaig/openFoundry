@@ -5445,17 +5445,6 @@ svg {
   margin-top: 2px;
   line-height: 15px;
 }
-.setup-rail-note {
-  margin-top: auto;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--fg-3);
-  font-size: 11px;
-  line-height: 16px;
-  border-top: 1px solid var(--stroke-4);
-  padding-top: 12px;
-}
 .setup-main {
   display: flex;
   flex-direction: column;
@@ -5531,9 +5520,6 @@ svg {
   flex-wrap: wrap;
 }
 .setup-note {
-  border-top: 1px solid var(--stroke-3);
-  border-bottom: 1px solid var(--stroke-3);
-  padding: 16px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -5553,11 +5539,9 @@ svg {
 }
 .setup-message {
   margin: 0;
+  border: 0;
 }
 .setup-runtime-panel {
-  border-top: 1px solid var(--stroke-3);
-  border-bottom: 1px solid var(--stroke-3);
-  padding: 18px 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -5634,8 +5618,7 @@ svg {
   text-transform: uppercase;
   color: var(--fg-3);
   padding: 8px 12px;
-  border-bottom: 1px solid var(--stroke-3);
-  background: var(--bg-3);
+  border-bottom: 1px solid var(--stroke-4);
 }
 .setup-runtime-table th:nth-child(2) {
   width: 120px;
@@ -5720,17 +5703,16 @@ svg {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid var(--stroke-3);
+  border: 0;
   border-radius: var(--radius-lg);
   background: transparent;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition: background 120ms ease;
 }
 .setup-model-option:hover {
   background: var(--bg-3);
 }
 .setup-model-option:has(input:checked) {
-  border-color: var(--brand-stroke);
   background: var(--brand-tint);
 }
 .setup-model-copy {
@@ -5753,9 +5735,9 @@ svg {
   align-items: center;
   gap: 8px;
   padding: 40px 24px;
-  border: 1px dashed var(--stroke-3);
+  border: 0;
   border-radius: var(--radius-lg);
-  background: transparent;
+  background: var(--bg-3);
   text-align: center;
   color: var(--fg-2);
 }
@@ -5770,7 +5752,6 @@ svg {
 }
 .setup-review {
   margin: 4px 0 0;
-  border-top: 1px solid var(--stroke-3);
 }
 .setup-review-row {
   display: grid;
@@ -5815,7 +5796,7 @@ svg {
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid var(--stroke-3);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--bg-3);
   margin: 12px 0;
@@ -5861,9 +5842,6 @@ svg {
     padding: 6px 10px;
   }
   .setup-step-copy small {
-    display: none;
-  }
-  .setup-rail-note {
     display: none;
   }
   .setup-scroll {

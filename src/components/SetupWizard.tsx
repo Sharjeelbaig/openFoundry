@@ -14,7 +14,6 @@ import {
   Copy20Regular,
   Dismiss20Regular,
   Key20Regular,
-  LockClosed20Regular,
   Open20Regular,
   Play20Regular,
   PlugConnected20Regular,
@@ -63,7 +62,7 @@ import type {
 const STEPS = [
   { label: "Workspace", description: "Name and terms" },
   { label: "Profile", description: "Your local identity" },
-  { label: "Runtime", description: "Connect a provider" },
+  { label: "Runtime", description: "Connect a runtime" },
   { label: "Model", description: "Pick a first model" },
   { label: "Ready", description: "Review and open" },
 ] as const;
@@ -396,7 +395,7 @@ export default function SetupWizard({
             <div className="setup-topbar-meta">
               <span>
                 {editProviders
-                  ? "Provider setup"
+                  ? "Runtime setup"
                   : `Step ${step + 1} of ${STEPS.length}`}
               </span>
               <span className="setup-topbar-local">
@@ -438,10 +437,6 @@ export default function SetupWizard({
                 );
               })}
             </ol>
-            <div className="setup-rail-note">
-              <LockClosed20Regular />
-              <span>No account required.</span>
-            </div>
           </aside>
 
           <main className="setup-main">
@@ -453,9 +448,8 @@ export default function SetupWizard({
                       Set up openFoundry
                     </h1>
                     <p className="setup-lead">
-                      This install runs on this computer. Setup takes about two minutes;
-                      you will choose a local runtime and a first model. Both can be
-                      changed later.
+                      This install runs on this computer. You will choose a local runtime
+                      and a first model. Both can be changed later.
                     </p>
 
                     <div className="setup-form-grid">
@@ -504,7 +498,7 @@ export default function SetupWizard({
                       Your local profile
                     </h1>
                     <p className="setup-lead">
-                      This identifies you in the workspace directory. It never leaves this
+                      This identifies you in this workspace. It never leaves this
                       computer.
                     </p>
 
@@ -600,7 +594,7 @@ export default function SetupWizard({
                     <p className="setup-lead">
                       {editProviders
                         ? "Start a runtime here, or point openFoundry at one you already run. openFoundry returns to the model you were viewing when you save."
-                        : "openFoundry talks to a local runtime over HTTP. Install llama.cpp here, or connect a runtime you already run."}
+                        : "openFoundry connects to a local runtime. Install llama.cpp here, or use one you already run."}
                     </p>
 
                     {error && (
@@ -639,8 +633,8 @@ export default function SetupWizard({
                               : llamaRunning
                               ? llama?.detail || "The local server is answering."
                               : llamaInstalled
-                              ? "Installed and ready. Start the server when you want to chat."
-                              : "A self-contained server with a small starter model. Everything stays on this machine."}
+                              ? "Installed. Start the server to use it."
+                              : "A local server with a small starter model."}
                           </p>
                         </div>
                       </div>
@@ -790,9 +784,7 @@ export default function SetupWizard({
                         <tr>
                           <th scope="col">Runtime</th>
                           <th scope="col">Status</th>
-                          <th scope="col">
-                            <span className="visually-hidden">Action</span>
-                          </th>
+                          <th scope="col" aria-label="Action" />
                         </tr>
                       </thead>
                       <tbody>
@@ -881,8 +873,8 @@ export default function SetupWizard({
                     {!editProviders && (
                       <MessageBar intent="info" className="setup-message">
                         <MessageBarBody>
-                          You can leave everything offline and configure it later. Model
-                          features unlock when a runtime responds.
+                          You can finish setup without a runtime and configure one later.
+                          Models appear when a runtime responds.
                         </MessageBarBody>
                       </MessageBar>
                     )}
@@ -981,7 +973,7 @@ export default function SetupWizard({
                   <section className="setup-step" aria-labelledby="setup-title-4">
                     <h1 className="setup-title" id="setup-title-4">Ready to build</h1>
                     <p className="setup-lead">
-                      Review the workspace before it opens. Providers and models can be
+                      Check the workspace before it opens. Providers and models can be
                       changed later.
                     </p>
                     <dl className="setup-review">
@@ -994,7 +986,7 @@ export default function SetupWizard({
                         <dd>{settings.userName || "Local user"}</dd>
                       </div>
                       <div className="setup-review-row">
-                        <dt>Runtimes online</dt>
+                        <dt>Online runtimes</dt>
                         <dd>{online.length}</dd>
                       </div>
                       <div className="setup-review-row">
@@ -1012,8 +1004,8 @@ export default function SetupWizard({
                     </dl>
                     <MessageBar intent="info" className="setup-message">
                       <MessageBarBody>
-                        This workspace lives on {systemHost || "this computer"}. Model licenses
-                        remain the responsibility of their owners.
+                        This workspace runs on {systemHost || "this computer"}. Model licenses
+                        belong to their owners.
                       </MessageBarBody>
                     </MessageBar>
                   </section>
