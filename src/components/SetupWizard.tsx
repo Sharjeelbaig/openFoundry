@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowClockwise20Regular,
@@ -13,11 +13,12 @@ import {
   Checkmark20Regular,
   Copy20Regular,
   Dismiss20Regular,
+  Key20Regular,
   LockClosed20Regular,
   Open20Regular,
   Play20Regular,
   PlugConnected20Regular,
-  Server20Regular,
+  Search20Regular,
   ShieldCheckmark20Regular,
   Stop20Regular,
 } from "@fluentui/react-icons";
@@ -28,7 +29,6 @@ import {
   AccordionPanel,
   Badge,
   Button,
-  Card,
   Checkbox,
   Dialog,
   DialogActions,
@@ -36,12 +36,12 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
+  Divider,
   Field,
   FluentProvider,
   Input,
   MessageBar,
   MessageBarBody,
-  MessageBarTitle,
   ProgressBar,
   Radio,
   RadioGroup,
@@ -61,11 +61,11 @@ import type {
 } from "@/lib/types";
 
 const STEPS = [
-  { label: "Welcome", description: "Terms and workspace" },
+  { label: "Workspace", description: "Name and terms" },
   { label: "Profile", description: "Your local identity" },
-  { label: "Providers", description: "Connect a runtime" },
-  { label: "Model", description: "Pick your first model" },
-  { label: "Ready", description: "Start building" },
+  { label: "Runtime", description: "Connect a provider" },
+  { label: "Model", description: "Pick a first model" },
+  { label: "Ready", description: "Review and open" },
 ] as const;
 
 type SetupWizardProps = {
@@ -96,6 +96,7 @@ export default function SetupWizard({
   const [claimed, setClaimed] = useState(!needsClaim);
   const [claimOpen, setClaimOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [modelQuery, setModelQuery] = useState("");
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [models, setModels] = useState<LocalModel[]>([]);
   const [settings, setSettings] = useState<LocalSettings>({
@@ -115,11 +116,21 @@ export default function SetupWizard({
   const [runtimeError, setRuntimeError] = useState("");
   const [runtimeBusy, setRuntimeBusy] = useState("");
   const [endpointsOpen, setEndpointsOpen] = useState(false);
+  const stepsRef = useRef<HTMLOListElement>(null);
 
   const chatModels = useMemo(
     () => models.filter((model) => model.task === "chat" || model.task === "vision"),
     [models]
   );
+  const filteredChatModels = useMemo(() => {
+    const query = modelQuery.trim().toLowerCase();
+    if (!query) return chatModels;
+    return chatModels.filter((model) =>
+      `${model.displayName} ${model.publisher} ${model.providerLabel}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [chatModels, modelQuery]);
 
   const savePartial = async (patch: Partial<LocalSettings>) => {
     const res = await fetch("/api/settings", {
@@ -211,6 +222,11 @@ export default function SetupWizard({
       setStep(2);
     }
   }, []);
+
+  useEffect(() => {
+    const active = stepsRef.current?.querySelector<HTMLElement>('[aria-current="step"]');
+    active?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [step]);
 
   useEffect(() => {
     if (step !== 2) return;
@@ -372,13 +388,10 @@ export default function SetupWizard({
         <div className="setup-shell">
           <header className="setup-topbar">
             <div className="setup-brand">
-              <OpenFoundryLogo size={24} />
-              <div className="setup-brand-text">
-                <strong>
-                  <span className="setup-brand-open">open</span>Foundry
-                </strong>
-                <span>Local workspace</span>
-              </div>
+              <OpenFoundryLogo size={22} />
+              <strong className="setup-brand-word">
+                <span className="setup-brand-open">open</span>Foundry
+              </strong>
             </div>
             <div className="setup-topbar-meta">
               <span>
@@ -386,15 +399,25 @@ export default function SetupWizard({
                   ? "Provider setup"
                   : `Step ${step + 1} of ${STEPS.length}`}
               </span>
-              <Badge appearance="tint" color="brand" size="small">
+              <span className="setup-topbar-local">
                 <ShieldCheckmark20Regular />
-                Local
-              </Badge>
+                Local only
+              </span>
             </div>
+            {!editProviders && (
+              <ProgressBar
+                className="setup-progress"
+                value={(step + 1) / STEPS.length}
+                max={1}
+                thickness="medium"
+                shape="square"
+                aria-label={`Step ${step + 1} of ${STEPS.length}`}
+              />
+            )}
           </header>
 
           <aside className="setup-rail">
-            <ol className="setup-steps" aria-label="Setup steps">
+            <ol className="setup-steps" aria-label="Setup steps" ref={stepsRef}>
               {visibleSteps.map((index) => {
                 const done = index < step && !editProviders;
                 const active = index === step;
@@ -417,7 +440,7 @@ export default function SetupWizard({
             </ol>
             <div className="setup-rail-note">
               <LockClosed20Regular />
-              <span>Everything stays on this computer.</span>
+              <span>No account required.</span>
             </div>
           </aside>
 
@@ -427,48 +450,19 @@ export default function SetupWizard({
                 {step === 0 && (
                   <section className="setup-step" aria-labelledby="setup-title-0">
                     <h1 className="setup-title" id="setup-title-0">
-                      Set up your local AI workbench.
+                      Set up openFoundry
                     </h1>
                     <p className="setup-lead">
-                      openFoundry runs models, agents and knowledge on this computer. No
-                      cloud account, no subscription, no usage bill.
+                      This install runs on this computer. Setup takes about two minutes;
+                      you will choose a local runtime and a first model. Both can be
+                      changed later.
                     </p>
-
-                    <div className="setup-feature-list">
-                      <div className="setup-feature">
-                        <span className="setup-feature-icon">
-                          <LockClosed20Regular />
-                        </span>
-                        <div className="setup-feature-copy">
-                          <strong>Local by default</strong>
-                          <span>Models, prompts and documents stay on this machine.</span>
-                        </div>
-                      </div>
-                      <div className="setup-feature">
-                        <span className="setup-feature-icon">
-                          <Server20Regular />
-                        </span>
-                        <div className="setup-feature-copy">
-                          <strong>Bring your own engine</strong>
-                          <span>Ollama, LM Studio, llama.cpp and Foundry Local are detected automatically.</span>
-                        </div>
-                      </div>
-                      <div className="setup-feature">
-                        <span className="setup-feature-icon">
-                          <ShieldCheckmark20Regular />
-                        </span>
-                        <div className="setup-feature-copy">
-                          <strong>Nothing to configure later</strong>
-                          <span>Start with one local model and change any endpoint afterwards.</span>
-                        </div>
-                      </div>
-                    </div>
 
                     <div className="setup-form-grid">
                       <Field
                         className="setup-field setup-field-wide"
                         label="Workspace name"
-                        hint="This name appears in the app header."
+                        hint="Shown in the app header."
                       >
                         <Input
                           className="setup-input"
@@ -480,6 +474,8 @@ export default function SetupWizard({
                       </Field>
                     </div>
 
+                    <Divider className="setup-divider" />
+
                     <div className="setup-terms">
                       <Checkbox
                         checked={settings.termsAccepted}
@@ -489,7 +485,7 @@ export default function SetupWizard({
                             termsAccepted: data.checked === true,
                           }))
                         }
-                        label="I understand that openFoundry is independent, that model use is governed by each model's license, and I accept the terms of use."
+                        label="I understand that openFoundry is independent and accept the terms of use."
                       />
                       <Button
                         appearance="subtle"
@@ -504,10 +500,12 @@ export default function SetupWizard({
 
                 {step === 1 && (
                   <section className="setup-step" aria-labelledby="setup-title-1">
-                    <h1 className="setup-title" id="setup-title-1">Who is building?</h1>
+                    <h1 className="setup-title" id="setup-title-1">
+                      Your local profile
+                    </h1>
                     <p className="setup-lead">
-                      This name and email identify you in this install&apos;s directory. They stay
-                      on this computer.
+                      This identifies you in the workspace directory. It never leaves this
+                      computer.
                     </p>
 
                     <div className="setup-form-grid">
@@ -565,15 +563,16 @@ export default function SetupWizard({
                     </div>
 
                     {!claimed && (
-                      <div className="setup-owner-panel">
-                        <MessageBar intent="info" className="setup-message">
-                          <MessageBarBody>
-                            <MessageBarTitle>This install has no owner yet</MessageBarTitle>
-                            openFoundry printed a one-time token in the terminal it started
-                            from. Enter it here to claim this install. The desktop app signs
-                            itself in and never asks for this again.
-                          </MessageBarBody>
-                        </MessageBar>
+                      <div className="setup-note">
+                        <div className="setup-note-head">
+                          <Key20Regular />
+                          <strong>This install has no owner yet</strong>
+                        </div>
+                        <p className="setup-note-copy">
+                          openFoundry printed a one-time token in the terminal it started
+                          from. Enter it here to claim this install. The desktop app signs
+                          itself in and never asks for this again.
+                        </p>
                         <Field
                           className="setup-field setup-field-narrow"
                           label="Setup token"
@@ -596,12 +595,12 @@ export default function SetupWizard({
                 {step === 2 && (
                   <section className="setup-step" aria-labelledby="setup-title-2">
                     <h1 className="setup-title" id="setup-title-2">
-                      {editProviders && focusLabel ? `Connect ${focusLabel}.` : "Get one model running."}
+                      {editProviders && focusLabel ? `Connect ${focusLabel}` : "Choose a runtime"}
                     </h1>
                     <p className="setup-lead">
                       {editProviders
-                        ? "Start a runtime here, or point openFoundry at one you already run. Then scan again. openFoundry returns to the model you were viewing when you save."
-                        : "openFoundry needs one local runtime to answer a prompt. llama.cpp installs here in a few minutes, with no account and nothing to configure."}
+                        ? "Start a runtime here, or point openFoundry at one you already run. openFoundry returns to the model you were viewing when you save."
+                        : "openFoundry talks to a local runtime over HTTP. Install llama.cpp here, or connect a runtime you already run."}
                     </p>
 
                     {error && (
@@ -615,14 +614,11 @@ export default function SetupWizard({
                       </MessageBar>
                     )}
 
-                    <Card appearance="filled-alternative" focusMode="off" className="setup-runtime-hero">
+                    <section className="setup-runtime-panel">
                       <div className="setup-runtime-head">
-                        <span className="setup-runtime-icon">
-                          <PlugConnected20Regular />
-                        </span>
                         <div className="setup-runtime-copy">
                           <div className="setup-runtime-title">
-                            <strong>llama.cpp</strong>
+                            <h2>llama.cpp</h2>
                             {installing ? (
                               <Badge appearance="tint" color="informative" size="small">Installing</Badge>
                             ) : installFailed ? (
@@ -769,7 +765,7 @@ export default function SetupWizard({
                             : `≈ ${installSizeMb} MB total · from GitHub and Hugging Face`}
                         </span>
                       </div>
-                    </Card>
+                    </section>
 
                     <div className="setup-section-head">
                       <Text weight="semibold">Already have a runtime?</Text>
@@ -789,44 +785,49 @@ export default function SetupWizard({
                       </Button>
                     </div>
 
-                    <ul className="setup-runtime-list">
-                      {otherRuntimes.length === 0 && (
-                        <li className="setup-runtime-row setup-runtime-row-empty">
-                          <p>Looking for runtimes…</p>
-                        </li>
-                      )}
-                      {otherRuntimes.map((runtime) => (
-                        <li className="setup-runtime-row" key={runtime.id}>
-                          <span className="setup-runtime-row-icon">
-                            <Server20Regular />
-                          </span>
-                          <div className="setup-runtime-row-copy">
-                            <div className="setup-runtime-row-name">
-                              <Text weight="semibold">{runtime.label}</Text>
-                              {runtime.modelCount > 0 && (
-                                <span className="setup-runtime-row-meta">
-                                  {runtime.modelCount} model{runtime.modelCount === 1 ? "" : "s"}
-                                </span>
-                              )}
-                            </div>
-                            <p>{runtime.detail}</p>
-                          </div>
-                          <RuntimeStateBadge state={runtime.state} />
-                          {runtime.state === "missing" && runtime.installUrl ? (
-                            <ExternalLink
-                              className="setup-external-link"
-                              href={runtime.installUrl}
-                              onOpenError={(message) => setRuntimeError(message)}
-                            >
-                              Get {runtime.label}
-                              <Open20Regular />
-                            </ExternalLink>
-                          ) : (
-                            <span className="setup-runtime-row-spacer" />
-                          )}
-                        </li>
-                      ))}
-                    </ul>
+                    <table className="setup-runtime-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Runtime</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">
+                            <span className="visually-hidden">Action</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {otherRuntimes.length === 0 && (
+                          <tr>
+                            <td className="setup-table-empty" colSpan={3}>
+                              Looking for runtimes…
+                            </td>
+                          </tr>
+                        )}
+                        {otherRuntimes.map((runtime) => (
+                          <tr key={runtime.id}>
+                            <td>
+                              <span className="setup-runtime-name">{runtime.label}</span>
+                              <span className="setup-runtime-detail">{runtime.detail}</span>
+                            </td>
+                            <td>
+                              <RuntimeStateBadge state={runtime.state} />
+                            </td>
+                            <td className="setup-runtime-action">
+                              {runtime.state === "missing" && runtime.installUrl ? (
+                                <ExternalLink
+                                  className="setup-external-link"
+                                  href={runtime.installUrl}
+                                  onOpenError={(message) => setRuntimeError(message)}
+                                >
+                                  Get {runtime.label}
+                                  <Open20Regular />
+                                </ExternalLink>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
 
                     <Accordion
                       className="setup-endpoints"
@@ -890,49 +891,75 @@ export default function SetupWizard({
 
                 {step === 3 && (
                   <section className="setup-step" aria-labelledby="setup-title-3">
-                    <h1 className="setup-title" id="setup-title-3">Choose your first model.</h1>
+                    <h1 className="setup-title" id="setup-title-3">
+                      Choose a first model
+                    </h1>
                     <p className="setup-lead">
                       {chatModels.length
-                        ? "These models were reported by the providers on this computer."
+                        ? "These models were reported by the runtimes on this computer."
                         : "No chat models were discovered. You can finish setup and add one later."}
                     </p>
 
                     {chatModels.length > 0 ? (
-                      <RadioGroup
-                        className="setup-model-radio-group"
-                        value={selectedModelKey}
-                        onChange={(_, data) => {
-                          const model = chatModels.find((item) => item.key === data.value);
-                          if (model) {
-                            setSettings((current) => ({
-                              ...current,
-                              defaultProviderId: model.provider,
-                              defaultModel: model.id,
-                            }));
-                          }
-                        }}
-                      >
-                        <div className="setup-model-list">
-                          {chatModels.map((model) => (
-                            <Radio
-                              key={model.key}
-                              value={model.key}
-                              className="setup-model-option"
-                              label={
-                                <>
-                                  <ModelLogo publisher={model.publisher} name={model.displayName} size={28} />
-                                  <span className="setup-model-copy">
-                                    <strong>{model.displayName}</strong>
-                                    <small>
-                                      {model.publisher} · {model.providerLabel}
-                                    </small>
-                                  </span>
-                                </>
-                              }
-                            />
-                          ))}
+                      <>
+                        <Field className="setup-model-search" label="Search models">
+                          <Input
+                            className="setup-input"
+                            value={modelQuery}
+                            placeholder="Filter by name or publisher"
+                            contentBefore={<Search20Regular />}
+                            onChange={(_, data) => setModelQuery(data.value)}
+                          />
+                        </Field>
+                        <div className="setup-model-count">
+                          {filteredChatModels.length} of {chatModels.length} models
                         </div>
-                      </RadioGroup>
+                        {filteredChatModels.length > 0 ? (
+                          <RadioGroup
+                            className="setup-model-radio-group"
+                            value={selectedModelKey}
+                            onChange={(_, data) => {
+                              const model = chatModels.find((item) => item.key === data.value);
+                              if (model) {
+                                setSettings((current) => ({
+                                  ...current,
+                                  defaultProviderId: model.provider,
+                                  defaultModel: model.id,
+                                }));
+                              }
+                            }}
+                          >
+                            <div className="setup-model-list">
+                              {filteredChatModels.map((model) => (
+                                <Radio
+                                  key={model.key}
+                                  value={model.key}
+                                  className="setup-model-option"
+                                  label={
+                                    <>
+                                      <ModelLogo publisher={model.publisher} name={model.displayName} size={28} />
+                                      <span className="setup-model-copy">
+                                        <strong>{model.displayName}</strong>
+                                        <small>
+                                          {model.publisher} · {model.providerLabel}
+                                        </small>
+                                      </span>
+                                    </>
+                                  }
+                                />
+                              ))}
+                            </div>
+                          </RadioGroup>
+                        ) : (
+                          <div className="setup-empty setup-empty-compact">
+                            <strong>No models match that search</strong>
+                            <p>Try a different name or publisher.</p>
+                            <Button appearance="secondary" size="small" onClick={() => setModelQuery("")}>
+                              Clear search
+                            </Button>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="setup-empty">
                         <PlugConnected20Regular />
@@ -952,39 +979,37 @@ export default function SetupWizard({
 
                 {step === 4 && (
                   <section className="setup-step" aria-labelledby="setup-title-4">
-                    <h1 className="setup-title" id="setup-title-4">Your workshop is ready.</h1>
+                    <h1 className="setup-title" id="setup-title-4">Ready to build</h1>
                     <p className="setup-lead">
-                      openFoundry opens on the workspace dashboard. Providers and models can
-                      be changed later.
+                      Review the workspace before it opens. Providers and models can be
+                      changed later.
                     </p>
-                    <div className="setup-summary">
-                      <div className="setup-summary-item">
-                        <span className="setup-summary-label">Workspace</span>
-                        <strong className="setup-summary-value">{settings.projectName}</strong>
+                    <dl className="setup-review">
+                      <div className="setup-review-row">
+                        <dt>Workspace</dt>
+                        <dd>{settings.projectName}</dd>
                       </div>
-                      <div className="setup-summary-item">
-                        <span className="setup-summary-label">Profile</span>
-                        <strong className="setup-summary-value">{settings.userName || "Local user"}</strong>
+                      <div className="setup-review-row">
+                        <dt>Profile</dt>
+                        <dd>{settings.userName || "Local user"}</dd>
                       </div>
-                      <div className="setup-summary-item">
-                        <span className="setup-summary-label">Providers online</span>
-                        <strong className="setup-summary-value">{online.length}</strong>
+                      <div className="setup-review-row">
+                        <dt>Runtimes online</dt>
+                        <dd>{online.length}</dd>
                       </div>
-                      <div className="setup-summary-item">
-                        <span className="setup-summary-label">Models discovered</span>
-                        <strong className="setup-summary-value">{models.length}</strong>
+                      <div className="setup-review-row">
+                        <dt>Models discovered</dt>
+                        <dd>{models.length}</dd>
                       </div>
-                      <div className="setup-summary-item">
-                        <span className="setup-summary-label">Default model</span>
-                        <strong className="setup-summary-value">
-                          {settings.defaultModel || "None selected"}
-                        </strong>
+                      <div className="setup-review-row">
+                        <dt>Default model</dt>
+                        <dd>{settings.defaultModel || "None selected"}</dd>
                       </div>
-                      <div className="setup-summary-item">
-                        <span className="setup-summary-label">Location</span>
-                        <strong className="setup-summary-value">{systemHost || "This computer"}</strong>
+                      <div className="setup-review-row">
+                        <dt>Location</dt>
+                        <dd>{systemHost || "This computer"}</dd>
                       </div>
-                    </div>
+                    </dl>
                     <MessageBar intent="info" className="setup-message">
                       <MessageBarBody>
                         This workspace lives on {systemHost || "this computer"}. Model licenses
