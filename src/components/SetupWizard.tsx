@@ -11,14 +11,45 @@ import {
   ArrowLeft20Regular,
   ArrowRight20Regular,
   Checkmark20Regular,
+  Copy20Regular,
   Dismiss20Regular,
-  Info20Regular,
+  LockClosed20Regular,
   Open20Regular,
   Play20Regular,
   PlugConnected20Regular,
+  Server20Regular,
+  ShieldCheckmark20Regular,
   Stop20Regular,
-  Warning20Regular,
 } from "@fluentui/react-icons";
+import {
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Field,
+  FluentProvider,
+  Input,
+  MessageBar,
+  MessageBarBody,
+  MessageBarTitle,
+  ProgressBar,
+  Radio,
+  RadioGroup,
+  Spinner,
+  Text,
+} from "@fluentui/react-components";
+import { foundryFluentTheme } from "./fluent-theme";
+import ExternalLink from "./ExternalLink";
 import { ModelLogo, OpenFoundryLogo } from "./Logos";
 import type {
   LocalModel,
@@ -29,18 +60,29 @@ import type {
   RuntimeStatus,
 } from "@/lib/types";
 
-const STEPS = ["Welcome", "Profile", "Providers", "Model", "Ready"] as const;
+const STEPS = [
+  { label: "Welcome", description: "Terms and workspace" },
+  { label: "Profile", description: "Your local identity" },
+  { label: "Providers", description: "Connect a runtime" },
+  { label: "Model", description: "Pick your first model" },
+  { label: "Ready", description: "Start building" },
+] as const;
+
+type SetupWizardProps = {
+  initial: LocalSettings;
+  systemHost: string;
+  needsClaim?: boolean;
+  theme?: "dark" | "light";
+};
 
 export default function SetupWizard({
   initial,
   systemHost,
   needsClaim = false,
-}: {
-  initial: LocalSettings;
-  systemHost: string;
-  needsClaim?: boolean;
-}) {
+  theme = "dark",
+}: SetupWizardProps) {
   const router = useRouter();
+  const fluentTheme = useMemo(() => foundryFluentTheme(theme), [theme]);
   const [step, setStep] = useState(0);
   const [returnTo, setReturnTo] = useState("");
   const [focusProvider, setFocusProvider] = useState("");
@@ -69,10 +111,7 @@ export default function SetupWizard({
   });
   const [runtimes, setRuntimes] = useState<RuntimeStatus[]>([]);
   const [runtimeJob, setRuntimeJob] = useState<RuntimeJob | null>(null);
-  const [starter, setStarter] = useState<{
-    name: string;
-    sizeBytes: number;
-  } | null>(null);
+  const [starter, setStarter] = useState<{ name: string; sizeBytes: number } | null>(null);
   const [runtimeError, setRuntimeError] = useState("");
   const [runtimeBusy, setRuntimeBusy] = useState("");
   const [endpointsOpen, setEndpointsOpen] = useState(false);
@@ -89,8 +128,7 @@ export default function SetupWizard({
       body: JSON.stringify({ ...patch, onboarded: editProviders }),
     });
     const json = (await res.json()) as { settings?: LocalSettings; error?: string };
-    if (!res.ok || !json.settings)
-      throw new Error(json.error || "Could not save setup settings");
+    if (!res.ok || !json.settings) throw new Error(json.error || "Could not save setup settings");
     setSettings(json.settings);
     return json.settings;
   };
@@ -107,11 +145,7 @@ export default function SetupWizard({
         huggingFacePath: settings.huggingFacePath,
       });
       const res = await fetch("/api/models", { cache: "no-store" });
-      const json = (await res.json()) as {
-        models?: LocalModel[];
-        providers?: ProviderStatus[];
-        error?: string;
-      };
+      const json = (await res.json()) as { models?: LocalModel[]; providers?: ProviderStatus[]; error?: string };
       if (!res.ok) throw new Error(json.error || "Provider scan failed");
       setModels(json.models || []);
       setProviders(json.providers || []);
@@ -133,9 +167,7 @@ export default function SetupWizard({
     if (!res.ok) throw new Error(json.error || "Could not read local runtimes");
     setRuntimes(json.runtimes || []);
     if (json.starter) setStarter(json.starter);
-    const active = (json.jobs || []).find(
-      (job) => job.status === "running" || job.status === "queued"
-    );
+    const active = (json.jobs || []).find((job) => job.status === "running" || job.status === "queued");
     if (active) setRuntimeJob(active);
     return json;
   };
@@ -155,11 +187,7 @@ export default function SetupWizard({
           jobId: action === "cancel" ? runtimeJob?.id : undefined,
         }),
       });
-      const json = (await res.json()) as {
-        job?: RuntimeJob;
-        error?: string;
-        detail?: string;
-      };
+      const json = (await res.json()) as { job?: RuntimeJob; error?: string; detail?: string };
       if (!res.ok) throw new Error(json.error || "The runtime action failed.");
       if (json.job) setRuntimeJob(json.job);
       if (action === "uninstall") setRuntimeJob(null);
@@ -200,10 +228,7 @@ export default function SetupWizard({
     const tick = async () => {
       try {
         const res = await fetch("/api/runtimes", { cache: "no-store" });
-        const json = (await res.json()) as {
-          runtimes?: RuntimeStatus[];
-          jobs?: RuntimeJob[];
-        };
+        const json = (await res.json()) as { runtimes?: RuntimeStatus[]; jobs?: RuntimeJob[] };
         if (stopped) return;
         if (json.runtimes) setRuntimes(json.runtimes);
         const job = (json.jobs || []).find((item) => item.id === id);
@@ -236,13 +261,8 @@ export default function SetupWizard({
               email: settings.userEmail,
             }),
           });
-          const payload = (await response.json().catch(() => ({}))) as {
-            accessCode?: string;
-            error?: string;
-          };
-          if (!response.ok || !payload.accessCode) {
-            throw new Error(payload.error || "Could not claim this install.");
-          }
+          const payload = (await response.json().catch(() => ({}))) as { accessCode?: string; error?: string };
+          if (!response.ok || !payload.accessCode) throw new Error(payload.error || "Could not claim this install.");
           setAccessCode(payload.accessCode);
           setClaimed(true);
           firstClaim = true;
@@ -281,31 +301,32 @@ export default function SetupWizard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...settings,
-          ...(editProviders
-            ? {}
-            : {
-                termsAccepted: true,
-                disclaimerDismissed: true,
-              }),
+          ...(editProviders ? {} : { termsAccepted: true, disclaimerDismissed: true }),
           onboarded: true,
         }),
       });
       const json = (await res.json()) as { settings?: LocalSettings; error?: string };
-      if (!res.ok || !json.settings)
-        throw new Error(json.error || "Could not finish setup");
+      if (!res.ok || !json.settings) throw new Error(json.error || "Could not finish setup");
       if (editProviders) {
         router.push(returnTo || "/discover/models");
         router.refresh();
         return;
       }
-      // Leave /setup for good. The layout is dynamic, so a full navigation is
-      // the reliable way to drop the finished wizard and render the app shell:
-      // reloading this route (the old behaviour) just re-rendered the wizard.
       window.location.assign(returnTo || "/discover/models");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const copyAccessCode = async () => {
+    try {
+      await navigator.clipboard.writeText(accessCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setError("Select the code and copy it manually.");
     }
   };
 
@@ -322,16 +343,11 @@ export default function SetupWizard({
       : "";
   const llama = runtimes.find((item) => item.id === "llamacpp");
   const otherRuntimes = runtimes.filter((item) => item.id !== "llamacpp");
-  const installing = Boolean(
-    runtimeJob &&
-      (runtimeJob.status === "running" || runtimeJob.status === "queued")
-  );
+  const installing = Boolean(runtimeJob && (runtimeJob.status === "running" || runtimeJob.status === "queued"));
   const installFailed = runtimeJob?.status === "error";
   const llamaRunning = llama?.state === "running";
   const llamaInstalled = llama?.state === "stopped" || llamaRunning;
-  const installSizeMb = Math.round(
-    ((starter?.sizeBytes || 397808192) + 25 * 1024 * 1024) / 1_000_000
-  );
+  const installSizeMb = Math.round(((starter?.sizeBytes || 397808192) + 25 * 1024 * 1024) / 1_000_000);
   const stageLabel = (stage: RuntimeJobStage) =>
     stage === "runtime"
       ? "Downloading llama.cpp"
@@ -343,737 +359,774 @@ export default function SetupWizard({
       ? "Starting the server"
       : "Finishing";
 
+  const selectedModelKey =
+    chatModels.find((model) => model.provider === settings.defaultProviderId && model.id === settings.defaultModel)?.key ?? "";
+
+  const visibleSteps = editProviders ? [2] : STEPS.map((_, index) => index);
+
+  const endpointsOpenValue = endpointsOpen || editProviders ? ["endpoints"] : [];
+
   return (
-    <div className="setup-screen">
-      <div className="setup-shell">
-        <aside className="setup-rail">
-          <div className="setup-brand">
-            <OpenFoundryLogo size={30} />
-            <div>
-              <strong><span className="setup-brand-open">open</span>Foundry</strong>
-              <span>A local AI workbench</span>
+    <FluentProvider theme={fluentTheme} className="setup-provider">
+      <div className="setup-screen">
+        <div className="setup-shell">
+          <header className="setup-topbar">
+            <div className="setup-brand">
+              <OpenFoundryLogo size={24} />
+              <div className="setup-brand-text">
+                <strong>
+                  <span className="setup-brand-open">open</span>Foundry
+                </strong>
+                <span>Local workspace</span>
+              </div>
             </div>
-          </div>
-          <ol className="setup-steps">
-            {(editProviders ? [2] : [0, 1, 2, 3, 4]).map((index) => {
-              const label = STEPS[index];
-              return (
-                <li
-                  key={label}
-                  className={
-                    index === step ? "active" : index < step && !editProviders ? "done" : ""
-                  }
-                >
-                  <span>
-                    {index < step && !editProviders ? (
-                      <Checkmark20Regular />
-                    ) : editProviders ? (
-                      <PlugConnected20Regular />
-                    ) : (
-                      index + 1
-                    )}
-                  </span>
-                  <div>
-                    <strong>{label}</strong>
-                    <small>
-                      {index === 0
-                        ? "Terms and independence"
-                        : index === 1
-                        ? "Your local identity"
-                        : index === 2
-                        ? "Ollama, LM Studio, llama.cpp"
-                        : index === 3
-                        ? "Pick your first model"
-                        : "Start building"}
-                    </small>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-          <div className="setup-rail-note">
-            <Info20Regular />
-            <span>
-              openFoundry is independent and not affiliated with any model provider.
-            </span>
-          </div>
-        </aside>
-
-        <main className="setup-main">
-          {step === 0 && (
-            <section className="setup-step">
-              <div className="setup-kicker">Welcome</div>
-              <h1>Your local AI workshop.</h1>
-              <p className="setup-lead">
-                openFoundry is a free, independent desktop workbench for running models,
-                agents and knowledge on your own hardware. No cloud account, no cloud
-                subscription, no usage bill.
-              </p>
-              <div className="setup-points">
-                <div>
-                  <strong>Local by default</strong>
-                  <span>Models, prompts and documents stay on this computer.</span>
-                </div>
-                <div>
-                  <strong>Bring your own engine</strong>
-                  <span>Ollama, LM Studio, llama.cpp, Foundry Local or Hugging Face.</span>
-                </div>
-                <div>
-                  <strong>No lock-in</strong>
-                  <span>Your workspace can be exported and moved at any time.</span>
-                </div>
-              </div>
-              <label className="field">
-                <span className="field-label">Workspace name</span>
-                <input
-                  className="input"
-                  value={settings.projectName}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, projectName: event.target.value }))
-                  }
-                />
-                <span className="field-hint">This name appears in the app header.</span>
-              </label>
-              <label className="setup-check">
-                <input
-                  type="checkbox"
-                  checked={settings.termsAccepted}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, termsAccepted: event.target.checked }))
-                  }
-                />
-                <span>
-                  I understand that openFoundry is independent, that model use is governed
-                  by each model&apos;s license, and I accept the{" "}
-                  <button type="button" className="link" onClick={() => setTermsOpen(true)}>
-                    terms of use
-                  </button>
-                  .
-                </span>
-              </label>
-            </section>
-          )}
-
-          {step === 1 && (
-            <section className="setup-step">
-              <div className="setup-kicker">Profile</div>
-              <h1>Who is building?</h1>
-              <p className="setup-lead">
-                This name and email identify you in this install&apos;s directory. They
-                stay on this computer.
-              </p>
-              <div className="form-grid">
-                <label className="field">
-                  <span className="field-label">Display name</span>
-                  <input
-                    className="input"
-                    autoFocus
-                    placeholder="Your name"
-                    value={settings.userName}
-                    onChange={(event) => {
-                      const userName = event.target.value;
-                      setSettings((current) => ({
-                        ...current,
-                        userName,
-                        userInitials:
-                          current.userInitials ||
-                          userName
-                            .trim()
-                            .split(/\s+/)
-                            .filter(Boolean)
-                            .map((part) => part[0])
-                            .join("")
-                            .slice(0, 2)
-                            .toUpperCase(),
-                      }));
-                    }}
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Initials</span>
-                  <input
-                    className="input"
-                    maxLength={3}
-                    value={settings.userInitials}
-                    onChange={(event) =>
-                      setSettings((current) => ({
-                        ...current,
-                        userInitials: event.target.value.toUpperCase(),
-                      }))
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Email</span>
-                  <input
-                    className="input"
-                    placeholder="name@company.com"
-                    value={settings.userEmail}
-                    onChange={(event) =>
-                      setSettings((current) => ({
-                        ...current,
-                        userEmail: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-              {!claimed && (
-                <div className="setup-card" style={{ marginTop: 18 }}>
-                  <strong>This install has no owner yet</strong>
-                  <p className="muted text-12" style={{ margin: 0 }}>
-                    openFoundry printed a one-time token in the terminal it started
-                    from. Enter it here to claim this install. The desktop app signs
-                    itself in and never asks for this.
-                  </p>
-                  <label className="field" style={{ maxWidth: 320 }}>
-                    <span className="field-label">Setup token</span>
-                    <input
-                      className="input mono"
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder="XXXX-XXXX-XXXX"
-                      value={claimToken}
-                      onChange={(event) => setClaimToken(event.target.value)}
-                    />
-                  </label>
-                </div>
-              )}
-            </section>
-          )}
-
-          {step === 2 && (
-            <section className="setup-step setup-runtime">
-              <div className="setup-kicker">
-                {editProviders ? "Provider setup" : "Runtime"}
-              </div>
-              <h1>
-                {editProviders && focusLabel
-                  ? `Connect ${focusLabel}.`
-                  : "Get one model running."}
-              </h1>
-              <p className="setup-lead">
+            <div className="setup-topbar-meta">
+              <span>
                 {editProviders
-                  ? "Start a runtime here, or point openFoundry at one you already run. Then scan again. openFoundry returns to the model you were viewing when you save."
-                  : "openFoundry needs one local runtime to answer a prompt. llama.cpp installs here in a few minutes, with no account and nothing to configure."}
-              </p>
+                  ? "Provider setup"
+                  : `Step ${step + 1} of ${STEPS.length}`}
+              </span>
+              <Badge appearance="tint" color="brand" size="small">
+                <ShieldCheckmark20Regular />
+                Local
+              </Badge>
+            </div>
+          </header>
 
-              <div className="runtime-hero">
-                <div className="runtime-hero-head">
-                  <span className="runtime-hero-icon">
-                    <PlugConnected20Regular />
-                  </span>
-                  <div className="runtime-hero-copy">
-                    <div className="runtime-hero-title">
-                      <strong>llama.cpp</strong>
-                      {installing ? (
-                        <span className="runtime-badge">Installing</span>
-                      ) : installFailed ? (
-                        <span className="runtime-badge warning">Install failed</span>
-                      ) : llamaRunning ? (
-                        <span className="runtime-badge running">Running</span>
-                      ) : llamaInstalled ? (
-                        <span className="runtime-badge">Installed</span>
-                      ) : (
-                        <span className="runtime-badge recommended">Recommended</span>
-                      )}
+          <aside className="setup-rail">
+            <ol className="setup-steps" aria-label="Setup steps">
+              {visibleSteps.map((index) => {
+                const done = index < step && !editProviders;
+                const active = index === step;
+                return (
+                  <li
+                    key={index}
+                    className={`setup-step-item${active ? " active" : ""}${done ? " done" : ""}`}
+                    aria-current={active ? "step" : undefined}
+                  >
+                    <span className="setup-step-index" aria-hidden="true">
+                      {done ? <Checkmark20Regular /> : index + 1}
+                    </span>
+                    <div className="setup-step-copy">
+                      <strong>{STEPS[index].label}</strong>
+                      <small>{STEPS[index].description}</small>
                     </div>
-                    <p>
-                      {installing
-                        ? runtimeJob?.message
-                        : installFailed
-                        ? runtimeJob?.error || "The install stopped before it finished."
-                        : llamaRunning
-                        ? llama?.detail || "The local server is answering."
-                        : llamaInstalled
-                        ? "Installed and ready. Start the server when you want to chat."
-                        : "A self-contained server with a small starter model. Everything stays on this machine."}
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="setup-rail-note">
+              <LockClosed20Regular />
+              <span>Everything stays on this computer.</span>
+            </div>
+          </aside>
+
+          <main className="setup-main">
+            <div className="setup-scroll">
+              <div className="setup-content">
+                {step === 0 && (
+                  <section className="setup-step" aria-labelledby="setup-title-0">
+                    <h1 className="setup-title" id="setup-title-0">
+                      Set up your local AI workbench.
+                    </h1>
+                    <p className="setup-lead">
+                      openFoundry runs models, agents and knowledge on this computer. No
+                      cloud account, no subscription, no usage bill.
                     </p>
-                  </div>
-                </div>
 
-                {installing && runtimeJob && (
-                  <div className="runtime-progress" aria-live="polite">
-                    <div
-                      className="runtime-progress-track"
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={Math.round(runtimeJob.progress)}
-                    >
-                      <div
-                        className="runtime-progress-fill"
-                        style={{ width: `${Math.max(2, runtimeJob.progress)}%` }}
+                    <div className="setup-feature-list">
+                      <div className="setup-feature">
+                        <span className="setup-feature-icon">
+                          <LockClosed20Regular />
+                        </span>
+                        <div className="setup-feature-copy">
+                          <strong>Local by default</strong>
+                          <span>Models, prompts and documents stay on this machine.</span>
+                        </div>
+                      </div>
+                      <div className="setup-feature">
+                        <span className="setup-feature-icon">
+                          <Server20Regular />
+                        </span>
+                        <div className="setup-feature-copy">
+                          <strong>Bring your own engine</strong>
+                          <span>Ollama, LM Studio, llama.cpp and Foundry Local are detected automatically.</span>
+                        </div>
+                      </div>
+                      <div className="setup-feature">
+                        <span className="setup-feature-icon">
+                          <ShieldCheckmark20Regular />
+                        </span>
+                        <div className="setup-feature-copy">
+                          <strong>Nothing to configure later</strong>
+                          <span>Start with one local model and change any endpoint afterwards.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="setup-form-grid">
+                      <Field
+                        className="setup-field setup-field-wide"
+                        label="Workspace name"
+                        hint="This name appears in the app header."
+                      >
+                        <Input
+                          className="setup-input"
+                          value={settings.projectName}
+                          onChange={(_, data) =>
+                            setSettings((current) => ({ ...current, projectName: data.value }))
+                          }
+                        />
+                      </Field>
+                    </div>
+
+                    <div className="setup-terms">
+                      <Checkbox
+                        checked={settings.termsAccepted}
+                        onChange={(_, data) =>
+                          setSettings((current) => ({
+                            ...current,
+                            termsAccepted: data.checked === true,
+                          }))
+                        }
+                        label="I understand that openFoundry is independent, that model use is governed by each model's license, and I accept the terms of use."
                       />
-                    </div>
-                    <div className="runtime-progress-meta">
-                      <span>{stageLabel(runtimeJob.stage)}</span>
-                      <span>{Math.round(runtimeJob.progress)}%</span>
-                    </div>
-                  </div>
-                )}
-
-                {installFailed && runtimeJob?.error && (
-                  <div className="runtime-failure" role="alert">
-                    <Warning20Regular />
-                    <span>{runtimeJob.error}</span>
-                  </div>
-                )}
-
-                <div className="runtime-hero-actions">
-                  {installing ? (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => runtimeAction("cancel")}
-                      disabled={runtimeBusy === "cancel"}
-                    >
-                      <Dismiss20Regular />
-                      {runtimeBusy === "cancel" ? "Cancelling…" : "Cancel install"}
-                    </button>
-                  ) : installFailed ? (
-                    <>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => runtimeAction("install")}
-                        disabled={runtimeBusy === "install"}
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        onClick={() => setTermsOpen(true)}
                       >
-                        <ArrowDownload20Regular />
-                        {runtimeBusy === "install" ? "Starting…" : "Retry install"}
-                      </button>
-                      {llamaInstalled && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => runtimeAction("uninstall")}
-                          disabled={runtimeBusy === "uninstall"}
+                        Read the terms
+                      </Button>
+                    </div>
+                  </section>
+                )}
+
+                {step === 1 && (
+                  <section className="setup-step" aria-labelledby="setup-title-1">
+                    <h1 className="setup-title" id="setup-title-1">Who is building?</h1>
+                    <p className="setup-lead">
+                      This name and email identify you in this install&apos;s directory. They stay
+                      on this computer.
+                    </p>
+
+                    <div className="setup-form-grid">
+                      <Field
+                        className="setup-field setup-field-wide"
+                        label="Display name"
+                      >
+                        <Input
+                          className="setup-input"
+                          autoFocus
+                          placeholder="Your name"
+                          value={settings.userName}
+                          onChange={(_, data) => {
+                            const userName = data.value;
+                            setSettings((current) => ({
+                              ...current,
+                              userName,
+                              userInitials:
+                                current.userInitials ||
+                                userName
+                                  .trim()
+                                  .split(/\s+/)
+                                  .filter(Boolean)
+                                  .map((part) => part[0])
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase(),
+                            }));
+                          }}
+                        />
+                      </Field>
+                      <Field className="setup-field" label="Initials">
+                        <Input
+                          className="setup-input"
+                          maxLength={3}
+                          value={settings.userInitials}
+                          onChange={(_, data) =>
+                            setSettings((current) => ({
+                              ...current,
+                              userInitials: data.value.toUpperCase(),
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field className="setup-field setup-field-wide" label="Email">
+                        <Input
+                          className="setup-input"
+                          placeholder="name@company.com"
+                          value={settings.userEmail}
+                          onChange={(_, data) =>
+                            setSettings((current) => ({ ...current, userEmail: data.value }))
+                          }
+                        />
+                      </Field>
+                    </div>
+
+                    {!claimed && (
+                      <div className="setup-owner-panel">
+                        <MessageBar intent="info" className="setup-message">
+                          <MessageBarBody>
+                            <MessageBarTitle>This install has no owner yet</MessageBarTitle>
+                            openFoundry printed a one-time token in the terminal it started
+                            from. Enter it here to claim this install. The desktop app signs
+                            itself in and never asks for this again.
+                          </MessageBarBody>
+                        </MessageBar>
+                        <Field
+                          className="setup-field setup-field-narrow"
+                          label="Setup token"
+                          hint="Enter the token printed in the terminal."
                         >
-                          Remove
-                        </button>
+                          <Input
+                            className="setup-input setup-mono"
+                            autoComplete="off"
+                            spellCheck={false}
+                            placeholder="XXXX-XXXX-XXXX"
+                            value={claimToken}
+                            onChange={(_, data) => setClaimToken(data.value)}
+                          />
+                        </Field>
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {step === 2 && (
+                  <section className="setup-step" aria-labelledby="setup-title-2">
+                    <h1 className="setup-title" id="setup-title-2">
+                      {editProviders && focusLabel ? `Connect ${focusLabel}.` : "Get one model running."}
+                    </h1>
+                    <p className="setup-lead">
+                      {editProviders
+                        ? "Start a runtime here, or point openFoundry at one you already run. Then scan again. openFoundry returns to the model you were viewing when you save."
+                        : "openFoundry needs one local runtime to answer a prompt. llama.cpp installs here in a few minutes, with no account and nothing to configure."}
+                    </p>
+
+                    {error && (
+                      <MessageBar intent="error" className="setup-message">
+                        <MessageBarBody>{error}</MessageBarBody>
+                      </MessageBar>
+                    )}
+                    {runtimeError && (
+                      <MessageBar intent="error" className="setup-message">
+                        <MessageBarBody>{runtimeError}</MessageBarBody>
+                      </MessageBar>
+                    )}
+
+                    <Card appearance="filled-alternative" focusMode="off" className="setup-runtime-hero">
+                      <div className="setup-runtime-head">
+                        <span className="setup-runtime-icon">
+                          <PlugConnected20Regular />
+                        </span>
+                        <div className="setup-runtime-copy">
+                          <div className="setup-runtime-title">
+                            <strong>llama.cpp</strong>
+                            {installing ? (
+                              <Badge appearance="tint" color="informative" size="small">Installing</Badge>
+                            ) : installFailed ? (
+                              <Badge appearance="tint" color="danger" size="small">Install failed</Badge>
+                            ) : llamaRunning ? (
+                              <Badge appearance="tint" color="success" size="small">Running</Badge>
+                            ) : llamaInstalled ? (
+                              <Badge appearance="tint" color="warning" size="small">Installed</Badge>
+                            ) : (
+                              <Badge appearance="tint" color="brand" size="small">Recommended</Badge>
+                            )}
+                          </div>
+                          <p>
+                            {installing
+                              ? runtimeJob?.message
+                              : installFailed
+                              ? runtimeJob?.error || "The install stopped before it finished."
+                              : llamaRunning
+                              ? llama?.detail || "The local server is answering."
+                              : llamaInstalled
+                              ? "Installed and ready. Start the server when you want to chat."
+                              : "A self-contained server with a small starter model. Everything stays on this machine."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {installing && runtimeJob && (
+                        <div className="setup-runtime-progress" aria-live="polite">
+                          <ProgressBar
+                            max={100}
+                            value={Math.max(0, Math.min(100, runtimeJob.progress))}
+                            thickness="large"
+                            color="brand"
+                            aria-label={`${Math.round(runtimeJob.progress)}% complete`}
+                          />
+                          <div className="setup-runtime-progress-meta">
+                            <span>{stageLabel(runtimeJob.stage)}</span>
+                            <span>{Math.round(runtimeJob.progress)}%</span>
+                          </div>
+                        </div>
                       )}
-                    </>
-                  ) : llamaRunning ? (
-                    <>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => runtimeAction("stop")}
-                        disabled={runtimeBusy === "stop"}
-                      >
-                        <Stop20Regular />
-                        {runtimeBusy === "stop" ? "Stopping…" : "Stop server"}
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={scan}
+
+                      {installFailed && runtimeJob?.error && (
+                        <MessageBar intent="error" className="setup-message">
+                          <MessageBarBody>{runtimeJob.error}</MessageBarBody>
+                        </MessageBar>
+                      )}
+
+                      <div className="setup-runtime-actions">
+                        {installing ? (
+                          <Button
+                            appearance="secondary"
+                            size="small"
+                            icon={runtimeBusy === "cancel" ? <Spinner size="tiny" /> : <Dismiss20Regular />}
+                            onClick={() => runtimeAction("cancel")}
+                            disabled={runtimeBusy === "cancel"}
+                          >
+                            {runtimeBusy === "cancel" ? "Cancelling…" : "Cancel install"}
+                          </Button>
+                        ) : installFailed ? (
+                          <>
+                            <Button
+                              appearance="primary"
+                              size="small"
+                              icon={runtimeBusy === "install" ? <Spinner size="tiny" /> : <ArrowDownload20Regular />}
+                              onClick={() => runtimeAction("install")}
+                              disabled={runtimeBusy === "install"}
+                            >
+                              {runtimeBusy === "install" ? "Starting…" : "Retry install"}
+                            </Button>
+                            {llamaInstalled && (
+                              <Button
+                                appearance="secondary"
+                                size="small"
+                                onClick={() => runtimeAction("uninstall")}
+                                disabled={runtimeBusy === "uninstall"}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </>
+                        ) : llamaRunning ? (
+                          <>
+                            <Button
+                              appearance="secondary"
+                              size="small"
+                              icon={runtimeBusy === "stop" ? <Spinner size="tiny" /> : <Stop20Regular />}
+                              onClick={() => runtimeAction("stop")}
+                              disabled={runtimeBusy === "stop"}
+                            >
+                              {runtimeBusy === "stop" ? "Stopping…" : "Stop server"}
+                            </Button>
+                            <Button
+                              appearance="secondary"
+                              size="small"
+                              icon={scanning ? <Spinner size="tiny" /> : <ArrowClockwise20Regular />}
+                              onClick={scan}
+                              disabled={scanning}
+                            >
+                              {scanning ? "Scanning…" : "Scan models"}
+                            </Button>
+                          </>
+                        ) : llamaInstalled ? (
+                          <>
+                            <Button
+                              appearance="primary"
+                              size="small"
+                              icon={runtimeBusy === "start" ? <Spinner size="tiny" /> : <Play20Regular />}
+                              onClick={() => runtimeAction("start")}
+                              disabled={runtimeBusy === "start"}
+                            >
+                              {runtimeBusy === "start" ? "Starting…" : "Start server"}
+                            </Button>
+                            <Button
+                              appearance="secondary"
+                              size="small"
+                              onClick={() => runtimeAction("uninstall")}
+                              disabled={runtimeBusy === "uninstall"}
+                            >
+                              Remove
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            appearance="primary"
+                            icon={runtimeBusy === "install" ? <Spinner size="tiny" /> : <ArrowDownload20Regular />}
+                            onClick={() => runtimeAction("install")}
+                            disabled={runtimeBusy === "install" || !llama?.installable}
+                          >
+                            {runtimeBusy === "install" ? "Starting…" : "Install llama.cpp"}
+                          </Button>
+                        )}
+                        <span className="setup-runtime-note">
+                          {installing
+                            ? "Downloads continue while this window stays open."
+                            : installFailed
+                            ? "Finished downloads are reused when you retry."
+                            : llamaRunning
+                            ? llama?.url
+                            : llamaInstalled
+                            ? llama?.version
+                              ? `Build ${llama.version}, installed in your data folder.`
+                              : "Installed in your data folder."
+                            : `≈ ${installSizeMb} MB total · from GitHub and Hugging Face`}
+                        </span>
+                      </div>
+                    </Card>
+
+                    <div className="setup-section-head">
+                      <Text weight="semibold">Already have a runtime?</Text>
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        icon={scanning ? <Spinner size="tiny" /> : <ArrowClockwise20Regular />}
+                        onClick={() => {
+                          void scan();
+                          void refreshRuntimes().catch((err) =>
+                            setRuntimeError(err instanceof Error ? err.message : String(err))
+                          );
+                        }}
                         disabled={scanning}
                       >
-                        <ArrowClockwise20Regular />
-                        {scanning ? "Scanning…" : "Scan models"}
-                      </button>
-                    </>
-                  ) : llamaInstalled ? (
-                    <>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => runtimeAction("start")}
-                        disabled={runtimeBusy === "start"}
-                      >
-                        <Play20Regular />
-                        {runtimeBusy === "start" ? "Starting…" : "Start server"}
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => runtimeAction("uninstall")}
-                        disabled={runtimeBusy === "uninstall"}
-                      >
-                        Remove
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => runtimeAction("install")}
-                      disabled={runtimeBusy === "install" || !llama?.installable}
-                    >
-                      <ArrowDownload20Regular />
-                      {runtimeBusy === "install"
-                        ? "Starting…"
-                        : "Install llama.cpp"}
-                    </button>
-                  )}
-                  <span className="runtime-hero-note">
-                    {installing
-                      ? "Downloads continue while this window stays open."
-                      : installFailed
-                      ? "Finished downloads are reused when you retry."
-                      : llamaRunning
-                      ? llama?.url
-                      : llamaInstalled
-                      ? llama?.version
-                        ? `Build ${llama.version}, installed in your data folder.`
-                        : "Installed in your data folder."
-                      : `≈ ${installSizeMb} MB total · from GitHub and Hugging Face`}
-                  </span>
-                </div>
-              </div>
-
-              <div className="runtime-secondary-head">
-                <h2>Already have a runtime?</h2>
-                <button
-                  className="link-button"
-                  onClick={() => {
-                    void scan();
-                    void refreshRuntimes().catch((err) =>
-                      setRuntimeError(
-                        err instanceof Error ? err.message : String(err)
-                      )
-                    );
-                  }}
-                  disabled={scanning}
-                >
-                  <ArrowClockwise20Regular />
-                  {scanning ? "Scanning…" : "Scan again"}
-                </button>
-              </div>
-
-              <div className="runtime-list">
-                {otherRuntimes.length === 0 && (
-                  <div className="runtime-row runtime-row-empty">
-                    <p>Looking for runtimes…</p>
-                  </div>
-                )}
-                {otherRuntimes.map((runtime) => (
-                  <div className="runtime-row" key={runtime.id}>
-                    <div className="runtime-row-copy">
-                      <div className="runtime-row-name">
-                        <strong>{runtime.label}</strong>
-                        {runtime.modelCount > 0 && (
-                          <span>
-                            {runtime.modelCount} model
-                            {runtime.modelCount === 1 ? "" : "s"}
-                          </span>
-                        )}
-                      </div>
-                      <p>{runtime.detail}</p>
+                        {scanning ? "Scanning…" : "Scan again"}
+                      </Button>
                     </div>
-                    <span
-                      className={`status${
-                        runtime.state === "running" ? "" : " muted"
-                      }`}
+
+                    <ul className="setup-runtime-list">
+                      {otherRuntimes.length === 0 && (
+                        <li className="setup-runtime-row setup-runtime-row-empty">
+                          <p>Looking for runtimes…</p>
+                        </li>
+                      )}
+                      {otherRuntimes.map((runtime) => (
+                        <li className="setup-runtime-row" key={runtime.id}>
+                          <span className="setup-runtime-row-icon">
+                            <Server20Regular />
+                          </span>
+                          <div className="setup-runtime-row-copy">
+                            <div className="setup-runtime-row-name">
+                              <Text weight="semibold">{runtime.label}</Text>
+                              {runtime.modelCount > 0 && (
+                                <span className="setup-runtime-row-meta">
+                                  {runtime.modelCount} model{runtime.modelCount === 1 ? "" : "s"}
+                                </span>
+                              )}
+                            </div>
+                            <p>{runtime.detail}</p>
+                          </div>
+                          <RuntimeStateBadge state={runtime.state} />
+                          {runtime.state === "missing" && runtime.installUrl ? (
+                            <ExternalLink
+                              className="setup-external-link"
+                              href={runtime.installUrl}
+                              onOpenError={(message) => setRuntimeError(message)}
+                            >
+                              Get {runtime.label}
+                              <Open20Regular />
+                            </ExternalLink>
+                          ) : (
+                            <span className="setup-runtime-row-spacer" />
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Accordion
+                      className="setup-endpoints"
+                      collapsible
+                      openItems={endpointsOpenValue}
+                      onToggle={(_, data) => setEndpointsOpen(data.openItems.includes("endpoints"))}
                     >
-                      <span
-                        className={`status-dot${
-                          runtime.state === "running"
-                            ? ""
-                            : runtime.state === "stopped"
-                            ? " warning"
-                            : " muted"
-                        }`}
-                      />
-                      {runtime.state === "running"
-                        ? "Running"
-                        : runtime.state === "stopped"
-                        ? "Installed"
-                        : "Not installed"}
-                    </span>
-                    {runtime.state === "running" ? (
-                      <span className="runtime-row-spacer" />
-                    ) : (
-                      <a
-                        className="runtime-link"
-                        href={runtime.installUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Get {runtime.label}
-                        <Open20Regular />
-                      </a>
+                      <AccordionItem value="endpoints">
+                        <AccordionHeader>Use a different endpoint</AccordionHeader>
+                        <AccordionPanel>
+                          <div className="setup-endpoint-grid">
+                            {[
+                              ["Foundry Local", "foundryUrl"],
+                              ["Ollama", "ollamaUrl"],
+                              ["LM Studio", "lmStudioUrl"],
+                              ["llama.cpp", "llamaCppUrl"],
+                            ].map(([label, key]) => (
+                              <Field key={key} label={label}>
+                                <Input
+                                  className="setup-input setup-mono"
+                                  value={String(settings[key as keyof LocalSettings] || "")}
+                                  onChange={(_, data) =>
+                                    setSettings((current) => ({
+                                      ...current,
+                                      [key]: data.value,
+                                    }))
+                                  }
+                                  aria-label={`${label} URL`}
+                                />
+                              </Field>
+                            ))}
+                            <Field className="setup-field-wide" label="Hugging Face cache">
+                              <Input
+                                className="setup-input setup-mono"
+                                value={settings.huggingFacePath}
+                                placeholder="~/.cache/huggingface/hub"
+                                onChange={(_, data) =>
+                                  setSettings((current) => ({
+                                    ...current,
+                                    huggingFacePath: data.value,
+                                  }))
+                                }
+                                aria-label="Hugging Face cache path"
+                              />
+                            </Field>
+                          </div>
+                        </AccordionPanel>
+                      </AccordionItem>
+                    </Accordion>
+
+                    {!editProviders && (
+                      <MessageBar intent="info" className="setup-message">
+                        <MessageBarBody>
+                          You can leave everything offline and configure it later. Model
+                          features unlock when a runtime responds.
+                        </MessageBarBody>
+                      </MessageBar>
                     )}
-                  </div>
-                ))}
-              </div>
+                  </section>
+                )}
 
-              <details
-                className="runtime-endpoints"
-                open={editProviders || endpointsOpen}
-                onToggle={(event) =>
-                  setEndpointsOpen(event.currentTarget.open)
-                }
-              >
-                <summary>Use a different endpoint</summary>
-                <div className="runtime-endpoint-grid">
-                  {[
-                    ["Foundry Local", "foundryUrl"],
-                    ["Ollama", "ollamaUrl"],
-                    ["LM Studio", "lmStudioUrl"],
-                    ["llama.cpp", "llamaCppUrl"],
-                  ].map(([label, key]) => (
-                    <label className="runtime-endpoint" key={key}>
-                      <span>{label}</span>
-                      <input
-                        className="input mono provider-url"
-                        value={String(
-                          settings[key as keyof LocalSettings] || ""
-                        )}
-                        onChange={(event) =>
-                          setSettings((current) => ({
-                            ...current,
-                            [key]: event.target.value,
-                          }))
-                        }
-                        aria-label={`${label} URL`}
-                      />
-                    </label>
-                  ))}
-                  <label className="runtime-endpoint runtime-endpoint-wide">
-                    <span>Hugging Face cache</span>
-                    <input
-                      className="input mono provider-url"
-                      value={settings.huggingFacePath}
-                      placeholder="~/.cache/huggingface/hub"
-                      onChange={(event) =>
-                        setSettings((current) => ({
-                          ...current,
-                          huggingFacePath: event.target.value,
-                        }))
-                      }
-                      aria-label="Hugging Face cache path"
-                    />
-                  </label>
-                </div>
-              </details>
+                {step === 3 && (
+                  <section className="setup-step" aria-labelledby="setup-title-3">
+                    <h1 className="setup-title" id="setup-title-3">Choose your first model.</h1>
+                    <p className="setup-lead">
+                      {chatModels.length
+                        ? "These models were reported by the providers on this computer."
+                        : "No chat models were discovered. You can finish setup and add one later."}
+                    </p>
 
-              {error && <div className="banner error">{error}</div>}
-              {runtimeError && (
-                <div className="banner error" role="alert">
-                  <Warning20Regular />
-                  <span>{runtimeError}</span>
-                </div>
-              )}
-              {!editProviders && (
-                <div className="banner">
-                  <Info20Regular />
-                  <span>
-                    You can leave everything offline and configure it later.
-                    Model features unlock when a runtime responds.
-                  </span>
-                </div>
-              )}
-            </section>
-          )}
-
-          {step === 3 && (
-            <section className="setup-step">
-              <div className="setup-kicker">Model</div>
-              <h1>Choose your first model.</h1>
-              <p className="setup-lead">
-                {chatModels.length
-                  ? "These models were reported by the providers on this computer."
-                  : "No chat models were discovered. You can finish setup and add one later."}
-              </p>
-              {chatModels.length > 0 ? (
-                <div className="setup-model-list">
-                  {chatModels.map((model) => {
-                    const active = settings.defaultProviderId === model.provider && settings.defaultModel === model.id;
-                    return (
-                      <button
-                        key={model.key}
-                        className={`setup-model-row${active ? " active" : ""}`}
-                        onClick={() =>
-                          setSettings((current) => ({
-                            ...current,
-                            defaultProviderId: model.provider,
-                            defaultModel: model.id,
-                          }))
-                        }
+                    {chatModels.length > 0 ? (
+                      <RadioGroup
+                        className="setup-model-radio-group"
+                        value={selectedModelKey}
+                        onChange={(_, data) => {
+                          const model = chatModels.find((item) => item.key === data.value);
+                          if (model) {
+                            setSettings((current) => ({
+                              ...current,
+                              defaultProviderId: model.provider,
+                              defaultModel: model.id,
+                            }));
+                          }
+                        }}
                       >
-                        <ModelLogo publisher={model.publisher} name={model.displayName} size={28} />
-                        <span>
-                          <strong>{model.displayName}</strong>
-                          <small>{model.publisher} · {model.providerLabel}</small>
-                        </span>
-                        {active && <Checkmark20Regular />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="setup-no-models">
-                  <PlugConnected20Regular />
-                  <strong>No model runtime detected</strong>
-                  <p>Start a provider and scan again, or continue and configure it later.</p>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setStep(2)}
-                  >
-                    <ArrowLeft20Regular /> Back to providers
-                  </button>
-                </div>
-              )}
-            </section>
-          )}
+                        <div className="setup-model-list">
+                          {chatModels.map((model) => (
+                            <Radio
+                              key={model.key}
+                              value={model.key}
+                              className="setup-model-option"
+                              label={
+                                <>
+                                  <ModelLogo publisher={model.publisher} name={model.displayName} size={28} />
+                                  <span className="setup-model-copy">
+                                    <strong>{model.displayName}</strong>
+                                    <small>
+                                      {model.publisher} · {model.providerLabel}
+                                    </small>
+                                  </span>
+                                </>
+                              }
+                            />
+                          ))}
+                        </div>
+                      </RadioGroup>
+                    ) : (
+                      <div className="setup-empty">
+                        <PlugConnected20Regular />
+                        <strong>No model runtime detected</strong>
+                        <p>Start a provider and scan again, or continue and configure it later.</p>
+                        <Button
+                          appearance="secondary"
+                          onClick={() => setStep(2)}
+                          icon={<ArrowLeft20Regular />}
+                        >
+                          Back to providers
+                        </Button>
+                      </div>
+                    )}
+                  </section>
+                )}
 
-          {step === 4 && (
-            <section className="setup-step">
-              <div className="setup-kicker">Ready</div>
-              <h1>Your workshop is ready.</h1>
-              <p className="setup-lead">
-                openFoundry opens on the workspace dashboard. Providers and models can be
-                changed later.
-              </p>
-              <div className="setup-summary">
-                <div>
-                  <span>Workspace</span>
-                  <strong>{settings.projectName}</strong>
-                </div>
-                <div>
-                  <span>Profile</span>
-                  <strong>{settings.userName || "Local user"}</strong>
-                </div>
-                <div>
-                  <span>Providers online</span>
-                  <strong>{online.length}</strong>
-                </div>
-                <div>
-                  <span>Models discovered</span>
-                  <strong>{models.length}</strong>
-                </div>
-                <div>
-                  <span>Default model</span>
-                  <strong>{settings.defaultModel || "None selected"}</strong>
-                </div>
+                {step === 4 && (
+                  <section className="setup-step" aria-labelledby="setup-title-4">
+                    <h1 className="setup-title" id="setup-title-4">Your workshop is ready.</h1>
+                    <p className="setup-lead">
+                      openFoundry opens on the workspace dashboard. Providers and models can
+                      be changed later.
+                    </p>
+                    <div className="setup-summary">
+                      <div className="setup-summary-item">
+                        <span className="setup-summary-label">Workspace</span>
+                        <strong className="setup-summary-value">{settings.projectName}</strong>
+                      </div>
+                      <div className="setup-summary-item">
+                        <span className="setup-summary-label">Profile</span>
+                        <strong className="setup-summary-value">{settings.userName || "Local user"}</strong>
+                      </div>
+                      <div className="setup-summary-item">
+                        <span className="setup-summary-label">Providers online</span>
+                        <strong className="setup-summary-value">{online.length}</strong>
+                      </div>
+                      <div className="setup-summary-item">
+                        <span className="setup-summary-label">Models discovered</span>
+                        <strong className="setup-summary-value">{models.length}</strong>
+                      </div>
+                      <div className="setup-summary-item">
+                        <span className="setup-summary-label">Default model</span>
+                        <strong className="setup-summary-value">
+                          {settings.defaultModel || "None selected"}
+                        </strong>
+                      </div>
+                      <div className="setup-summary-item">
+                        <span className="setup-summary-label">Location</span>
+                        <strong className="setup-summary-value">{systemHost || "This computer"}</strong>
+                      </div>
+                    </div>
+                    <MessageBar intent="info" className="setup-message">
+                      <MessageBarBody>
+                        This workspace lives on {systemHost || "this computer"}. Model licenses
+                        remain the responsibility of their owners.
+                      </MessageBarBody>
+                    </MessageBar>
+                  </section>
+                )}
               </div>
-              <div className="banner">
-                <Info20Regular />
-                <span>
-                  This workspace lives on {systemHost || "this computer"}. Model licenses
-                  remain the responsibility of their owners.
-                </span>
-              </div>
-            </section>
-          )}
-
-          <footer className="setup-actions">
-            {editProviders ? (
-              <button
-                className="btn btn-secondary"
-                onClick={() => router.push(returnTo || "/discover/models")}
-              >
-                <ArrowLeft20Regular /> Back to model
-              </button>
-            ) : step > 0 ? (
-              <button className="btn btn-secondary" onClick={() => setStep(step - 1)}>
-                <ArrowLeft20Regular /> Back
-              </button>
-            ) : (
-              <span />
-            )}
-            <div className="row" style={{ gap: 8 }}>
-              {editProviders ? (
-                <button
-                  className="btn btn-primary"
-                  disabled={saving || scanning}
-                  onClick={finish}
-                >
-                  {saving ? "Saving…" : "Save and return"}
-                </button>
-              ) : step < STEPS.length - 1 ? (
-                <button
-                  className="btn btn-primary"
-                  disabled={
-                    saving ||
-                    scanning ||
-                    (step === 0 && !settings.termsAccepted) ||
-                    (step === 1 && !settings.userName.trim()) ||
-                    (step === 1 &&
-                      !claimed &&
-                      (!claimToken.trim() ||
-                        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.userEmail)))
-                  }
-                  onClick={next}
-                >
-                  Continue <ArrowRight20Regular />
-                </button>
-              ) : (
-                <button className="btn btn-primary" disabled={saving} onClick={finish}>
-                  {saving ? "Starting…" : "Open openFoundry"}
-                </button>
-              )}
             </div>
-          </footer>
-        </main>
-      </div>
 
-      {claimOpen && (
-        <div className="dialog-backdrop">
-          <div
-            className="dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Your access code"
-          >
-            <div className="dialog-head">
+            <footer className="setup-actions">
               <div>
-                <h2 className="dialog-title">Your access code</h2>
-                <p className="dialog-sub">
+                {editProviders ? (
+                  <Button
+                    appearance="secondary"
+                    onClick={() => router.push(returnTo || "/discover/models")}
+                    icon={<ArrowLeft20Regular />}
+                  >
+                    Back to model
+                  </Button>
+                ) : step > 0 ? (
+                  <Button
+                    appearance="secondary"
+                    onClick={() => setStep(step - 1)}
+                    icon={<ArrowLeft20Regular />}
+                  >
+                    Back
+                  </Button>
+                ) : (
+                  <span />
+                )}
+              </div>
+              <div className="setup-actions-right">
+                {editProviders ? (
+                  <Button
+                    appearance="primary"
+                    disabled={saving || scanning}
+                    onClick={finish}
+                  >
+                    {saving ? "Saving…" : "Save and return"}
+                  </Button>
+                ) : step < STEPS.length - 1 ? (
+                  <Button
+                    appearance="primary"
+                    icon={<ArrowRight20Regular />}
+                    iconPosition="after"
+                    disabled={
+                      saving ||
+                      scanning ||
+                      (step === 0 && !settings.termsAccepted) ||
+                      (step === 1 && !settings.userName.trim()) ||
+                      (step === 1 &&
+                        !claimed &&
+                        (!claimToken.trim() ||
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.userEmail)))
+                    }
+                    onClick={next}
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <Button
+                    appearance="primary"
+                    disabled={saving}
+                    onClick={finish}
+                  >
+                    {saving ? "Starting…" : "Open openFoundry"}
+                  </Button>
+                )}
+              </div>
+            </footer>
+          </main>
+        </div>
+
+        <Dialog
+          open={claimOpen}
+          modalType="alert"
+          onOpenChange={(_, data) => {
+            if (!data.open) setClaimOpen(false);
+          }}
+        >
+          <DialogSurface className="setup-dialog">
+            <DialogBody>
+              <DialogTitle>Your access code</DialogTitle>
+              <DialogContent>
+                <p className="setup-dialog-note">
                   Nobody can recover this code. Store it somewhere before you continue.
                 </p>
-              </div>
-            </div>
-            <div className="dialog-body">
-              <div className="row" style={{ gap: 8 }}>
-                <span className="mono" style={{ fontSize: 18, letterSpacing: "0.08em" }}>
-                  {accessCode}
-                </span>
-                <span className="spacer" />
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(accessCode);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  }}
-                >
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-              <p className="muted text-12" style={{ marginTop: 10 }}>
-                You will use it to sign in from another browser. On this computer you
-                stay signed in.
-              </p>
-            </div>
-            <div className="dialog-footer">
-              <button className="btn btn-primary" onClick={finishClaim}>
-                I saved it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                <div className="setup-code-box">
+                  <code>{accessCode}</code>
+                  <Button
+                    appearance="secondary"
+                    size="small"
+                    icon={copied ? <Checkmark20Regular /> : <Copy20Regular />}
+                    onClick={copyAccessCode}
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <p className="setup-dialog-note">
+                  You will use it to sign in from another browser. On this computer you stay
+                  signed in.
+                </p>
+              </DialogContent>
+              <DialogActions>
+                <Button appearance="primary" onClick={finishClaim}>
+                  I saved it
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
 
-      {termsOpen && (
-        <div className="dialog-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setTermsOpen(false);
-        }}>
-          <div className="dialog wide" role="dialog" aria-modal="true" aria-label="Terms of use">
-            <div className="dialog-head">
-              <div>
-                <h2 className="dialog-title">Terms of use</h2>
-                <p className="dialog-sub">Summary</p>
-              </div>
-              <button className="icon-button" onClick={() => setTermsOpen(false)} aria-label="Close">
-                <Dismiss20Regular />
-              </button>
-            </div>
-            <div className="dialog-body model-prose">
-              <p>openFoundry is free software provided as-is, without warranty.</p>
-              <p>You are responsible for models, model licenses, data and remote endpoints you configure.</p>
-              <p>openFoundry is independent and is not affiliated with any model provider or platform vendor.</p>
-            </div>
-            <div className="dialog-footer">
-              <button className="btn btn-primary" onClick={() => setTermsOpen(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <Dialog open={termsOpen} onOpenChange={(_, data) => setTermsOpen(data.open)}>
+          <DialogSurface className="setup-dialog">
+            <DialogBody>
+              <DialogTitle>Terms of use</DialogTitle>
+              <DialogContent>
+                <p>openFoundry is free software provided as-is, without warranty.</p>
+                <p>
+                  You are responsible for models, model licenses, data and remote endpoints you
+                  configure.
+                </p>
+                <p>openFoundry is independent and is not affiliated with any model provider or platform vendor.</p>
+              </DialogContent>
+              <DialogActions>
+                <Button appearance="primary" onClick={() => setTermsOpen(false)}>
+                  Close
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
+      </div>
+    </FluentProvider>
   );
+}
+
+function RuntimeStateBadge({ state }: { state: RuntimeStatus["state"] }) {
+  if (state === "running") return <Badge appearance="tint" color="success" size="small">Running</Badge>;
+  if (state === "stopped") return <Badge appearance="tint" color="warning" size="small">Installed</Badge>;
+  if (state === "installing") return <Badge appearance="tint" color="informative" size="small">Installing</Badge>;
+  return <Badge appearance="tint" color="subtle" size="small">Not installed</Badge>;
 }

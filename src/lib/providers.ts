@@ -15,6 +15,7 @@ import {
 } from "./types";
 import { taskFor } from "./model-task";
 import { readJson } from "./store";
+import { augmentedPath, discoverFoundryUrls, findExecutable } from "./runtime-discovery";
 
 const execFileAsync = promisify(execFile);
 
@@ -43,20 +44,28 @@ function isLoopbackUrl(value: string): boolean {
  */
 async function discoverFoundryUrl(): Promise<string | null> {
   return cached("foundry-url", 10000, async () => {
-    try {
-      const { stdout } = await execFileAsync(
-        "foundry",
-        ["server", "status", "-o", "json"],
-        { timeout: 3000, maxBuffer: 512 * 1024 }
-      );
-      const parsed = JSON.parse(stdout) as { webUrls?: string[] };
-      const url = parsed.webUrls?.find(
-        (item) => typeof item === "string" && /^https?:\/\//.test(item)
-      );
-      return url ? url.replace(/\/+$/, "") : null;
-    } catch {
-      return null;
-    }
+    const urls = await discoverFoundryUrls();
+    return urls[0] ?? null;
+  });
+}
+
+/**
+ * Run a runtime CLI with the PATH a desktop launch omits, and with the binary
+ * resolved from its documented install location when `which` cannot see it.
+ */
+async function runRuntimeCommand(
+  name: "foundry" | "ollama",
+  args: string[],
+  options: { timeout?: number; maxBuffer?: number } = {}
+): Promise<{ stdout: string; stderr: string }> {
+  const location = await findExecutable(name);
+  if (!location) {
+    throw new Error(`${name} is not installed or could not be found.`);
+  }
+  return execFileAsync(location.path, args, {
+    timeout: options.timeout,
+    maxBuffer: options.maxBuffer,
+    env: { ...process.env, PATH: augmentedPath() },
   });
 }
 
@@ -197,7 +206,7 @@ interface FoundryCacheModel {
  */
 async function foundryCatalog(): Promise<Map<string, FoundryCacheModel>> {
   try {
-    const { stdout } = await execFileAsync(
+    const { stdout } = await runRuntimeCommand(
       "foundry",
       ["model", "list", "--output", "json"],
       { timeout: 6000, maxBuffer: 4 * 1024 * 1024 }
@@ -665,7 +674,7 @@ export async function isFoundryCached(modelId: string): Promise<boolean> {
 }
 
 export async function loadFoundryModel(modelId: string): Promise<void> {
-  await execFileAsync("foundry", ["model", "load", modelId], {
+  await runRuntimeCommand("foundry", ["model", "load", modelId], {
     timeout: 120000,
     maxBuffer: 4 * 1024 * 1024,
   });
@@ -730,7 +739,7 @@ export async function ensureModelReady(
 }
 
 export async function pullOllamaModel(modelId: string): Promise<void> {
-  await execFileAsync("ollama", ["pull", modelId], {
+  await runRuntimeCommand("ollama", ["pull", modelId], {
     timeout: 30 * 60 * 1000,
     maxBuffer: 16 * 1024 * 1024,
   });
@@ -738,7 +747,7 @@ export async function pullOllamaModel(modelId: string): Promise<void> {
 }
 
 export async function downloadFoundryModel(modelId: string): Promise<void> {
-  await execFileAsync("foundry", ["model", "download", modelId], {
+  await runRuntimeCommand("foundry", ["model", "download", modelId], {
     timeout: 30 * 60 * 1000,
     maxBuffer: 8 * 1024 * 1024,
   });
@@ -747,7 +756,7 @@ export async function downloadFoundryModel(modelId: string): Promise<void> {
 
 export async function unloadFoundryModel(modelId: string): Promise<void> {
   try {
-    await execFileAsync("foundry", ["model", "unload", modelId], {
+    await runRuntimeCommand("foundry", ["model", "unload", modelId], {
       timeout: 20000,
     });
   } catch {

@@ -35,6 +35,10 @@ export default async function RootLayout({
     (await cookies()).get("openfoundry:theme")?.value === "light"
       ? "light"
       : "dark";
+  // The desktop shell serves the UI from a loopback Next server, so the UI
+  // cannot rely on Tauri IPC being present for every operation. This flag is
+  // available to client code to choose the server-backed open path.
+  const desktopShell = Boolean(process.env.OPENFOUNDRY_PUBLIC_URL);
   // Resolve the origin from the request itself so server-rendered endpoint
   // samples match the address the browser actually loaded.
   const requestHeaders = await headers();
@@ -47,7 +51,7 @@ export default async function RootLayout({
     ? summaryFor(session.directory, session.principal.id, projectScope(settings.projectId))
     : null;
   return (
-    <html lang="en" data-theme={theme} suppressHydrationWarning>
+    <html lang="en" data-theme={theme} data-desktop={desktopShell ? "true" : undefined} suppressHydrationWarning>
       <body>
         <OriginProvider value={origin}>
           <AppShell
