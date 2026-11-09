@@ -48,6 +48,7 @@ import {
   Text,
 } from "@fluentui/react-components";
 import { foundryFluentTheme } from "./fluent-theme";
+import { llamaRuntimeControls } from "@/lib/runtime-view";
 import ExternalLink from "./ExternalLink";
 import { ModelLogo, OpenFoundryLogo } from "./Logos";
 import type {
@@ -360,8 +361,10 @@ export default function SetupWizard({
   const otherRuntimes = runtimes.filter((item) => item.id !== "llamacpp");
   const installing = Boolean(runtimeJob && (runtimeJob.status === "running" || runtimeJob.status === "queued"));
   const installFailed = runtimeJob?.status === "error";
-  const llamaRunning = llama?.state === "running";
-  const llamaInstalled = llama?.state === "stopped" || llamaRunning;
+  const llamaControls = llamaRuntimeControls(llama);
+  const llamaRunning = llamaControls.running;
+  const llamaInstalled = llamaControls.detected;
+  const llamaExternal = llamaControls.external;
   const installSizeMb = Math.round(((starter?.sizeBytes || 397808192) + 25 * 1024 * 1024) / 1_000_000);
   const stageLabel = (stage: RuntimeJobStage) =>
     stage === "runtime"
@@ -633,7 +636,9 @@ export default function SetupWizard({
                               : llamaRunning
                               ? llama?.detail || "The local server is answering."
                               : llamaInstalled
-                              ? "Installed. Start the server to use it."
+                              ? llamaExternal
+                                ? "Installed outside openFoundry. Start it there to serve models."
+                                : "Installed. Start the server to use it."
                               : "A local server with a small starter model."}
                           </p>
                         </div>
@@ -683,7 +688,7 @@ export default function SetupWizard({
                             >
                               {runtimeBusy === "install" ? "Starting…" : "Retry install"}
                             </Button>
-                            {llamaInstalled && (
+                            {llamaControls.canUninstall && (
                               <Button
                                 appearance="secondary"
                                 size="small"
@@ -696,15 +701,17 @@ export default function SetupWizard({
                           </>
                         ) : llamaRunning ? (
                           <>
-                            <Button
-                              appearance="secondary"
-                              size="small"
-                              icon={runtimeBusy === "stop" ? <Spinner size="tiny" /> : <Stop20Regular />}
-                              onClick={() => runtimeAction("stop")}
-                              disabled={runtimeBusy === "stop"}
-                            >
-                              {runtimeBusy === "stop" ? "Stopping…" : "Stop server"}
-                            </Button>
+                            {llamaControls.canStop && (
+                              <Button
+                                appearance="secondary"
+                                size="small"
+                                icon={runtimeBusy === "stop" ? <Spinner size="tiny" /> : <Stop20Regular />}
+                                onClick={() => runtimeAction("stop")}
+                                disabled={runtimeBusy === "stop"}
+                              >
+                                {runtimeBusy === "stop" ? "Stopping…" : "Stop server"}
+                              </Button>
+                            )}
                             <Button
                               appearance="secondary"
                               size="small"
@@ -715,7 +722,7 @@ export default function SetupWizard({
                               {scanning ? "Scanning…" : "Scan models"}
                             </Button>
                           </>
-                        ) : llamaInstalled ? (
+                        ) : llamaControls.canStart ? (
                           <>
                             <Button
                               appearance="primary"
@@ -735,7 +742,7 @@ export default function SetupWizard({
                               Remove
                             </Button>
                           </>
-                        ) : (
+                        ) : llamaExternal ? null : (
                           <Button
                             appearance="primary"
                             icon={runtimeBusy === "install" ? <Spinner size="tiny" /> : <ArrowDownload20Regular />}
@@ -752,6 +759,8 @@ export default function SetupWizard({
                             ? "Finished downloads are reused when you retry."
                             : llamaRunning
                             ? llama?.url
+                            : llamaExternal
+                            ? llama?.detail || "Installed outside openFoundry."
                             : llamaInstalled
                             ? llama?.version
                               ? `Build ${llama.version}, installed in your data folder.`
@@ -768,6 +777,7 @@ export default function SetupWizard({
                         size="small"
                         icon={scanning ? <Spinner size="tiny" /> : <ArrowClockwise20Regular />}
                         onClick={() => {
+                          setRuntimeError("");
                           void scan();
                           void refreshRuntimes().catch((err) =>
                             setRuntimeError(err instanceof Error ? err.message : String(err))
