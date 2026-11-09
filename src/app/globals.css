@@ -5383,9 +5383,9 @@ svg {
 .setup-steps::before {
   content: "";
   position: absolute;
-  left: 23px;
-  top: 18px;
-  bottom: 18px;
+  left: 8px;
+  top: 12px;
+  bottom: 12px;
   width: 1px;
   background: var(--stroke-4);
 }
@@ -5393,41 +5393,41 @@ svg {
   position: relative;
   display: flex;
   gap: 12px;
-  align-items: center;
-  padding: 9px 8px;
-  border-radius: var(--radius-lg);
+  align-items: flex-start;
+  padding: 10px 8px 10px 0;
   color: var(--fg-3);
 }
 .setup-step-item.active {
-  background: var(--bg-3);
   color: var(--fg-1);
 }
-.setup-step-index {
-  width: 30px;
-  height: 30px;
+.setup-step-marker {
+  width: 16px;
+  height: 16px;
   flex: none;
-  border-radius: 50%;
-  border: 1px solid var(--stroke-3);
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
   background: var(--bg);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg-3);
   z-index: 1;
 }
-.setup-step-item.active .setup-step-index {
-  border-color: var(--brand-stroke);
-  background: var(--brand-tint);
-  color: var(--purple-fg);
-  box-shadow: 0 0 0 3px var(--bg-3);
+.setup-step-marker svg {
+  width: 12px;
+  height: 12px;
+  color: var(--success);
 }
-.setup-step-item.done .setup-step-index {
-  border-color: var(--success);
-  background: var(--success);
-  color: var(--on-brand-fg);
+.setup-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stroke-3);
+  border: 1px solid var(--stroke-3);
+}
+.setup-step-item.active .setup-step-dot {
+  background: var(--brand-stroke);
+  border-color: var(--brand-stroke);
+}
+.setup-step-item.done .setup-step-copy strong {
+  color: var(--fg-2);
 }
 .setup-step-copy {
   min-width: 0;
@@ -5609,6 +5609,43 @@ svg {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+}
+.setup-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-2);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.setup-status-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--stroke-2);
+}
+.setup-status-success .setup-status-dot {
+  background: var(--success);
+}
+.setup-status-warning .setup-status-dot {
+  background: var(--warning);
+}
+.setup-status-danger {
+  color: var(--danger);
+}
+.setup-status-danger .setup-status-dot {
+  background: var(--danger);
+}
+.setup-status-brand .setup-status-dot {
+  background: var(--brand-stroke);
+}
+.setup-status-muted {
+  color: var(--fg-3);
+}
+.setup-status-muted .setup-status-dot {
+  background: var(--stroke-2);
 }
 .setup-runtime-table th {
   text-align: left;
@@ -5840,6 +5877,14 @@ svg {
   .setup-step-item {
     min-width: max-content;
     padding: 6px 10px;
+    align-items: center;
+  }
+  .setup-step-item.active {
+    background: var(--bg-3);
+    border-radius: var(--radius-lg);
+  }
+  .setup-step-marker {
+    background: transparent;
   }
   .setup-step-copy small {
     display: none;
