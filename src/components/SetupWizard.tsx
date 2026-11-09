@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowClockwise20Regular,
@@ -59,13 +59,7 @@ import type {
   RuntimeStatus,
 } from "@/lib/types";
 
-const STEPS = [
-  { label: "Workspace", description: "Name and terms" },
-  { label: "Profile", description: "Your local identity" },
-  { label: "Runtime", description: "Connect a runtime" },
-  { label: "Model", description: "Pick a first model" },
-  { label: "Ready", description: "Review and open" },
-] as const;
+const STEPS = ["Workspace", "Profile", "Runtime", "Model", "Ready"] as const;
 
 type SetupWizardProps = {
   initial: LocalSettings;
@@ -83,6 +77,7 @@ export default function SetupWizard({
   const router = useRouter();
   const fluentTheme = useMemo(() => foundryFluentTheme(theme), [theme]);
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [returnTo, setReturnTo] = useState("");
   const [focusProvider, setFocusProvider] = useState("");
   const [editProviders, setEditProviders] = useState(false);
@@ -115,7 +110,6 @@ export default function SetupWizard({
   const [runtimeError, setRuntimeError] = useState("");
   const [runtimeBusy, setRuntimeBusy] = useState("");
   const [endpointsOpen, setEndpointsOpen] = useState(false);
-  const stepsRef = useRef<HTMLOListElement>(null);
 
   const chatModels = useMemo(
     () => models.filter((model) => model.task === "chat" || model.task === "vision"),
@@ -223,11 +217,6 @@ export default function SetupWizard({
   }, []);
 
   useEffect(() => {
-    const active = stepsRef.current?.querySelector<HTMLElement>('[aria-current="step"]');
-    active?.scrollIntoView({ block: "nearest", inline: "center" });
-  }, [step]);
-
-  useEffect(() => {
     if (step !== 2) return;
     if (providers.length === 0 && !scanning) void scan();
     void refreshRuntimes().catch((err) =>
@@ -299,11 +288,23 @@ export default function SetupWizard({
       }
     }
     if (step === 2 && providers.length === 0) void scan();
+    setDirection("forward");
     setStep(Math.min(step + 1, STEPS.length - 1));
+  };
+
+  const goBack = () => {
+    if (editProviders) {
+      router.push(returnTo || "/discover/models");
+      return;
+    }
+    if (step === 0) return;
+    setDirection("back");
+    setStep(step - 1);
   };
 
   const finishClaim = () => {
     setClaimOpen(false);
+    setDirection("forward");
     setStep(Math.min(step + 1, STEPS.length - 1));
   };
 
@@ -379,13 +380,12 @@ export default function SetupWizard({
   const selectedModelKey =
     chatModels.find((model) => model.provider === settings.defaultProviderId && model.id === settings.defaultModel)?.key ?? "";
 
-  const visibleSteps = editProviders ? [2] : STEPS.map((_, index) => index);
-
   const endpointsOpenValue = endpointsOpen || editProviders ? ["endpoints"] : [];
 
   return (
     <FluentProvider theme={fluentTheme} className="setup-provider">
       <div className="setup-screen">
+        <div className="setup-bloom" aria-hidden="true" />
         <div className="setup-shell">
           <header className="setup-topbar">
             <div className="setup-brand">
@@ -394,56 +394,28 @@ export default function SetupWizard({
                 <span className="setup-brand-open">open</span>Foundry
               </strong>
             </div>
-            <div className="setup-topbar-meta">
-              <span>
-                {editProviders
-                  ? "Runtime setup"
-                  : `Step ${step + 1} of ${STEPS.length}`}
-              </span>
-              <span className="setup-topbar-local">
-                <ShieldCheckmark20Regular />
-                Local only
-              </span>
-            </div>
-            {!editProviders && (
-              <ProgressBar
-                className="setup-progress"
-                value={(step + 1) / STEPS.length}
-                max={1}
-                thickness="medium"
-                shape="square"
-                aria-label={`Step ${step + 1} of ${STEPS.length}`}
-              />
-            )}
+            <span className="setup-topbar-local">
+              <ShieldCheckmark20Regular />
+              Local only
+            </span>
           </header>
 
-          <aside className="setup-rail">
-            <ol className="setup-steps" aria-label="Setup steps" ref={stepsRef}>
-              {visibleSteps.map((index) => {
-                const done = index < step && !editProviders;
-                const active = index === step;
-                return (
-                  <li
-                    key={index}
-                    className={`setup-step-item${active ? " active" : ""}${done ? " done" : ""}`}
-                    aria-current={active ? "step" : undefined}
-                  >
-                    <span className="setup-step-marker" aria-hidden="true">
-                      {done ? <Checkmark20Regular /> : <span className="setup-step-dot" />}
-                    </span>
-                    <div className="setup-step-copy">
-                      <strong>{STEPS[index].label}</strong>
-                      <small>{STEPS[index].description}</small>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </aside>
+
 
           <main className="setup-main">
             <div className="setup-scroll">
               <div className="setup-content">
+                {(editProviders || step > 0) && (
+                  <Button
+                    className="setup-back"
+                    appearance="subtle"
+                    shape="circular"
+                    icon={<ArrowLeft20Regular />}
+                    aria-label={editProviders ? "Back to model" : "Back"}
+                    onClick={goBack}
+                  />
+                )}
+                <div key={step} className={`setup-page setup-page-${direction}`}>
                 {step === 0 && (
                   <section className="setup-step" aria-labelledby="setup-title-0">
                     <h1 className="setup-title" id="setup-title-0">
@@ -636,7 +608,7 @@ export default function SetupWizard({
                               ? llama?.detail || "The local server is answering."
                               : llamaInstalled
                               ? llamaExternal
-                                ? "Installed outside openFoundry. Start it there to serve models."
+                                ? llama?.detail || "Installed outside openFoundry."
                                 : "Installed. Start the server to use it."
                               : "A local server with a small starter model."}
                           </p>
@@ -751,21 +723,21 @@ export default function SetupWizard({
                             {runtimeBusy === "install" ? "Starting…" : "Install llama.cpp"}
                           </Button>
                         )}
-                        <span className="setup-runtime-note">
-                          {installing
-                            ? "Downloads continue while this window stays open."
-                            : installFailed
-                            ? "Finished downloads are reused when you retry."
-                            : llamaRunning
-                            ? llama?.url
-                            : llamaExternal
-                            ? llama?.detail || "Installed outside openFoundry."
-                            : llamaInstalled
-                            ? llama?.version
-                              ? `Build ${llama.version}, installed in your data folder.`
-                              : "Installed in your data folder."
-                            : `≈ ${installSizeMb} MB total · from GitHub and Hugging Face`}
-                        </span>
+                        {!llamaExternal && (
+                          <span className="setup-runtime-note">
+                            {installing
+                              ? "Downloads continue while this window stays open."
+                              : installFailed
+                              ? "Finished downloads are reused when you retry."
+                              : llamaRunning
+                              ? llama?.url
+                              : llamaInstalled
+                              ? llama?.version
+                                ? `Build ${llama.version}, installed in your data folder.`
+                                : "Installed in your data folder."
+                              : `≈ ${installSizeMb} MB total · from GitHub and Hugging Face`}
+                          </span>
+                        )}
                       </div>
                     </section>
 
@@ -968,10 +940,10 @@ export default function SetupWizard({
                         <p>Start a provider and scan again, or continue and configure it later.</p>
                         <Button
                           appearance="secondary"
-                          onClick={() => setStep(2)}
+                          onClick={goBack}
                           icon={<ArrowLeft20Regular />}
                         >
-                          Back to providers
+                          Back to runtime
                         </Button>
                       </div>
                     )}
@@ -1019,31 +991,29 @@ export default function SetupWizard({
                     </MessageBar>
                   </section>
                 )}
+                  </div>
+                </div>
               </div>
-            </div>
 
             <footer className="setup-actions">
-              <div>
-                {editProviders ? (
-                  <Button
-                    appearance="secondary"
-                    onClick={() => router.push(returnTo || "/discover/models")}
-                    icon={<ArrowLeft20Regular />}
-                  >
-                    Back to model
-                  </Button>
-                ) : step > 0 ? (
-                  <Button
-                    appearance="secondary"
-                    onClick={() => setStep(step - 1)}
-                    icon={<ArrowLeft20Regular />}
-                  >
-                    Back
-                  </Button>
-                ) : (
-                  <span />
-                )}
-              </div>
+              <span />
+              {!editProviders && (
+                <div
+                  className="setup-dots"
+                  role="group"
+                  aria-label={`Step ${step + 1} of ${STEPS.length}`}
+                >
+                  {STEPS.map((label, index) => (
+                    <span
+                      key={label}
+                      className={`setup-dot${index === step ? " active" : ""}${
+                        index < step ? " done" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+              )}
               <div className="setup-actions-right">
                 {editProviders ? (
                   <Button
@@ -1070,7 +1040,7 @@ export default function SetupWizard({
                     }
                     onClick={next}
                   >
-                    Continue
+                    Next
                   </Button>
                 ) : (
                   <Button
