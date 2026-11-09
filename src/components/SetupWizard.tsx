@@ -26,7 +26,6 @@ import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
-  Badge,
   Button,
   Checkbox,
   Dialog,
@@ -429,8 +428,8 @@ export default function SetupWizard({
                     className={`setup-step-item${active ? " active" : ""}${done ? " done" : ""}`}
                     aria-current={active ? "step" : undefined}
                   >
-                    <span className="setup-step-index" aria-hidden="true">
-                      {done ? <Checkmark20Regular /> : index + 1}
+                    <span className="setup-step-marker" aria-hidden="true">
+                      {done ? <Checkmark20Regular /> : <span className="setup-step-dot" />}
                     </span>
                     <div className="setup-step-copy">
                       <strong>{STEPS[index].label}</strong>
@@ -617,15 +616,15 @@ export default function SetupWizard({
                           <div className="setup-runtime-title">
                             <h2>llama.cpp</h2>
                             {installing ? (
-                              <Badge appearance="tint" color="informative" size="small">Installing</Badge>
+                              <RuntimeStatusMark tone="brand" label="Installing" />
                             ) : installFailed ? (
-                              <Badge appearance="tint" color="danger" size="small">Install failed</Badge>
+                              <RuntimeStatusMark tone="danger" label="Install failed" />
                             ) : llamaRunning ? (
-                              <Badge appearance="tint" color="success" size="small">Running</Badge>
+                              <RuntimeStatusMark tone="success" label="Running" />
                             ) : llamaInstalled ? (
-                              <Badge appearance="tint" color="warning" size="small">Installed</Badge>
+                              <RuntimeStatusMark tone="warning" label="Installed" />
                             ) : (
-                              <Badge appearance="tint" color="brand" size="small">Recommended</Badge>
+                              <RuntimeStatusMark tone="brand" label="Recommended" />
                             )}
                           </div>
                           <p>
@@ -812,7 +811,7 @@ export default function SetupWizard({
                               <span className="setup-runtime-detail">{runtime.detail}</span>
                             </td>
                             <td>
-                              <RuntimeStateBadge state={runtime.state} />
+                              <RuntimeStateLabel state={runtime.state} />
                             </td>
                             <td className="setup-runtime-action">
                               {runtime.state === "missing" && runtime.installUrl ? (
@@ -1151,9 +1150,27 @@ export default function SetupWizard({
   );
 }
 
-function RuntimeStateBadge({ state }: { state: RuntimeStatus["state"] }) {
-  if (state === "running") return <Badge appearance="tint" color="success" size="small">Running</Badge>;
-  if (state === "stopped") return <Badge appearance="tint" color="warning" size="small">Installed</Badge>;
-  if (state === "installing") return <Badge appearance="tint" color="informative" size="small">Installing</Badge>;
-  return <Badge appearance="tint" color="subtle" size="small">Not installed</Badge>;
+type RuntimeStatusTone = "success" | "warning" | "danger" | "brand" | "muted";
+
+function RuntimeStatusMark({
+  tone,
+  label,
+}: {
+  tone: RuntimeStatusTone;
+  label: string;
+}) {
+  return (
+    <span className={`setup-status setup-status-${tone}`}>
+      <span className="setup-status-dot" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+function RuntimeStateLabel({ state }: { state: RuntimeStatus["state"] }) {
+  if (state === "running") return <RuntimeStatusMark tone="success" label="Running" />;
+  if (state === "stopped") return <RuntimeStatusMark tone="warning" label="Installed" />;
+  if (state === "installing") return <RuntimeStatusMark tone="brand" label="Installing" />;
+  if (state === "error") return <RuntimeStatusMark tone="danger" label="Error" />;
+  return <RuntimeStatusMark tone="muted" label="Not installed" />;
 }
