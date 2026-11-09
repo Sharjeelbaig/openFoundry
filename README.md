@@ -2,7 +2,7 @@
 
 **A local AI workbench for your own computer.**
 
-[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-macos-beta.1/openFoundry_0.4.4_aarch64.dmg) | [Download for Windows](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-windows-beta.1/openFoundry_0.4.4_x64-setup.exe) | [Download for Linux](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.4-linux-beta.1/openFoundry_0.4.4_amd64.deb) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
+[Website](https://openfoundry.pages.dev) | [Documentation](https://openfoundry.pages.dev/docs/) | [Download for macOS](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-macos-beta.1/openFoundry_0.4.5_aarch64.dmg) | [Download for Windows](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-windows-beta.1/openFoundry_0.4.5_x64-setup.exe) | [Download for Linux](https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-linux-beta.1/openFoundry_0.4.5_amd64.deb) | [GitHub](https://github.com/Sharjeelbaig/openFoundry)
 
 openFoundry is a free, independent desktop app for discovering models, chatting with
 them, and building prompt agents. Workspace data stays on your machine and the app talks
