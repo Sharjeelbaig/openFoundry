@@ -80,6 +80,43 @@ describe("executableCandidates", () => {
     expect(values.every((value) => value.endsWith("ollama.exe"))).toBe(true);
   });
 
+
+  it("finds llama-server on macOS", () => {
+    expect(executableCandidates("llama-server", "darwin", env)).toEqual(
+      expect.arrayContaining([
+        "/usr/local/bin/llama-server",
+        "/opt/homebrew/bin/llama-server",
+        "/Users/tester/.local/bin/llama-server",
+      ])
+    );
+  });
+
+  it("finds llama-server in Windows program folders and WinGet links", () => {
+    const values = executableCandidates("llama-server", "win32", env);
+    expect(values).toEqual(
+      expect.arrayContaining([
+        "C:\\Users\\tester\\AppData\\Local\\Programs\\llama.cpp\\llama-server.exe",
+        "C:\\Users\\tester\\AppData\\Local\\Microsoft\\WinGet\\Links\\llama-server.exe",
+        "C:\\Program Files\\llama.cpp\\llama-server.exe",
+      ])
+    );
+    expect(values.every((value) => value.endsWith("llama-server.exe"))).toBe(true);
+  });
+
+  it("finds llama-server in Linux user and system bins", () => {
+    const values = executableCandidates("llama-server", "linux", {
+      HOME: "/home/tester",
+      NODE_ENV: "test",
+    } as unknown as NodeJS.ProcessEnv);
+    expect(values).toEqual(
+      expect.arrayContaining([
+        "/usr/local/bin/llama-server",
+        "/usr/bin/llama-server",
+        "/home/tester/.local/bin/llama-server",
+      ])
+    );
+  });
+
   it("covers user-local Linux installs", () => {
     const values = executableCandidates("foundry", "linux", {
       HOME: "/home/tester",

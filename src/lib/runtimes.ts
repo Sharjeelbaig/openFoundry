@@ -712,7 +712,12 @@ export async function startLlamaServer(): Promise<{
 
   const binary = serverPath();
   if (!(await fileExists(binary))) {
-    throw new Error("llama.cpp is not installed yet.");
+    const system = await findExecutable("llama-server");
+    throw new Error(
+      system
+        ? `A system llama-server is installed at ${system.path}. Start it outside openFoundry, or install the managed copy.`
+        : "llama.cpp is not installed yet."
+    );
   }
   if (!(await fileExists(modelPath()))) {
     throw new Error(`The model ${STARTER_MODEL.name} is missing.`);

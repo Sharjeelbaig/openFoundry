@@ -31,7 +31,10 @@ describe("feedback mailto", () => {
       command: "open",
       args: ["mailto:x@y.z"],
     });
-    expect(openerCommand("mailto:x@y.z", "win32").command).toBe("rundll32");
+    expect(openerCommand("mailto:x@y.z", "win32")).toEqual({
+      command: "rundll32",
+      args: ["url.dll,FileProtocolHandler", "mailto:x@y.z"],
+    });
     expect(openerCommand("mailto:x@y.z", "linux")).toEqual({
       command: "xdg-open",
       args: ["mailto:x@y.z"],

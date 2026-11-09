@@ -182,6 +182,11 @@ export function executableCandidates(
   if (platform === "win32") {
     return [
       join(platform, local, "Microsoft", "WindowsApps", `llama-server${exe}`),
+      join(platform, local, "Microsoft", "WinGet", "Links", `llama-server${exe}`),
+      join(platform, local, "Programs", "llama.cpp", `llama-server${exe}`),
+      ...programFiles(env).map((base) =>
+        join(platform, base, "llama.cpp", `llama-server${exe}`)
+      ),
       join(platform, home, ".local", "bin", `llama-server${exe}`),
     ];
   }
