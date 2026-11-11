@@ -1,6 +1,6 @@
 [package]
 name = "openfoundry"
-version = "0.4.5"
+version = "0.5.0"
 description = "openFoundry - a local AI workbench"
 authors = ["Sharjeel Baig <eng.sharjeel.baig@gmail.com>"]
 license = "Apache-2.0"
