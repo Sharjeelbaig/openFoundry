@@ -1,30 +1,30 @@
 {
-  "version": "0.4.5",
-  "tag": "v0.4.5-macos-beta.1",
-  "asset": "openFoundry_0.4.5_aarch64.dmg",
-  "bytes": 59210786,
-  "sha256": "2c77880a4f26c1424d7eb78d276527e8dc10d4a4549de959010da3091d11c7e3",
-  "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-macos-beta.1/openFoundry_0.4.5_aarch64.dmg",
+  "version": "0.5.0",
+  "tag": "v0.5.0-macos-beta.1",
+  "asset": "openFoundry_0.5.0_aarch64.dmg",
+  "bytes": 59212186,
+  "sha256": "3fa120024d0b1235c440e3027cfbc739986575785bebba03fbdf2f8ef839f253",
+  "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.5.0-macos-beta.1/openFoundry_0.5.0_aarch64.dmg",
   "macos": {
-    "tag": "v0.4.5-macos-beta.1",
-    "asset": "openFoundry_0.4.5_aarch64.dmg",
-    "bytes": 59210786,
-    "sha256": "2c77880a4f26c1424d7eb78d276527e8dc10d4a4549de959010da3091d11c7e3",
-    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-macos-beta.1/openFoundry_0.4.5_aarch64.dmg"
+    "tag": "v0.5.0-macos-beta.1",
+    "asset": "openFoundry_0.5.0_aarch64.dmg",
+    "bytes": 59212186,
+    "sha256": "3fa120024d0b1235c440e3027cfbc739986575785bebba03fbdf2f8ef839f253",
+    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.5.0-macos-beta.1/openFoundry_0.5.0_aarch64.dmg"
   },
   "windows": {
-    "tag": "v0.4.5-windows-beta.1",
-    "asset": "openFoundry_0.4.5_x64-setup.exe",
-    "bytes": 36748917,
-    "sha256": "b4386f8487efb570123de929f476fd0e04c0bd23eabd572c7027b9285ec97bdd",
-    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-windows-beta.1/openFoundry_0.4.5_x64-setup.exe"
+    "tag": "v0.5.0-windows-beta.1",
+    "asset": "openFoundry_0.5.0_x64-setup.exe",
+    "bytes": 36737293,
+    "sha256": "b708ca9c0661366a2e60e9d0fc7f593febe990ede66d792c9ac515a7585170aa",
+    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.5.0-windows-beta.1/openFoundry_0.5.0_x64-setup.exe"
   },
   "linux": {
-    "tag": "v0.4.5-linux-beta.1",
-    "asset": "openFoundry_0.4.5_amd64.deb",
-    "bytes": 67049488,
-    "sha256": "002e7ae46a84020d092e423906338ac21ae4d3e9084b37bf7978fe71607c0919",
-    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.4.5-linux-beta.1/openFoundry_0.4.5_amd64.deb"
+    "tag": "v0.5.0-linux-beta.1",
+    "asset": "openFoundry_0.5.0_amd64.deb",
+    "bytes": 67050324,
+    "sha256": "0e64b77010c78ac36031f1c2c898a1f0eab494987400f7a84952f44908e27f68",
+    "downloadUrl": "https://github.com/Sharjeelbaig/openFoundry/releases/download/v0.5.0-linux-beta.1/openFoundry_0.5.0_amd64.deb"
   },
   "siteUrl": "https://openfoundry.pages.dev"
 }
