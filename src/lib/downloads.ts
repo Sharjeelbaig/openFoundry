@@ -6,6 +6,7 @@ import "server-only";
 import { spawn, type ChildProcess } from "child_process";
 import { randomUUID } from "crypto";
 import { findModel, invalidateModelCache } from "./providers";
+import { augmentedPath, findExecutable } from "./runtime-discovery";
 import type { DownloadJob } from "./types";
 
 interface InternalJob extends DownloadJob {
@@ -170,10 +171,8 @@ export async function startModelDownload(
   if (active) return { job: publicJob(active), cached: false };
 
   const now = new Date().toISOString();
-  const command =
-    model.provider === "huggingface"
-      ? "ollama"
-      : "foundry";
+  const command: "foundry" | "ollama" =
+    model.provider === "huggingface" ? "ollama" : "foundry";
   const args =
     model.provider === "huggingface"
       ? ["pull", `hf.co/${model.id}`]
@@ -199,9 +198,28 @@ export async function startModelDownload(
   };
   store().jobs.set(job.id, job);
 
+  // A desktop launch does not inherit the shell PATH, so resolve the runtime
+  // from its documented install locations and spawn the absolute binary with an
+  // augmented PATH. `spawn("foundry")` alone reports ENOENT on macOS even
+  // though the CLI is installed.
+  const location = await findExecutable(command);
+  if (!location) {
+    job.status = "error";
+    job.error = `${command} was not found. Install ${job.providerLabel} or add it to PATH.`;
+    job.message = job.error;
+    job.finishedAt = new Date().toISOString();
+    job.updatedAt = job.finishedAt;
+    return { job: publicJob(job), cached: false };
+  }
+  // Resolving the binary can take a moment. A cancel that arrived in that
+  // window must win; never spawn a job the user already stopped.
+  if (job.status === "cancelled") {
+    return { job: publicJob(job), cached: false };
+  }
+
   try {
-    const child = spawn(command, args, {
-      env: process.env,
+    const child = spawn(location.path, args, {
+      env: { ...process.env, PATH: augmentedPath() },
       stdio: ["ignore", "pipe", "pipe"],
     });
     job.child = child;

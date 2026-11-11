@@ -5,6 +5,13 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
 
+  // A desktop launch (Finder, Explorer, a desktop entry) inherits a minimal
+  // PATH, so Homebrew and per-user installs are invisible to every child
+  // process. Normalize it once before anything shells out. The user's own PATH
+  // stays first, so explicit overrides still win.
+  const { augmentedPath } = await import("./lib/runtime-discovery");
+  process.env.PATH = augmentedPath();
+
   const [{ getDirectory }, { ensureBootstrapToken, ensureMachineKey, hasOwner }] =
     await Promise.all([
       import("./lib/directory/store"),
