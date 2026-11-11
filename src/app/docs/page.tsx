@@ -503,7 +503,7 @@ api-key: <project api key>
                 ["/api/system", "Machine, runtime and storage status", "GET"],
                 ["/api/gateway/v1/chat/completions", "Routed gateway completion", "POST"],
                 ["/api/evaluations", "Quality and red team runs", "GET / POST / PATCH"],
-                ["/api/users", "Local project access records", "GET / POST / PATCH / DELETE"],
+                ["/api/directory/principals", "Local directory principals and their roles", "GET / POST / PATCH"],
                 ["/api/settings", "Project identity and runtime endpoints", "GET / PATCH"],
                 ["/api/responses/retention", "Responses history retention policy and owner stats", "GET / POST"],
                 ["/api/responses/store/<action>", "Per-tenant shared Responses store: save, load, prune, stats, policy, audit (bearer token)", "GET / POST"],
