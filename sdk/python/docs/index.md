@@ -4,10 +4,13 @@
 
 # openfoundry-agent-framework documentation
 
-`openfoundry-agent-framework` lets the official Microsoft Agent Framework Python SDK use a
+`openfoundry-agent-framework` lets Microsoft's official Agent Framework Python SDK use a
 local openFoundry project as its Foundry project. It supplies an `TokenCredential` that
 presents the project API key as a bearer token, plus a few factories for the common
 clients.
+
+This is an independent, community package. It is not published by, affiliated with, or
+endorsed by Microsoft; it wraps Microsoft's `agent-framework` package.
 
 The SDK itself is unchanged: `FoundryChatClient`, `Agent`, `FoundryAgent`, function tools,
 streaming, the Responses API and every orchestration builder run as they do against

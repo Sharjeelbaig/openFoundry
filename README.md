@@ -252,9 +252,10 @@ redistribute them.
 ## Python SDK
 
 The official Microsoft Agent Framework Python SDK can use an openFoundry project as its
-Foundry project. `openfoundry-agent-framework` supplies the credential that presents the
-project API key as a bearer token, so `FoundryChatClient`, `FoundryAgent` and every
-orchestration builder run locally without an Entra tenant:
+Foundry project. `openfoundry-agent-framework` — an independent adapter, not a Microsoft
+package — supplies the credential that presents the project API key as a bearer token, so
+`FoundryChatClient`, `FoundryAgent` and every orchestration builder run locally without an
+Entra tenant:
 
 ```bash
 pip install openfoundry-agent-framework

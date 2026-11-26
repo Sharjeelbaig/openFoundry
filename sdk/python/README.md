@@ -5,8 +5,14 @@
 <h1 align="center">openfoundry-agent-framework</h1>
 
 <p align="center">
-  <strong>Run the official Microsoft Agent Framework SDK against a local openFoundry project.</strong><br>
+  <strong>An independent adapter that runs Microsoft's Agent Framework SDK against a local openFoundry project.</strong><br>
   No Azure subscription. No Entra tenant. No <code>az login</code>.
+</p>
+
+<p align="center">
+  <sub><strong>Not affiliated with, endorsed by, or sponsored by Microsoft.</strong>
+  This is a community package maintained by the openFoundry project; it wraps Microsoft's
+  official <code>agent-framework</code> package and is not published by Microsoft.</sub>
 </p>
 
 <p align="center">
@@ -18,13 +24,14 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Sharjeelbaig/openFoundry/main/public/brand/openfoundry-pypi-banner.png" alt="openFoundry — Microsoft Agent Framework on a local Foundry project" width="820">
+  <img src="https://raw.githubusercontent.com/Sharjeelbaig/openFoundry/main/public/brand/openfoundry-pypi-banner.png" alt="openFoundry — an independent adapter for the Agent Framework SDK" width="820">
 </p>
 
 ---
 
-The official `agent-framework` SDK talks to a Foundry project through `FoundryChatClient`
-and `AIProjectClient`. Both expect a project endpoint and a `TokenCredential`.
+The `agent-framework` package is Microsoft's official SDK. It talks to a Foundry project
+through `FoundryChatClient` and `AIProjectClient`. Both expect a project endpoint and a
+`TokenCredential`.
 
 openFoundry serves those same project paths on loopback
 (`/api/projects/<project>/openai/v1`) and authenticates with a **project API key** that is

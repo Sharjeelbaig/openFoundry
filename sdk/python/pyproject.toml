@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openfoundry-agent-framework"
-version = "0.1.0"
-description = "Run the Microsoft Agent Framework SDK against a local openFoundry project — no Azure subscription, no Entra tenant."
+version = "0.1.1"
+description = "An independent adapter that runs Microsoft's Agent Framework SDK against a local openFoundry project — no Azure subscription, no Entra tenant."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"

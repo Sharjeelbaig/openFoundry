@@ -6,6 +6,17 @@ All notable changes to `openfoundry-agent-framework` are recorded here. The form
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-26
+
+### Changed
+
+- Independence is stated up front: the package is described as an independent adapter
+  that wraps Microsoft's `agent-framework`, not as a Microsoft package.
+- PyPI summary, README header and banner subtitle now name the Microsoft dependency
+  instead of leading with it, and the "not affiliated with Microsoft" notice sits above
+  the fold.
+- Documentation index repeats the independence statement.
+
 ## [0.1.0] - 2026-11-26
 
 First public release.

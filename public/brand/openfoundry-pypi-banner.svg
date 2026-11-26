@@ -21,7 +21,7 @@
   <text x="328" y="196" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="68" letter-spacing="-1.5">
     <tspan fill="#A8A29E" font-weight="400">open</tspan><tspan fill="#F4EFE6" font-weight="600">Foundry</tspan>
   </text>
-  <text x="332" y="250" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" fill="#8A8178" letter-spacing="0.2">Microsoft Agent Framework on a local Foundry project</text>
+  <text x="332" y="250" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" fill="#8A8178" letter-spacing="0.2">An independent adapter for the Agent Framework SDK</text>
   <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="19" fill="#C9C2B8">
     <rect x="332" y="288" width="150" height="44" rx="22" fill="#F4EFE6" fill-opacity="0.06" stroke="#F4EFE6" stroke-opacity="0.14"/>
     <text x="407" y="316" text-anchor="middle">Sequential</text>
