@@ -1,0 +1,37 @@
+<svg width="1280" height="400" viewBox="0 0 1280 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="copper" x1="8" y1="6" x2="10.4" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFC57E"/>
+      <stop offset="1" stop-color="#D86831"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(190 200) scale(420 300)">
+      <stop stop-color="#D86831" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#D86831" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="400" rx="28" fill="#141414"/>
+  <rect width="1280" height="400" rx="28" fill="url(#glow)"/>
+  <g transform="translate(72 96)">
+    <rect width="208" height="208" rx="46" fill="#2B241D" fill-opacity="0.55"/>
+    <g transform="scale(6.5)">
+      <path d="M8 6h15.8v4.6H13.2v3.6h8.5v4.6h-8.5V26H8V6Z" fill="#F4EFE6"/>
+      <path d="M8 6h2.4v20H8z" fill="url(#copper)"/>
+    </g>
+  </g>
+  <text x="328" y="196" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="68" letter-spacing="-1.5">
+    <tspan fill="#A8A29E" font-weight="400">open</tspan><tspan fill="#F4EFE6" font-weight="600">Foundry</tspan>
+  </text>
+  <text x="332" y="250" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" fill="#8A8178" letter-spacing="0.2">Microsoft Agent Framework on a local Foundry project</text>
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="19" fill="#C9C2B8">
+    <rect x="332" y="288" width="150" height="44" rx="22" fill="#F4EFE6" fill-opacity="0.06" stroke="#F4EFE6" stroke-opacity="0.14"/>
+    <text x="407" y="316" text-anchor="middle">Sequential</text>
+    <rect x="494" y="288" width="168" height="44" rx="22" fill="#F4EFE6" fill-opacity="0.06" stroke="#F4EFE6" stroke-opacity="0.14"/>
+    <text x="578" y="316" text-anchor="middle">Concurrent</text>
+    <rect x="674" y="288" width="166" height="44" rx="22" fill="#F4EFE6" fill-opacity="0.06" stroke="#F4EFE6" stroke-opacity="0.14"/>
+    <text x="757" y="316" text-anchor="middle">Group chat</text>
+    <rect x="852" y="288" width="146" height="44" rx="22" fill="#F4EFE6" fill-opacity="0.06" stroke="#F4EFE6" stroke-opacity="0.14"/>
+    <text x="925" y="316" text-anchor="middle">Handoff</text>
+    <rect x="1010" y="288" width="160" height="44" rx="22" fill="#F4EFE6" fill-opacity="0.06" stroke="#F4EFE6" stroke-opacity="0.14"/>
+    <text x="1090" y="316" text-anchor="middle">Magentic</text>
+  </g>
+</svg>

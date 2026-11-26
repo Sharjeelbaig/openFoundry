@@ -1,0 +1,52 @@
+# Publish sdk/python to PyPI.
+#
+# One-time setup on https://pypi.org/manage/account/publishing/ (Trusted Publishers):
+#   PyPI Project Name:   openfoundry-agent-framework
+#   Owner:               Sharjeelbaig
+#   Repository name:     openFoundry
+#   Workflow name:       publish-python.yml
+#   Environment name:    pypi
+#
+# After that, run this workflow manually (Actions → Publish Python package → Run workflow)
+# or push a tag such as sdk-python-v0.1.0. No API token is stored in the repository.
+
+name: Publish Python package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "sdk-python-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build distributions
+        working-directory: sdk/python
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Check distributions
+        working-directory: sdk/python
+        run: twine check --strict dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/python/dist/
+          print-hash: true

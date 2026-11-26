@@ -59,3 +59,7 @@ __pycache__/
 
 # Source master; the landing page ships the compressed cut
 landing-src/gemma-tour-1080p.mp4
+
+# Python SDK build artifacts
+*.egg-info/
+.venv/

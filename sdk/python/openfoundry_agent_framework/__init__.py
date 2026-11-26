@@ -23,6 +23,8 @@ Environment variables:
   ``http://127.0.0.1:3000/api/projects/openfoundry-lab``
 - ``OPENFOUNDRY_API_KEY`` — the project API key from Manage → Project details
 - ``OPENFOUNDRY_MODEL`` — a local deployment or model id
+
+Documentation: https://github.com/Sharjeelbaig/openFoundry/tree/main/sdk/python/docs
 """
 
 from __future__ import annotations
@@ -38,9 +40,17 @@ from agent_framework.foundry import FoundryAgent, FoundryChatClient
 
 DEFAULT_PROJECT_ENDPOINT = "http://127.0.0.1:3000/api/projects/openfoundry-lab"
 
+try:  # pragma: no cover - metadata is absent only for an uninstalled checkout
+    from importlib.metadata import PackageNotFoundError, version
+
+    __version__ = version("openfoundry-agent-framework")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.1.0"
+
 __all__ = [
     "DEFAULT_PROJECT_ENDPOINT",
     "OpenFoundryCredential",
+    "__version__",
     "create_agent",
     "create_chat_client",
     "create_foundry_agent",

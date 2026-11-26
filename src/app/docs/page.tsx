@@ -277,9 +277,13 @@ with AIProjectClient(
         <h3 id="agent-framework">Microsoft Agent Framework SDK</h3>
         <p>
           The official <span className="mono">agent-framework</span> Python SDK can
-          use this project. The repository includes a small helper package at{" "}
-          <span className="mono">sdk/python</span> that presents the project API key
-          as the bearer token the SDK expects:
+          use this project through{" "}
+          <span className="mono">openfoundry-agent-framework</span> on PyPI
+          (<span className="mono">pip install openfoundry-agent-framework</span>), a
+          small helper package that presents the project API key as the bearer token
+          the SDK expects. The source lives in{" "}
+          <span className="mono">sdk/python</span> with full documentation in{" "}
+          <span className="mono">sdk/python/docs</span>.
         </p>
         <pre className="code-block">{`from openfoundry_agent_framework import create_agent
 

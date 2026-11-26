@@ -249,6 +249,28 @@ Hugging Face downloads use `ollama pull hf.co/<repo>`; Foundry Local downloads u
 Foundry CLI. Model weights and licenses belong to their publishers; openFoundry does not
 redistribute them.
 
+## Python SDK
+
+The official Microsoft Agent Framework Python SDK can use an openFoundry project as its
+Foundry project. `openfoundry-agent-framework` supplies the credential that presents the
+project API key as a bearer token, so `FoundryChatClient`, `FoundryAgent` and every
+orchestration builder run locally without an Entra tenant:
+
+```bash
+pip install openfoundry-agent-framework
+```
+
+```python
+from openfoundry_agent_framework import create_agent
+
+agent = create_agent(name="LocalAgent", instructions="Answer in one short sentence.")
+print(asyncio.run(agent.run("Hello")).text)
+```
+
+Set `OPENFOUNDRY_PROJECT_ENDPOINT`, `OPENFOUNDRY_API_KEY` and `OPENFOUNDRY_MODEL` from
+**Manage → Project details**. Source, examples and full documentation live in
+`sdk/python/`.
+
 ## Architecture
 
 - **Next.js 16 + React 19 + TypeScript**: workspace UI and local API routes.
@@ -270,6 +292,7 @@ src/components/          Workspace UI, setup wizard, download center
 src/lib/                 Providers, store, model discovery, downloads
 src-tauri/               Tauri shell, loading screen, icons
 scripts/                 Desktop resource preparation
+sdk/python/              Python SDK for the Agent Framework (published to PyPI)
 public/brand/            openFoundry mark and app tile sources
 public/                  Other openFoundry artwork
 BRAND.md                 Mark, colour and usage rules
